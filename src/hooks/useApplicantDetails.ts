@@ -30,6 +30,6 @@ export const useApplicantDetails = (applicantId: string | undefined) => {
 
             return data as ApplicantDetails;
         },
-        enabled: !!applicantId,
+        enabled: !!applicantId && applicantId !== 'new',
     });
 };

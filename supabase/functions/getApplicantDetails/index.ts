@@ -42,7 +42,11 @@ serve(async (req) => {
 
         // Check if applicantId is a UUID (Supabase ID) and resolve to JotForm ID
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        let supabaseUuid: string | null = null;
+        let jotformId: string = applicantId;
+
         if (uuidRegex.test(applicantId)) {
+            supabaseUuid = applicantId; // Preserve the UUID
             const { data: applicant, error: dbError } = await supabase
                 .from('applicants')
                 .select('jotform_id')
@@ -52,8 +56,11 @@ serve(async (req) => {
             if (dbError || !applicant?.jotform_id) {
                 throw new Error(`Could not find applicant with ID ${applicantId}`)
             }
-            applicantId = applicant.jotform_id
+            jotformId = applicant.jotform_id
         }
+
+        // Use jotformId for JotForm API calls
+        applicantId = jotformId;
 
         // Form IDs from Settings
         const FORMS = {
@@ -287,7 +294,7 @@ serve(async (req) => {
         }
 
         const responseData = {
-            id: mainData.content.id,
+            id: supabaseUuid || mainData.content.id, // Return UUID if available, otherwise JotForm ID
             created_at: mainData.content.created_at,
             status: mainData.content.status,
             answers: mainAnswers,

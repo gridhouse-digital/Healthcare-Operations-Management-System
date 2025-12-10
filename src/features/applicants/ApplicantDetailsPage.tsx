@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApplicantDetails } from '@/hooks/useApplicantDetails';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { format } from 'date-fns';
-import { ArrowLeft, Mail, Phone, FileText, Calendar, Shield, AlertCircle, CheckCircle, X, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, FileText, Calendar, Shield, AlertCircle, CheckCircle, X, ExternalLink, UserPlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { EnhancedApplicantSummaryPanel } from '@/components/ai/EnhancedApplicantSummaryPanel';
 import { ApplicantTimeline } from '@/components/applicants/ApplicantTimeline';
@@ -78,6 +78,43 @@ export function ApplicantDetailsPage() {
             setRequestLoading(prev => ({ ...prev, [reqKey]: false }));
         }
     };
+
+    // Handle "new" applicant route
+    if (id === 'new') {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('/applicants')}
+                        className="p-2 hover:bg-[rgba(162,161,168,0.1)] rounded-full transition-colors"
+                    >
+                        <ArrowLeft size={24} className="text-[#16151C] dark:text-white" />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-[#16151C] dark:text-white">Add New Applicant</h1>
+                        <p className="text-[#A2A1A8] font-light">Create a new applicant profile</p>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-12 text-center">
+                    <UserPlus size={64} className="mx-auto mb-6 text-[#A2A1A8]" />
+                    <h2 className="text-xl font-semibold text-[#16151C] dark:text-white mb-3">
+                        Applicants are added through the application form
+                    </h2>
+                    <p className="text-[#A2A1A8] mb-6 max-w-md mx-auto">
+                        New applicants submit their information through our JotForm application system.
+                        Once submitted, they will automatically appear in the applicants list.
+                    </p>
+                    <button
+                        onClick={() => navigate('/applicants')}
+                        className="px-6 py-3 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-medium"
+                    >
+                        View All Applicants
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (isLoading) return <div className="p-8 text-center text-[#A2A1A8]">Loading applicant details...</div>;
     if (error) return <div className="p-8 text-center text-red-500">Failed to load applicant: {error.message}</div>;
