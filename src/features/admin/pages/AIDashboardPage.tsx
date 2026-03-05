@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { BarChart, Activity, Database, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { BarChart, Activity, Database, AlertTriangle, CheckCircle, Sparkles, Zap } from 'lucide-react';
 
 interface AILog {
     id: string;
@@ -34,7 +34,6 @@ export function AIDashboardPage() {
             setLoading(true);
             setError(null);
             try {
-                // Fetch recent logs
                 const { data: logsData, error: logsError } = await supabase
                     .from('ai_logs')
                     .select('*')
@@ -46,7 +45,6 @@ export function AIDashboardPage() {
                     setError(`Failed to load AI logs: ${logsError.message}`);
                 }
 
-                // Fetch cache stats
                 const { data: cacheData, error: cacheError } = await supabase
                     .from('ai_cache')
                     .select('input_hash, created_at, model, output, ttl_seconds')
@@ -55,7 +53,6 @@ export function AIDashboardPage() {
 
                 if (cacheError) {
                     console.error('Error fetching ai_cache:', cacheError);
-                    if (!error) setError(`Failed to load cache data: ${cacheError.message}`);
                 }
 
                 if (logsData) setLogs(logsData);
@@ -71,127 +68,138 @@ export function AIDashboardPage() {
         fetchData();
     }, []);
 
-    // Calculate stats
     const totalRequests = logs.length;
     const successRate = totalRequests > 0
         ? ((logs.filter(l => l.success).length / totalRequests) * 100).toFixed(1)
         : '0';
     const totalTokens = logs.reduce((acc, curr) => acc + (curr.tokens_in || 0) + (curr.tokens_out || 0), 0);
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+    if (loading) return (
+        <div className="flex items-center justify-center py-20">
+            <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+                <span className="text-[13px] text-muted-foreground font-mono uppercase tracking-[0.06em]">Loading AI telemetry…</span>
             </div>
-        );
-    }
+        </div>
+    );
 
     return (
-        <div className="space-y-6 p-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Activity className="w-6 h-6 text-blue-500" />
-                    AI System Status
-                </h1>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    System Operational
+        <div className="space-y-5">
+            {/* Page Header */}
+            <div className="flex items-end justify-between pl-1">
+                <div>
+                    <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.875rem', fontStyle: 'italic', letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                        className="text-foreground">
+                        AI Dashboard
+                    </h1>
+                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
+                        className="uppercase text-muted-foreground mt-1">
+                        System telemetry &amp; inference logs
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="ai-tag">AI</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[hsl(152,58%,38%)] animate-pulse" />
+                        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.625rem', letterSpacing: '0.05em' }}
+                            className="uppercase text-[hsl(152,54%,44%)]">
+                            Operational
+                        </span>
+                    </div>
                 </div>
             </div>
 
             {/* Error Alert */}
             {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-red-800 dark:text-red-300">
-                        <AlertTriangle className="w-5 h-5" />
-                        <p className="font-medium">Error Loading Data</p>
+                <div className="p-4 rounded-lg bg-[hsl(4,82%,52%)]/8 border border-[hsl(4,82%,52%)]/20">
+                    <div className="flex items-center gap-2 mb-1">
+                        <AlertTriangle size={13} className="text-[hsl(4,82%,52%)]" />
+                        <p className="text-[13px] font-semibold text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)]">Error Loading Data</p>
                     </div>
-                    <p className="text-sm text-red-700 dark:text-red-400 mt-1">{error}</p>
-                    <p className="text-xs text-red-600 dark:text-red-500 mt-2">
-                        The ai_logs and ai_cache tables may not exist in the database or there may be permission issues.
-                    </p>
+                    <p className="text-[12px] text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)] font-mono">{error}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1.5">The ai_logs or ai_cache tables may not exist or there may be permission issues.</p>
                 </div>
             )}
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-medium text-gray-500">Total Requests</h3>
-                        <BarChart className="w-5 h-5 text-blue-500" />
+            {/* Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                    { label: 'Total Requests', value: totalRequests.toLocaleString(), icon: BarChart, color: 'text-primary' },
+                    { label: 'Success Rate', value: `${successRate}%`, icon: CheckCircle, color: 'text-[hsl(152,58%,38%)]' },
+                    { label: 'Token Usage', value: totalTokens.toLocaleString(), icon: Zap, color: 'text-[hsl(38,96%,48%)]' },
+                ].map(({ label, value, icon: Icon, color }) => (
+                    <div key={label} className="bg-card border border-border rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="zone-label">{label}</span>
+                            <Icon size={14} className={color} strokeWidth={2} />
+                        </div>
+                        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: '2rem', fontStyle: 'italic', letterSpacing: '-0.02em', lineHeight: 1 }}
+                            className="text-foreground">
+                            {value}
+                        </p>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalRequests}</div>
-                </div>
-
-                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-medium text-gray-500">Success Rate</h3>
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{successRate}%</div>
-                </div>
-
-                <div className="p-6 bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-medium text-gray-500">Token Usage</h3>
-                        <Database className="w-5 h-5 text-purple-500" />
-                    </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalTokens.toLocaleString()}</div>
-                </div>
+                ))}
             </div>
 
-            {/* Recent Logs & Cache */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Recent Logs */}
-                <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg border shadow-sm overflow-hidden">
-                    <div className="p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Recent Activity Log</h3>
+            {/* Logs + Cache */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Activity Log */}
+                <div className="lg:col-span-2 bg-card border border-border rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
+                        <Activity size={13} className="text-primary" strokeWidth={2} />
+                        <span className="zone-label">Recent Activity Log</span>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-gray-50 dark:bg-gray-900/50 text-gray-500">
+                        <table className="w-full">
+                            <thead className="border-b border-border">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">Time</th>
-                                    <th className="px-4 py-3 font-medium">Feature</th>
-                                    <th className="px-4 py-3 font-medium">Model</th>
-                                    <th className="px-4 py-3 font-medium">Tokens</th>
-                                    <th className="px-4 py-3 font-medium">Status</th>
+                                    {['Time', 'Feature', 'Model', 'Tokens', 'Status'].map((h) => (
+                                        <th key={h} className="px-4 py-3 text-left">
+                                            <span className="zone-label">{h}</span>
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y dark:divide-gray-700">
+                            <tbody className="divide-y divide-border/60">
                                 {logs.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-12 text-center">
-                                            <Database className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                                            <p className="text-gray-500 font-medium">No AI activity logs yet</p>
-                                            <p className="text-sm text-gray-400 mt-1">Logs will appear here after AI features are used</p>
+                                        <td colSpan={5} className="px-5 py-16 text-center">
+                                            <Sparkles size={28} className="mx-auto text-muted-foreground/25 mb-3" strokeWidth={1} />
+                                            <p className="text-[13px] text-muted-foreground">No AI activity logs yet</p>
+                                            <p className="text-[12px] text-muted-foreground/60 font-mono mt-1">Logs appear after AI features are used</p>
                                         </td>
                                     </tr>
                                 ) : (
                                     logs.map((log) => (
-                                        <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                            <td className="px-4 py-3 text-gray-500">
-                                                {new Date(log.created_at).toLocaleTimeString()}
-                                            </td>
-                                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                                                {log.feature}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                                                {log.model?.split('/').pop() || 'N/A'}
-                                            </td>
-                                            <td className="px-4 py-3 text-gray-500">
-                                                {(log.tokens_in + log.tokens_out).toLocaleString()}
+                                        <tr key={log.id} className="hover:bg-primary/[0.02] transition-colors">
+                                            <td className="px-4 py-3">
+                                                <span className="text-[12px] text-muted-foreground font-mono">
+                                                    {new Date(log.created_at).toLocaleTimeString()}
+                                                </span>
                                             </td>
                                             <td className="px-4 py-3">
-                                                <div className="flex flex-col">
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium w-fit ${log.success
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                                                        }`}>
-                                                        {log.success ? 'success' : 'error'}
+                                                <span className="text-[13px] text-foreground font-medium">{log.feature}</span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-[11px] text-muted-foreground font-mono">{log.model?.split('/').pop() || 'N/A'}</span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className="text-[12px] text-muted-foreground font-mono">
+                                                    {(log.tokens_in + log.tokens_out).toLocaleString()}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className={[
+                                                        'inline-flex items-center h-5 px-2 rounded text-[10px] font-mono font-semibold uppercase tracking-[0.04em] border w-fit',
+                                                        log.success
+                                                            ? 'bg-[hsl(152,58%,38%)]/8 text-[hsl(152,50%,30%)] dark:text-[hsl(152,54%,52%)] border-[hsl(152,58%,38%)]/20'
+                                                            : 'bg-[hsl(4,82%,52%)]/8 text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)] border-[hsl(4,82%,52%)]/20'
+                                                    ].join(' ')}>
+                                                        {log.success ? 'ok' : 'error'}
                                                     </span>
                                                     {log.error && (
-                                                        <span className="text-xs text-red-500 mt-1 max-w-[200px] truncate" title={log.error}>
+                                                        <span className="text-[11px] text-[hsl(4,76%,60%)] font-mono max-w-[180px] truncate" title={log.error}>
                                                             {log.error}
                                                         </span>
                                                     )}
@@ -206,26 +214,30 @@ export function AIDashboardPage() {
                 </div>
 
                 {/* Cache Status */}
-                <div className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm overflow-hidden">
-                    <div className="p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Cache Status</h3>
+                <div className="bg-card border border-border rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
+                        <Database size={13} className="text-primary" strokeWidth={2} />
+                        <span className="zone-label">Cache Status</span>
                     </div>
                     <div className="p-4">
                         <div className="flex items-center justify-between mb-4">
-                            <span className="text-sm text-gray-500">Active Entries</span>
-                            <span className="font-bold text-gray-900 dark:text-white">{cacheEntries.length}</span>
+                            <span className="text-[12px] text-muted-foreground font-mono uppercase tracking-[0.04em]">Active entries</span>
+                            <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.5rem', fontStyle: 'italic' }}
+                                className="text-foreground">
+                                {cacheEntries.length}
+                            </span>
                         </div>
                         {cacheEntries.length === 0 ? (
                             <div className="py-8 text-center">
-                                <Database className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-                                <p className="text-sm text-gray-500">No cached entries</p>
+                                <Database size={24} className="mx-auto text-muted-foreground/25 mb-2" strokeWidth={1} />
+                                <p className="text-[12px] text-muted-foreground">No cached entries</p>
                             </div>
                         ) : (
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 {cacheEntries.slice(0, 5).map((entry) => (
-                                    <div key={entry.input_hash} className="flex items-center justify-between text-sm p-2 bg-gray-50 dark:bg-gray-900/30 rounded">
-                                        <span className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[150px]">{entry.model || 'cached'}</span>
-                                        <span className="text-gray-500 text-xs">
+                                    <div key={entry.input_hash} className="flex items-center justify-between p-2.5 bg-muted/20 rounded-md border border-border">
+                                        <span className="text-[12px] text-foreground font-mono truncate max-w-[140px]">{entry.model || 'cached'}</span>
+                                        <span className="text-[11px] text-muted-foreground font-mono flex-shrink-0 ml-2">
                                             {Math.floor((new Date().getTime() - new Date(entry.created_at).getTime()) / 1000 / 60)}m ago
                                         </span>
                                     </div>
@@ -233,8 +245,8 @@ export function AIDashboardPage() {
                             </div>
                         )}
                         {cacheEntries.length > 0 && (
-                            <div className="mt-4 pt-4 border-t dark:border-gray-700">
-                                <button className="w-full py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
+                            <div className="mt-4 pt-4 border-t border-border">
+                                <button className="w-full h-8 rounded-md text-[12px] font-semibold text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)] border border-[hsl(4,82%,52%)]/25 hover:bg-[hsl(4,82%,52%)]/6 transition-colors">
                                     Clear Cache
                                 </button>
                             </div>

@@ -1,0 +1,138 @@
+{
+  "scriptId": "395",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/@supabase/realtime-js/2.98.0/dist/main/lib/transformers.js",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 8974,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 567,
+          "endOffset": 1561,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "convertChangeData",
+      "ranges": [
+        {
+          "startOffset": 2203,
+          "endOffset": 2559,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "convertColumn",
+      "ranges": [
+        {
+          "startOffset": 3297,
+          "endOffset": 3664,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "convertCell",
+      "ranges": [
+        {
+          "startOffset": 4099,
+          "endOffset": 5873,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "noop",
+      "ranges": [
+        {
+          "startOffset": 5923,
+          "endOffset": 5955,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toBoolean",
+      "ranges": [
+        {
+          "startOffset": 5975,
+          "endOffset": 6146,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toNumber",
+      "ranges": [
+        {
+          "startOffset": 6196,
+          "endOffset": 6402,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toJson",
+      "ranges": [
+        {
+          "startOffset": 6448,
+          "endOffset": 6642,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toArray",
+      "ranges": [
+        {
+          "startOffset": 7003,
+          "endOffset": 7779,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toTimestampString",
+      "ranges": [
+        {
+          "startOffset": 8069,
+          "endOffset": 8184,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "httpEndpointURL",
+      "ranges": [
+        {
+          "startOffset": 8257,
+          "endOffset": 8889,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

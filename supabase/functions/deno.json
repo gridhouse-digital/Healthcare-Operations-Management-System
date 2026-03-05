@@ -1,0 +1,11 @@
+{
+  "tasks": {
+    "test": "deno test --allow-env --allow-net _shared/tests/",
+    "test:coverage": "deno test --allow-env --allow-net --coverage=coverage _shared/tests/ && deno coverage coverage --lcov > coverage/lcov.info",
+    "check": "deno check _shared/tenant-guard.ts _shared/audit-logger.ts _shared/error-response.ts _shared/cors.ts"
+  },
+  "imports": {
+    "jsr:@supabase/supabase-js@2": "jsr:@supabase/supabase-js@2",
+    "jsr:@std/assert": "jsr:@std/assert"
+  }
+}

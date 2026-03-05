@@ -1,0 +1,501 @@
+{
+  "scriptId": "383",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/iceberg-js/0.8.1/dist/index.mjs",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 17187,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "IcebergError",
+      "ranges": [
+        {
+          "startOffset": 73,
+          "endOffset": 482,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isNotFound",
+      "ranges": [
+        {
+          "startOffset": 554,
+          "endOffset": 604,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isConflict",
+      "ranges": [
+        {
+          "startOffset": 675,
+          "endOffset": 725,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthenticationTimeout",
+      "ranges": [
+        {
+          "startOffset": 810,
+          "endOffset": 873,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "buildUrl",
+      "ranges": [
+        {
+          "startOffset": 898,
+          "endOffset": 1165,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "buildAuthHeaders",
+      "ranges": [
+        {
+          "startOffset": 1200,
+          "endOffset": 1550,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createFetchClient",
+      "ranges": [
+        {
+          "startOffset": 1551,
+          "endOffset": 2812,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "namespaceToPath",
+      "ranges": [
+        {
+          "startOffset": 2843,
+          "endOffset": 2912,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "NamespaceOperations",
+      "ranges": [
+        {
+          "startOffset": 2949,
+          "endOffset": 3039,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listNamespaces",
+      "ranges": [
+        {
+          "startOffset": 3042,
+          "endOffset": 3360,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createNamespace",
+      "ranges": [
+        {
+          "startOffset": 3363,
+          "endOffset": 3669,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "dropNamespace",
+      "ranges": [
+        {
+          "startOffset": 3672,
+          "endOffset": 3838,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "loadNamespaceMetadata",
+      "ranges": [
+        {
+          "startOffset": 3841,
+          "endOffset": 4092,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "namespaceExists",
+      "ranges": [
+        {
+          "startOffset": 4095,
+          "endOffset": 4442,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createNamespaceIfNotExists",
+      "ranges": [
+        {
+          "startOffset": 4445,
+          "endOffset": 4700,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "namespaceToPath2",
+      "ranges": [
+        {
+          "startOffset": 4730,
+          "endOffset": 4800,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "TableOperations",
+      "ranges": [
+        {
+          "startOffset": 4833,
+          "endOffset": 4987,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listTables",
+      "ranges": [
+        {
+          "startOffset": 4990,
+          "endOffset": 5227,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createTable",
+      "ranges": [
+        {
+          "startOffset": 5230,
+          "endOffset": 5644,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "updateTable",
+      "ranges": [
+        {
+          "startOffset": 5647,
+          "endOffset": 5997,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "dropTable",
+      "ranges": [
+        {
+          "startOffset": 6000,
+          "endOffset": 6256,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "loadTable",
+      "ranges": [
+        {
+          "startOffset": 6259,
+          "endOffset": 6637,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "tableExists",
+      "ranges": [
+        {
+          "startOffset": 6640,
+          "endOffset": 7152,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createTableIfNotExists",
+      "ranges": [
+        {
+          "startOffset": 7155,
+          "endOffset": 7491,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "IcebergRestCatalog",
+      "ranges": [
+        {
+          "startOffset": 7700,
+          "endOffset": 8260,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listNamespaces",
+      "ranges": [
+        {
+          "startOffset": 8704,
+          "endOffset": 8791,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createNamespace",
+      "ranges": [
+        {
+          "startOffset": 9365,
+          "endOffset": 9466,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "dropNamespace",
+      "ranges": [
+        {
+          "startOffset": 9768,
+          "endOffset": 9844,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "loadNamespaceMetadata",
+      "ranges": [
+        {
+          "startOffset": 10176,
+          "endOffset": 10269,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listTables",
+      "ranges": [
+        {
+          "startOffset": 10637,
+          "endOffset": 10718,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createTable",
+      "ranges": [
+        {
+          "startOffset": 11602,
+          "endOffset": 11703,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "updateTable",
+      "ranges": [
+        {
+          "startOffset": 12387,
+          "endOffset": 12474,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "dropTable",
+      "ranges": [
+        {
+          "startOffset": 12696,
+          "endOffset": 12778,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "loadTable",
+      "ranges": [
+        {
+          "startOffset": 13163,
+          "endOffset": 13228,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "namespaceExists",
+      "ranges": [
+        {
+          "startOffset": 13576,
+          "endOffset": 13657,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "tableExists",
+      "ranges": [
+        {
+          "startOffset": 14005,
+          "endOffset": 14074,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createNamespaceIfNotExists",
+      "ranges": [
+        {
+          "startOffset": 14789,
+          "endOffset": 14912,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createTableIfNotExists",
+      "ranges": [
+        {
+          "startOffset": 15710,
+          "endOffset": 15833,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "parseDecimalType",
+      "ranges": [
+        {
+          "startOffset": 15972,
+          "endOffset": 16166,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "parseFixedType",
+      "ranges": [
+        {
+          "startOffset": 16167,
+          "endOffset": 16319,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isDecimalType",
+      "ranges": [
+        {
+          "startOffset": 16320,
+          "endOffset": 16387,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isFixedType",
+      "ranges": [
+        {
+          "startOffset": 16388,
+          "endOffset": 16451,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "typesEqual",
+      "ranges": [
+        {
+          "startOffset": 16452,
+          "endOffset": 16850,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getCurrentSchema",
+      "ranges": [
+        {
+          "startOffset": 16851,
+          "endOffset": 16979,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

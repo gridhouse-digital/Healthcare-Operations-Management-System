@@ -1,0 +1,72 @@
+{
+  "scriptId": "414",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/@supabase/auth-js/2.98.0/dist/main/lib/webauthn.errors.js",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 11895,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "WebAuthnError",
+      "ranges": [
+        {
+          "startOffset": 988,
+          "endOffset": 1399,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "WebAuthnUnknownError",
+      "ranges": [
+        {
+          "startOffset": 1625,
+          "endOffset": 1897,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isWebAuthnError",
+      "ranges": [
+        {
+          "startOffset": 2122,
+          "endOffset": 2245,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "identifyRegistrationError",
+      "ranges": [
+        {
+          "startOffset": 2829,
+          "endOffset": 8753,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "identifyAuthenticationError",
+      "ranges": [
+        {
+          "startOffset": 9322,
+          "endOffset": 11851,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

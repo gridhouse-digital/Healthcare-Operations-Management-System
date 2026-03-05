@@ -1,23 +1,21 @@
 import { SlideOver } from '@/components/ui/SlideOver';
-import { SidebarContent } from '@/components/layout/Sidebar';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useEffect, useState } from 'react';
 import { settingsService } from '@/services/settingsService';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { LayoutDashboard, Users, FileText, Briefcase, Settings, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
 import defaultLogoDark from '@/assets/logo-dark.png';
 
-// Duplicate navigation structure as it's not exported from Sidebar.tsx 
-// (Alternatively, export it from Sidebar.tsx, but duplication avoids circular deps if structured poorly)
-// Ideally, this should be in a centralized config, but for now, we'll keep it consistent.
 const navigation = [
-    { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { name: 'Applicants', href: '/applicants', icon: Users },
-    { name: 'Offers', href: '/offers', icon: FileText },
-    { name: 'Employees', href: '/employees', icon: Briefcase },
-    { name: 'AI Dashboard', href: '/admin/ai-dashboard', icon: Sparkles, adminOnly: true },
-    { name: 'Settings', href: '/settings', icon: Settings, adminOnly: true },
+    { name: 'Dashboard',    href: '/',                      icon: LayoutDashboard },
+    { name: 'Applicants',   href: '/applicants',            icon: Users },
+    { name: 'Offers',       href: '/offers',                icon: FileText },
+    { name: 'Employees',    href: '/employees',             icon: Briefcase },
+    { name: 'AI Dashboard', href: '/admin/ai-dashboard',    icon: Sparkles,  adminOnly: true },
+    { name: 'Settings',     href: '/settings',              icon: Settings,  adminOnly: true },
 ];
 
 interface MobileNavProps {
@@ -28,42 +26,105 @@ interface MobileNavProps {
 export function MobileNav({ isOpen, onClose }: MobileNavProps) {
     const location = useLocation();
     const { isAdmin } = useUserRole();
-    const [logoForLightMode, setLogoForLightMode] = useState(defaultLogoDark);
-    const [logoForDarkMode, setLogoForDarkMode] = useState(defaultLogoLight);
+    const [logoLight, setLogoLight] = useState(defaultLogoDark);
+    const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
 
     useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const settings = await settingsService.getSettings();
-                if (settings['logo_light']) setLogoForLightMode(settings['logo_light']);
-                if (settings['logo_dark']) setLogoForDarkMode(settings['logo_dark']);
-            } catch (error) {
-                console.error('Failed to load logo settings', error);
-            }
-        };
-        loadSettings();
+        settingsService.getSettings().then(settings => {
+            if (settings['logo_light']) setLogoLight(settings['logo_light']);
+            if (settings['logo_dark'])  setLogoDark(settings['logo_dark']);
+        }).catch(() => {});
     }, []);
 
-    const filteredNavigation = navigation.filter(item => !item.adminOnly || isAdmin);
+    const filteredNav = navigation.filter(item => !item.adminOnly || isAdmin);
+    const currentPath = location.pathname;
 
     return (
-        <SlideOver
-            isOpen={isOpen}
-            onClose={onClose}
-            title="Menu"
-            side="left"
-            width="md"
-        >
-            <div className="h-full flex flex-col -m-6">
-                {/* Check margin adjustment based on SlideOver padding */}
-                <SidebarContent
-                    logoLight={logoForLightMode}
-                    logoDark={logoForDarkMode}
-                    navigation={filteredNavigation}
-                    currentPath={location.pathname}
-                    className="flex h-full w-full relative left-0 top-0 bottom-0 rounded-none border-none bg-transparent"
-                    onNavigate={onClose}
-                />
+        <SlideOver isOpen={isOpen} onClose={onClose} title="Menu" side="left" width="md">
+            <div
+                className="h-full flex flex-col -m-6"
+                style={{ background: 'var(--sidebar)' }}
+            >
+                {/* Brand */}
+                <div
+                    className="flex items-center px-5 h-[60px] flex-shrink-0"
+                    style={{ borderBottom: '1px solid var(--sidebar-border)' }}
+                >
+                    <img src={logoLight} alt="Prolific HR" className="h-7 w-auto object-contain block dark:hidden" />
+                    <img src={logoDark}  alt="Prolific HR" className="h-7 w-auto object-contain hidden dark:block" />
+                </div>
+
+                {/* Nav */}
+                <nav className="flex-1 overflow-y-auto py-4 px-2">
+                    <p
+                        className="px-3 mb-3 uppercase select-none"
+                        style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.5625rem',
+                            fontWeight: 500,
+                            letterSpacing: '0.10em',
+                            color: 'var(--sidebar-foreground)',
+                            opacity: 0.35,
+                        }}
+                    >
+                        Modules
+                    </p>
+                    <ul className="space-y-0.5">
+                        {filteredNav.map((item, i) => {
+                            const isActive = item.href === '/'
+                                ? currentPath === '/'
+                                : currentPath === item.href || currentPath.startsWith(item.href + '/');
+
+                            return (
+                                <li key={item.name}>
+                                    <Link
+                                        to={item.href}
+                                        onClick={onClose}
+                                        className={cn(
+                                            'animate-reveal-right',
+                                            `delay-${Math.min(i * 50, 300)}`,
+                                            'group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-md transition-all duration-100',
+                                        )}
+                                        style={{
+                                            color: isActive ? 'hsl(196 84% 64%)' : 'hsl(0 0% 44%)',
+                                            background: isActive ? 'hsl(196 84% 42% / 0.10)' : 'transparent',
+                                        }}
+                                    >
+                                        {isActive && (
+                                            <div
+                                                className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[18px] rounded-r-full"
+                                                style={{ background: 'hsl(196 84% 52%)' }}
+                                            />
+                                        )}
+                                        <item.icon
+                                            size={15}
+                                            strokeWidth={isActive ? 2 : 1.75}
+                                            className="flex-shrink-0"
+                                            style={{ color: isActive ? 'hsl(196 84% 55%)' : 'currentColor' }}
+                                        />
+                                        <span className={cn(
+                                            "text-[13px] leading-none",
+                                            isActive ? "font-semibold" : "font-medium"
+                                        )}>
+                                            {item.name}
+                                        </span>
+                                        {item.name === 'AI Dashboard' && (
+                                            <span className="ml-auto ai-tag">AI</span>
+                                        )}
+                                    </Link>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </nav>
+
+                {/* Footer */}
+                <div
+                    className="px-4 py-4"
+                    style={{ borderTop: '1px solid var(--sidebar-border)' }}
+                >
+                    <ThemeToggle />
+                </div>
             </div>
         </SlideOver>
     );

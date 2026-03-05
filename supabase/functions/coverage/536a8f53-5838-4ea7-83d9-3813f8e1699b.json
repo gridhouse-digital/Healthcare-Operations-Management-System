@@ -1,0 +1,1441 @@
+{
+  "scriptId": "376",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/@supabase/storage-js/2.98.0/dist/index.mjs",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 88872,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "StorageError",
+      "ranges": [
+        {
+          "startOffset": 227,
+          "endOffset": 511,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isStorageError",
+      "ranges": [
+        {
+          "startOffset": 657,
+          "endOffset": 775,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageApiError",
+      "ranges": [
+        {
+          "startOffset": 937,
+          "endOffset": 1196,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toJSON",
+      "ranges": [
+        {
+          "startOffset": 1198,
+          "endOffset": 1328,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageUnknownError",
+      "ranges": [
+        {
+          "startOffset": 1495,
+          "endOffset": 1719,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageVectorsError",
+      "ranges": [
+        {
+          "startOffset": 1919,
+          "endOffset": 1973,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isStorageVectorsError",
+      "ranges": [
+        {
+          "startOffset": 2133,
+          "endOffset": 2241,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageVectorsApiError",
+      "ranges": [
+        {
+          "startOffset": 2447,
+          "endOffset": 2541,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageVectorsUnknownError",
+      "ranges": [
+        {
+          "startOffset": 2762,
+          "endOffset": 2846,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 3006,
+          "endOffset": 3849,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "resolveFetch",
+      "ranges": [
+        {
+          "startOffset": 4134,
+          "endOffset": 4251,
+          "count": 3
+        },
+        {
+          "startOffset": 4212,
+          "endOffset": 4250,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 4178,
+          "endOffset": 4211,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 4221,
+          "endOffset": 4248,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isPlainObject",
+      "ranges": [
+        {
+          "startOffset": 4541,
+          "endOffset": 4842,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "recursiveToCamel",
+      "ranges": [
+        {
+          "startOffset": 5061,
+          "endOffset": 5450,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isValidBucketName",
+      "ranges": [
+        {
+          "startOffset": 6134,
+          "endOffset": 6471,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_typeof",
+      "ranges": [
+        {
+          "startOffset": 6546,
+          "endOffset": 6884,
+          "count": 1
+        },
+        {
+          "startOffset": 6722,
+          "endOffset": 6869,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "_typeof",
+      "ranges": [
+        {
+          "startOffset": 6682,
+          "endOffset": 6721,
+          "count": 18
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "_typeof",
+      "ranges": [
+        {
+          "startOffset": 6724,
+          "endOffset": 6869,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toPrimitive",
+      "ranges": [
+        {
+          "startOffset": 6963,
+          "endOffset": 7289,
+          "count": 9
+        },
+        {
+          "startOffset": 7020,
+          "endOffset": 7025,
+          "count": 0
+        },
+        {
+          "startOffset": 7036,
+          "endOffset": 7273,
+          "count": 0
+        },
+        {
+          "startOffset": 7274,
+          "endOffset": 7282,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "toPropertyKey",
+      "ranges": [
+        {
+          "startOffset": 7370,
+          "endOffset": 7479,
+          "count": 9
+        },
+        {
+          "startOffset": 7464,
+          "endOffset": 7467,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "_defineProperty",
+      "ranges": [
+        {
+          "startOffset": 7561,
+          "endOffset": 7750,
+          "count": 9
+        },
+        {
+          "startOffset": 7633,
+          "endOffset": 7733,
+          "count": 3
+        },
+        {
+          "startOffset": 7734,
+          "endOffset": 7744,
+          "count": 6
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "ownKeys",
+      "ranges": [
+        {
+          "startOffset": 7831,
+          "endOffset": 8102,
+          "count": 6
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 7982,
+          "endOffset": 8063,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_objectSpread2",
+      "ranges": [
+        {
+          "startOffset": 8103,
+          "endOffset": 8570,
+          "count": 6
+        },
+        {
+          "startOffset": 8224,
+          "endOffset": 8228,
+          "count": 0
+        },
+        {
+          "startOffset": 8328,
+          "endOffset": 8553,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 8271,
+          "endOffset": 8326,
+          "count": 9
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 8458,
+          "endOffset": 8552,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_getErrorMessage",
+      "ranges": [
+        {
+          "startOffset": 8789,
+          "endOffset": 9036,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "handleError",
+      "ranges": [
+        {
+          "startOffset": 9345,
+          "endOffset": 10616,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_getRequestParams",
+      "ranges": [
+        {
+          "startOffset": 10949,
+          "endOffset": 11627,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_handleRequest",
+      "ranges": [
+        {
+          "startOffset": 12028,
+          "endOffset": 12778,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createFetchApi",
+      "ranges": [
+        {
+          "startOffset": 12944,
+          "endOffset": 13824,
+          "count": 2
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "get",
+      "ranges": [
+        {
+          "startOffset": 13010,
+          "endOffset": 13147,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "post",
+      "ranges": [
+        {
+          "startOffset": 13157,
+          "endOffset": 13299,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "put",
+      "ranges": [
+        {
+          "startOffset": 13308,
+          "endOffset": 13449,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "head",
+      "ranges": [
+        {
+          "startOffset": 13459,
+          "endOffset": 13662,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "remove",
+      "ranges": [
+        {
+          "startOffset": 13674,
+          "endOffset": 13818,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "BaseApiClient",
+      "ranges": [
+        {
+          "startOffset": 14522,
+          "endOffset": 14736,
+          "count": 3
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "throwOnError",
+      "ranges": [
+        {
+          "startOffset": 14924,
+          "endOffset": 14992,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "setHeader",
+      "ranges": [
+        {
+          "startOffset": 15213,
+          "endOffset": 15345,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "handleOperation",
+      "ranges": [
+        {
+          "startOffset": 16117,
+          "endOffset": 16402,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StreamDownloadBuilder",
+      "ranges": [
+        {
+          "startOffset": 16505,
+          "endOffset": 16633,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "then",
+      "ranges": [
+        {
+          "startOffset": 16635,
+          "endOffset": 16724,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "execute",
+      "ranges": [
+        {
+          "startOffset": 16726,
+          "endOffset": 17008,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "BlobDownloadBuilder",
+      "ranges": [
+        {
+          "startOffset": 17174,
+          "endOffset": 17378,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "asStream",
+      "ranges": [
+        {
+          "startOffset": 17380,
+          "endOffset": 17473,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "then",
+      "ranges": [
+        {
+          "startOffset": 17475,
+          "endOffset": 17567,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "catch",
+      "ranges": [
+        {
+          "startOffset": 17569,
+          "endOffset": 17637,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "finally",
+      "ranges": [
+        {
+          "startOffset": 17639,
+          "endOffset": 17709,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getPromise",
+      "ranges": [
+        {
+          "startOffset": 17711,
+          "endOffset": 17803,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "execute",
+      "ranges": [
+        {
+          "startOffset": 17805,
+          "endOffset": 18095,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageFileApi",
+      "ranges": [
+        {
+          "startOffset": 18428,
+          "endOffset": 18553,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "uploadOrUpdate",
+      "ranges": [
+        {
+          "startOffset": 18927,
+          "endOffset": 20913,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "upload",
+      "ranges": [
+        {
+          "startOffset": 22184,
+          "endOffset": 22297,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "uploadToSignedUrl",
+      "ranges": [
+        {
+          "startOffset": 23392,
+          "endOffset": 24562,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createSignedUploadUrl",
+      "ranges": [
+        {
+          "startOffset": 25485,
+          "endOffset": 26141,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "update",
+      "ranges": [
+        {
+          "startOffset": 27419,
+          "endOffset": 27531,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "move",
+      "ranges": [
+        {
+          "startOffset": 28253,
+          "endOffset": 28653,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "copy",
+      "ranges": [
+        {
+          "startOffset": 29384,
+          "endOffset": 29800,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createSignedUrl",
+      "ranges": [
+        {
+          "startOffset": 31384,
+          "endOffset": 32064,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createSignedUrls",
+      "ranges": [
+        {
+          "startOffset": 33594,
+          "endOffset": 34230,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "download",
+      "ranges": [
+        {
+          "startOffset": 35842,
+          "endOffset": 36532,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "info",
+      "ranges": [
+        {
+          "startOffset": 36929,
+          "endOffset": 37193,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "exists",
+      "ranges": [
+        {
+          "startOffset": 37608,
+          "endOffset": 38220,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getPublicUrl",
+      "ranges": [
+        {
+          "startOffset": 39954,
+          "endOffset": 40861,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "remove",
+      "ranges": [
+        {
+          "startOffset": 41378,
+          "endOffset": 41612,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "list",
+      "ranges": [
+        {
+          "startOffset": 43375,
+          "endOffset": 43756,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listV2",
+      "ranges": [
+        {
+          "startOffset": 43916,
+          "endOffset": 44212,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "encodeMetadata",
+      "ranges": [
+        {
+          "startOffset": 44214,
+          "endOffset": 44278,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toBase64",
+      "ranges": [
+        {
+          "startOffset": 44280,
+          "endOffset": 44402,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_getFinalPath",
+      "ranges": [
+        {
+          "startOffset": 44404,
+          "endOffset": 44485,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_removeEmptyFolders",
+      "ranges": [
+        {
+          "startOffset": 44487,
+          "endOffset": 44577,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "transformOptsToQueryString",
+      "ranges": [
+        {
+          "startOffset": 44579,
+          "endOffset": 45004,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageBucketApi",
+      "ranges": [
+        {
+          "startOffset": 45303,
+          "endOffset": 45838,
+          "count": 3
+        },
+        {
+          "startOffset": 45431,
+          "endOffset": 45452,
+          "count": 0
+        },
+        {
+          "startOffset": 45454,
+          "endOffset": 45645,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "listBuckets",
+      "ranges": [
+        {
+          "startOffset": 46776,
+          "endOffset": 47047,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getBucket",
+      "ranges": [
+        {
+          "startOffset": 47785,
+          "endOffset": 47976,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createBucket",
+      "ranges": [
+        {
+          "startOffset": 49441,
+          "endOffset": 49834,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "updateBucket",
+      "ranges": [
+        {
+          "startOffset": 51127,
+          "endOffset": 51481,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "emptyBucket",
+      "ranges": [
+        {
+          "startOffset": 51948,
+          "endOffset": 52152,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteBucket",
+      "ranges": [
+        {
+          "startOffset": 52705,
+          "endOffset": 52906,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listBucketOptionsToQueryString",
+      "ranges": [
+        {
+          "startOffset": 52908,
+          "endOffset": 53406,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageAnalyticsClient",
+      "ranges": [
+        {
+          "startOffset": 54157,
+          "endOffset": 54382,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createBucket",
+      "ranges": [
+        {
+          "startOffset": 55269,
+          "endOffset": 55465,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listBuckets",
+      "ranges": [
+        {
+          "startOffset": 56762,
+          "endOffset": 57767,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteBucket",
+      "ranges": [
+        {
+          "startOffset": 58534,
+          "endOffset": 58751,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "from",
+      "ranges": [
+        {
+          "startOffset": 63118,
+          "endOffset": 64019,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "VectorIndexApi",
+      "ranges": [
+        {
+          "startOffset": 64331,
+          "endOffset": 64600,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createIndex",
+      "ranges": [
+        {
+          "startOffset": 64653,
+          "endOffset": 64872,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getIndex",
+      "ranges": [
+        {
+          "startOffset": 64929,
+          "endOffset": 65196,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listIndexes",
+      "ranges": [
+        {
+          "startOffset": 65282,
+          "endOffset": 65500,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteIndex",
+      "ranges": [
+        {
+          "startOffset": 65550,
+          "endOffset": 65829,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "VectorDataApi",
+      "ranges": [
+        {
+          "startOffset": 66149,
+          "endOffset": 66418,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "putVectors",
+      "ranges": [
+        {
+          "startOffset": 66484,
+          "endOffset": 66837,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getVectors",
+      "ranges": [
+        {
+          "startOffset": 66888,
+          "endOffset": 67104,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listVectors",
+      "ranges": [
+        {
+          "startOffset": 67156,
+          "endOffset": 67751,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "queryVectors",
+      "ranges": [
+        {
+          "startOffset": 67831,
+          "endOffset": 68051,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteVectors",
+      "ranges": [
+        {
+          "startOffset": 68120,
+          "endOffset": 68476,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "VectorBucketApi",
+      "ranges": [
+        {
+          "startOffset": 68780,
+          "endOffset": 69049,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createBucket",
+      "ranges": [
+        {
+          "startOffset": 69087,
+          "endOffset": 69336,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getBucket",
+      "ranges": [
+        {
+          "startOffset": 69394,
+          "endOffset": 69636,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listBuckets",
+      "ranges": [
+        {
+          "startOffset": 69706,
+          "endOffset": 69935,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteBucket",
+      "ranges": [
+        {
+          "startOffset": 69991,
+          "endOffset": 70245,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageVectorsClient",
+      "ranges": [
+        {
+          "startOffset": 71975,
+          "endOffset": 72062,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "from",
+      "ranges": [
+        {
+          "startOffset": 72588,
+          "endOffset": 72701,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createBucket",
+      "ranges": [
+        {
+          "startOffset": 73241,
+          "endOffset": 73426,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getBucket",
+      "ranges": [
+        {
+          "startOffset": 73968,
+          "endOffset": 74143,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listBuckets",
+      "ranges": [
+        {
+          "startOffset": 74749,
+          "endOffset": 74919,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteBucket",
+      "ranges": [
+        {
+          "startOffset": 75470,
+          "endOffset": 75657,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "VectorBucketScope",
+      "ranges": [
+        {
+          "startOffset": 76333,
+          "endOffset": 76466,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createIndex",
+      "ranges": [
+        {
+          "startOffset": 77230,
+          "endOffset": 77482,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listIndexes",
+      "ranges": [
+        {
+          "startOffset": 78094,
+          "endOffset": 78351,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getIndex",
+      "ranges": [
+        {
+          "startOffset": 78968,
+          "endOffset": 79150,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteIndex",
+      "ranges": [
+        {
+          "startOffset": 79682,
+          "endOffset": 79876,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "index",
+      "ranges": [
+        {
+          "startOffset": 80690,
+          "endOffset": 80812,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "VectorIndexScope",
+      "ranges": [
+        {
+          "startOffset": 81532,
+          "endOffset": 81706,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "putVectors",
+      "ranges": [
+        {
+          "startOffset": 82471,
+          "endOffset": 82756,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getVectors",
+      "ranges": [
+        {
+          "startOffset": 83441,
+          "endOffset": 83730,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listVectors",
+      "ranges": [
+        {
+          "startOffset": 84421,
+          "endOffset": 84719,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "queryVectors",
+      "ranges": [
+        {
+          "startOffset": 85532,
+          "endOffset": 85829,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteVectors",
+      "ranges": [
+        {
+          "startOffset": 86464,
+          "endOffset": 86765,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "StorageClient",
+      "ranges": [
+        {
+          "startOffset": 87230,
+          "endOffset": 87318,
+          "count": 3
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "from",
+      "ranges": [
+        {
+          "startOffset": 87530,
+          "endOffset": 87612,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "get vectors",
+      "ranges": [
+        {
+          "startOffset": 87911,
+          "endOffset": 88040,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "get analytics",
+      "ranges": [
+        {
+          "startOffset": 88368,
+          "endOffset": 88474,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

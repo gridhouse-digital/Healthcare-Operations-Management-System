@@ -1,0 +1,204 @@
+{
+  "scriptId": "399",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/@supabase/auth-js/2.98.0/dist/main/GoTrueAdminApi.js",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 18490,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "GoTrueAdminApi",
+      "ranges": [
+        {
+          "startOffset": 715,
+          "endOffset": 1445,
+          "count": 3
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "signOut",
+      "ranges": [
+        {
+          "startOffset": 1581,
+          "endOffset": 2286,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "inviteUserByEmail",
+      "ranges": [
+        {
+          "startOffset": 2478,
+          "endOffset": 3028,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "generateLink",
+      "ranges": [
+        {
+          "startOffset": 3393,
+          "endOffset": 4525,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createUser",
+      "ranges": [
+        {
+          "startOffset": 4704,
+          "endOffset": 5176,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "listUsers",
+      "ranges": [
+        {
+          "startOffset": 5452,
+          "endOffset": 7346,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getUserById",
+      "ranges": [
+        {
+          "startOffset": 7560,
+          "endOffset": 8040,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "updateUserById",
+      "ranges": [
+        {
+          "startOffset": 9473,
+          "endOffset": 10002,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deleteUser",
+      "ranges": [
+        {
+          "startOffset": 10486,
+          "endOffset": 11092,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_listFactors",
+      "ranges": [
+        {
+          "startOffset": 11097,
+          "endOffset": 11726,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_deleteFactor",
+      "ranges": [
+        {
+          "startOffset": 11731,
+          "endOffset": 12300,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_listOAuthClients",
+      "ranges": [
+        {
+          "startOffset": 12570,
+          "endOffset": 14486,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_createOAuthClient",
+      "ranges": [
+        {
+          "startOffset": 14734,
+          "endOffset": 15272,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_getOAuthClient",
+      "ranges": [
+        {
+          "startOffset": 15533,
+          "endOffset": 16051,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_updateOAuthClient",
+      "ranges": [
+        {
+          "startOffset": 16305,
+          "endOffset": 16864,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_deleteOAuthClient",
+      "ranges": [
+        {
+          "startOffset": 17109,
+          "endOffset": 17597,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "_regenerateOAuthClientSecret",
+      "ranges": [
+        {
+          "startOffset": 17861,
+          "endOffset": 18411,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

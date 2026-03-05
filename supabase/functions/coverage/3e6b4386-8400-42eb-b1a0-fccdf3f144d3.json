@@ -1,0 +1,50 @@
+{
+  "scriptId": "337",
+  "url": "file:///C:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/prolific-hr-app/supabase/functions/_shared/tenant-guard.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 2990,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [
+        {
+          "startOffset": 275,
+          "endOffset": 289,
+          "count": 2
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "TenantGuardError",
+      "ranges": [
+        {
+          "startOffset": 293,
+          "endOffset": 442,
+          "count": 2
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "tenantGuard",
+      "ranges": [
+        {
+          "startOffset": 1084,
+          "endOffset": 2989,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

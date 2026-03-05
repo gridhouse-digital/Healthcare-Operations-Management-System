@@ -3,7 +3,6 @@ import { settingsService } from '@/services/settingsService';
 import { supabase } from '@/lib/supabase';
 import {
     Key,
-
     Settings as SettingsIcon,
     Save,
     Users,
@@ -20,6 +19,26 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
 type SettingsTab = 'Integrations' | 'System Settings' | 'Team';
 
+const inputCls = 'w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50';
+const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5';
+const sectionCls = 'p-5 border border-border rounded-lg space-y-4';
+
+// Status badge — dark-first, no dark: prefixes
+const connectedBadge = { color: 'hsl(152 54% 54%)', background: 'hsl(152 58% 38% / 0.10)', border: '1px solid hsl(152 58% 38% / 0.20)' };
+const optionalBadge  = { color: 'hsl(0 0% 44%)',    background: 'hsl(0 0% 100% / 0.04)',   border: '1px solid hsl(0 0% 100% / 0.08)' };
+
+function ConnectedBadge({ label = 'Connected', connected = true }: { label?: string; connected?: boolean }) {
+    const style = connected ? connectedBadge : optionalBadge;
+    return (
+        <span
+            className="inline-flex items-center h-5 px-2 rounded text-[10px] font-mono font-semibold uppercase tracking-[0.04em]"
+            style={style}
+        >
+            {label}
+        </span>
+    );
+}
+
 export function SettingsPage() {
     const [activeTab, setActiveTab] = useState<SettingsTab>('Integrations');
     const [showApiKeys, setShowApiKeys] = useState(false);
@@ -30,7 +49,6 @@ export function SettingsPage() {
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteLoading, setInviteLoading] = useState(false);
 
-    // Job Roles State
     const [jobRoles, setJobRoles] = useState<string[]>([]);
     const [newRole, setNewRole] = useState('');
 
@@ -46,30 +64,20 @@ export function SettingsPage() {
     }, [activeTab]);
 
     const loadJobRoles = async () => {
-        try {
-            const roles = await settingsService.getJobRoles();
-            setJobRoles(roles);
-        } catch (error) {
-            console.error('Failed to load job roles', error);
-        }
+        try { setJobRoles(await settingsService.getJobRoles()); }
+        catch (error) { console.error('Failed to load job roles', error); }
     };
 
     const loadSettings = async () => {
-        try {
-            const data = await settingsService.getSettings();
-            setSettingsMap(data);
-        } catch (error) {
-            console.error('Failed to load settings', error);
-        } finally {
-            setLoading(false);
-        }
+        try { setSettingsMap(await settingsService.getSettings()); }
+        catch (error) { console.error('Failed to load settings', error); }
+        finally { setLoading(false); }
     };
 
     const loadUsers = async () => {
         try {
             setLoading(true);
-            const data = await userService.getUsers();
-            setUsers(data);
+            setUsers(await userService.getUsers());
         } catch (error) {
             console.error('Failed to load users', error);
         } finally {
@@ -78,33 +86,18 @@ export function SettingsPage() {
     };
 
     const handleSave = async () => {
-        try {
-            await settingsService.updateSettings(settingsMap);
-            toast.success('Settings saved successfully');
-        } catch (error) {
-            console.error('Failed to save settings', error);
-            toast.error('Failed to save settings');
-        }
+        try { await settingsService.updateSettings(settingsMap); toast.success('Settings saved successfully'); }
+        catch (error) { console.error('Failed to save settings', error); toast.error('Failed to save settings'); }
     };
 
     const handleAddRole = async () => {
         if (!newRole.trim()) return;
-        if (jobRoles.includes(newRole.trim())) {
-            toast.error('Role already exists');
-            return;
-        }
-
+        if (jobRoles.includes(newRole.trim())) { toast.error('Role already exists'); return; }
         const updatedRoles = [...jobRoles, newRole.trim()];
         setJobRoles(updatedRoles);
         setNewRole('');
-
-        try {
-            await settingsService.updateJobRoles(updatedRoles);
-            toast.success('Role added successfully');
-        } catch (error) {
-            console.error('Failed to save role', error);
-            toast.error('Failed to save role');
-        }
+        try { await settingsService.updateJobRoles(updatedRoles); toast.success('Role added successfully'); }
+        catch (error) { console.error('Failed to save role', error); toast.error('Failed to save role'); }
     };
 
     const handleDeleteRole = async (roleToDelete: string) => {
@@ -114,56 +107,36 @@ export function SettingsPage() {
             confirmText: 'Delete',
             variant: 'danger',
         });
-
         if (!confirmed) return;
-
         const updatedRoles = jobRoles.filter(role => role !== roleToDelete);
         setJobRoles(updatedRoles);
-
-        try {
-            await settingsService.updateJobRoles(updatedRoles);
-            toast.success('Role removed');
-        } catch (error) {
-            console.error('Failed to remove role', error);
-            toast.error('Failed to remove role');
-        }
+        try { await settingsService.updateJobRoles(updatedRoles); toast.success('Role removed'); }
+        catch (error) { console.error('Failed to remove role', error); toast.error('Failed to remove role'); }
     };
 
     const updateSetting = (key: string, value: string) => {
         setSettingsMap(prev => ({ ...prev, [key]: value }));
     };
 
-
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
         setInviteLoading(true);
         try {
-            const { data, error } = await supabase.functions.invoke('invite-user', {
-                body: { email: inviteEmail }
-            });
-
+            const { data, error } = await supabase.functions.invoke('invite-user', { body: { email: inviteEmail } });
             if (error) throw error;
-
-            // Handle 200 OK errors from the function
-            if (data && data.error) {
-                throw new Error(JSON.stringify(data, null, 2));
-            }
-
+            if (data && data.error) throw new Error(JSON.stringify(data, null, 2));
             toast.success('Invitation sent successfully!');
             setShowInviteModal(false);
             setInviteEmail('');
-            // Refresh users list
             loadUsers();
         } catch (error: any) {
             console.error('Failed to invite user', error);
-            // Show the full error object for debugging
             toast.error(error.message || JSON.stringify(error, null, 2));
         } finally {
             setInviteLoading(false);
         }
     };
 
-    // Admin Request Management & User Editing
     const [requests, setRequests] = useState<any[]>([]);
     const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
     const [editFormData, setEditFormData] = useState({
@@ -177,70 +150,31 @@ export function SettingsPage() {
     const [editLoading, setEditLoading] = useState(false);
 
     useEffect(() => {
-        if (activeTab === 'Team') {
-            loadRequests();
-        }
+        if (activeTab === 'Team') loadRequests();
     }, [activeTab]);
 
     const loadRequests = async () => {
-        try {
-            const data = await userService.getAllPendingRequests();
-            setRequests(data);
-        } catch (error) {
-            console.error('Failed to load requests', error);
-        }
+        try { setRequests(await userService.getAllPendingRequests()); }
+        catch (error) { console.error('Failed to load requests', error); }
     };
 
     const handleApprove = async (requestId: string) => {
-        const confirmed = await confirm({
-            title: 'Approve Request',
-            description: 'Are you sure you want to approve this request?',
-            confirmText: 'Approve',
-        });
-
+        const confirmed = await confirm({ title: 'Approve Request', description: 'Are you sure you want to approve this request?', confirmText: 'Approve' });
         if (!confirmed) return;
-
-        try {
-            await userService.approveRequest(requestId);
-            toast.success('Request approved');
-            loadRequests();
-            loadUsers();
-        } catch (error) {
-            console.error('Failed to approve request', error);
-            toast.error('Failed to approve request');
-        }
+        try { await userService.approveRequest(requestId); toast.success('Request approved'); loadRequests(); loadUsers(); }
+        catch (error) { console.error('Failed to approve request', error); toast.error('Failed to approve request'); }
     };
 
     const handleReject = async (requestId: string) => {
-        const confirmed = await confirm({
-            title: 'Reject Request',
-            description: 'Are you sure you want to reject this request?',
-            confirmText: 'Reject',
-            variant: 'danger',
-        });
-
+        const confirmed = await confirm({ title: 'Reject Request', description: 'Are you sure you want to reject this request?', confirmText: 'Reject', variant: 'danger' });
         if (!confirmed) return;
-
-        try {
-            await userService.rejectRequest(requestId);
-            toast.success('Request rejected');
-            loadRequests();
-        } catch (error) {
-            console.error('Failed to reject request', error);
-            toast.error('Failed to reject request');
-        }
+        try { await userService.rejectRequest(requestId); toast.success('Request rejected'); loadRequests(); }
+        catch (error) { console.error('Failed to reject request', error); toast.error('Failed to reject request'); }
     };
 
     const handleEditClick = (user: UserProfile) => {
         setEditingUser(user);
-        setEditFormData({
-            first_name: user.first_name || '',
-            last_name: user.last_name || '',
-            email: user.email,
-            phone_number: user.phone_number || '',
-            role: user.role,
-            password: ''
-        });
+        setEditFormData({ first_name: user.first_name || '', last_name: user.last_name || '', email: user.email, phone_number: user.phone_number || '', role: user.role, password: '' });
     };
 
     const handleUpdateUser = async (e: React.FormEvent) => {
@@ -248,17 +182,8 @@ export function SettingsPage() {
         if (!editingUser) return;
         setEditLoading(true);
         try {
-            const updates: any = {
-                first_name: editFormData.first_name,
-                last_name: editFormData.last_name,
-                email: editFormData.email,
-                phone_number: editFormData.phone_number,
-                role: editFormData.role
-            };
-            if (editFormData.password) {
-                updates.password = editFormData.password;
-            }
-
+            const updates: any = { first_name: editFormData.first_name, last_name: editFormData.last_name, email: editFormData.email, phone_number: editFormData.phone_number, role: editFormData.role };
+            if (editFormData.password) updates.password = editFormData.password;
             await userService.adminUpdateUser(editingUser.id, updates);
             toast.success('User updated successfully');
             setEditingUser(null);
@@ -274,36 +199,59 @@ export function SettingsPage() {
     const tabs: { id: SettingsTab; label: string; icon: any }[] = [
         { id: 'Integrations', label: 'Integrations', icon: Key },
         { id: 'System Settings', label: 'System Settings', icon: SettingsIcon },
-        { id: 'Team', label: 'Team Management', icon: Users },
+        { id: 'Team', label: 'Team', icon: Users },
     ];
 
-    if (loading) return <div className="p-8 text-center text-[#A2A1A8]">Loading settings...</div>;
+    if (loading) return (
+        <div className="flex items-center justify-center py-20">
+            <span className="text-[13px] text-muted-foreground font-mono uppercase tracking-[0.06em]">Loading settings…</span>
+        </div>
+    );
+
+    const SaveButton = () => (
+        <div className="flex justify-end pt-4">
+            <button onClick={handleSave} className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors">
+                <Save size={13} />
+                Save Changes
+            </button>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             {/* Page Header */}
-            <div>
-                <h1 className="text-[#16151C] dark:text-white font-semibold text-xl">Settings</h1>
-                <p className="text-[#A2A1A8] font-light text-sm">Configure system settings and integrations</p>
+            <div className="pl-1">
+                <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.875rem', fontStyle: 'italic', letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                    className="text-foreground">
+                    Settings
+                </h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
+                    className="uppercase text-muted-foreground mt-1">
+                    System configuration &amp; integrations
+                </p>
             </div>
 
-            {/* Settings Layout */}
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex flex-col lg:flex-row gap-5">
                 {/* Sidebar Tabs */}
-                <div className="w-full lg:w-64 bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-4">
-                    <nav className="flex lg:flex-col overflow-x-auto lg:overflow-visible space-x-2 lg:space-x-0 lg:space-y-2 pb-2 lg:pb-0 scrollbar-hide">
+                <div className="w-full lg:w-52 bg-card border border-border rounded-lg p-2">
+                    <nav className="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-1">
                         {tabs.map((tab) => {
                             const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
                             return (
                                 <button
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`w-auto flex-shrink-0 lg:w-full flex items-center gap-3 px-4 py-3 rounded-[10px] transition-colors font-light whitespace-nowrap ${activeTab === tab.id
-                                        ? 'bg-[rgba(113,82,243,0.05)] text-[#7152F3] font-semibold'
-                                        : 'text-[#16151C] dark:text-[#A2A1A8] hover:bg-[rgba(162,161,168,0.05)] hover:text-[#16151C] dark:hover:text-white'
-                                        }`}
+                                    className="flex-shrink-0 lg:w-full flex items-center gap-2.5 px-3 py-2.5 rounded-md text-[13px] transition-colors whitespace-nowrap"
+                                    style={{
+                                        background: isActive ? 'hsl(196 84% 42% / 0.10)' : 'transparent',
+                                        color: isActive ? 'hsl(196 84% 60%)' : 'hsl(0 0% 44%)',
+                                        fontWeight: isActive ? 600 : 400,
+                                    }}
+                                    onMouseEnter={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'hsl(0 0% 100% / 0.04)'; (e.currentTarget as HTMLButtonElement).style.color = 'hsl(0 0% 72%)'; } }}
+                                    onMouseLeave={e => { if (!isActive) { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = 'hsl(0 0% 44%)'; } }}
                                 >
-                                    <Icon size={18} strokeWidth={activeTab === tab.id ? 2 : 1.5} />
+                                    <Icon size={14} strokeWidth={isActive ? 2 : 1.75} />
                                     <span>{tab.label}</span>
                                 </button>
                             );
@@ -311,465 +259,297 @@ export function SettingsPage() {
                     </nav>
                 </div>
 
-                {/* Content Area */}
-                <div className="flex-1 bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)]">
-                    {/* Integrations Tab */}
+                {/* Content */}
+                <div className="flex-1 bg-card border border-border rounded-lg">
+                    {/* Integrations */}
                     {activeTab === 'Integrations' && (
-                        <div className="p-6 space-y-6">
-                            <div>
-                                <h3 className="text-[#16151C] dark:text-white font-semibold mb-4">API Integrations</h3>
-                                <p className="text-sm text-[#A2A1A8] font-light mb-6">
-                                    Configure external service connections for automated data sync
-                                </p>
+                        <div className="p-5 space-y-4">
+                            <div className="mb-2">
+                                <p className="text-[14px] font-semibold text-foreground">API Integrations</p>
+                                <p className="text-[12px] text-muted-foreground mt-0.5">Configure external service connections for automated data sync</p>
                             </div>
 
                             {/* Airtable */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <div className="flex items-center justify-between mb-4">
+                            <div className={sectionCls}>
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-slate-900 dark:text-white">Airtable</h4>
-                                        <p className="text-sm text-slate-500 dark:text-[#A2A1A8]">Applicant data sync</p>
+                                        <p className="text-[13px] font-semibold text-foreground">Airtable</p>
+                                        <p className="text-[11px] text-muted-foreground">Applicant data sync</p>
                                     </div>
-                                    <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">
-                                        Connected
+                                    <ConnectedBadge connected />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Base ID</label>
+                                    <input type="text" value={settingsMap['airtable_base_id'] || ''} onChange={(e) => updateSetting('airtable_base_id', e.target.value)} placeholder="appXXXXXXXXXXXXXX" className={inputCls} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>API Key</label>
+                                    <div className="relative">
+                                        <input type={showApiKeys ? 'text' : 'password'} value={settingsMap['airtable_api_key'] || ''} onChange={(e) => updateSetting('airtable_api_key', e.target.value)} placeholder="keyXXXXXXXXXXXXXX" className={inputCls + ' pr-9'} />
+                                        <button onClick={() => setShowApiKeys(!showApiKeys)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                                            {showApiKeys ? <EyeOff size={13} /> : <Eye size={13} />}
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Base ID</label>
-                                        <input
-                                            type="text"
-                                            value={settingsMap['airtable_base_id'] || ''}
-                                            onChange={(e) => updateSetting('airtable_base_id', e.target.value)}
-                                            placeholder="appXXXXXXXXXXXXXX"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">API Key</label>
-                                        <div className="relative">
-                                            <input
-                                                type={showApiKeys ? 'text' : 'password'}
-                                                value={settingsMap['airtable_api_key'] || ''}
-                                                onChange={(e) => updateSetting('airtable_api_key', e.target.value)}
-                                                placeholder="keyXXXXXXXXXXXXXX"
-                                                className="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                            />
-                                            <button
-                                                onClick={() => setShowApiKeys(!showApiKeys)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                            >
-                                                {showApiKeys ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Table Name</label>
-                                        <input
-                                            type="text"
-                                            value={settingsMap['airtable_table_name'] || ''}
-                                            onChange={(e) => updateSetting('airtable_table_name', e.target.value)}
-                                            placeholder="Applicants"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
+                                <div>
+                                    <label className={labelCls}>Table Name</label>
+                                    <input type="text" value={settingsMap['airtable_table_name'] || ''} onChange={(e) => updateSetting('airtable_table_name', e.target.value)} placeholder="Applicants" className={inputCls} />
                                 </div>
                             </div>
 
                             {/* JotForm */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <div className="flex items-center justify-between mb-4">
+                            <div className={sectionCls}>
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-slate-900 dark:text-white">JotForm</h4>
-                                        <p className="text-sm text-slate-500 dark:text-[#A2A1A8]">Form submission sync</p>
+                                        <p className="text-[13px] font-semibold text-foreground">JotForm</p>
+                                        <p className="text-[11px] text-muted-foreground">Form submission sync</p>
                                     </div>
-                                    <div className={`px-3 py-1 rounded-full text-sm ${settingsMap['jotform_api_key'] ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
-                                        {settingsMap['jotform_api_key'] ? 'Connected' : 'Not Configured'}
+                                    <ConnectedBadge connected={!!settingsMap['jotform_api_key']} label={settingsMap['jotform_api_key'] ? 'Connected' : 'Not Configured'} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>API Key</label>
+                                    <div className="relative">
+                                        <input type={showApiKeys ? 'text' : 'password'} value={settingsMap['jotform_api_key'] || ''} onChange={(e) => updateSetting('jotform_api_key', e.target.value)} placeholder="Enter JotForm API Key" className={inputCls + ' pr-9'} />
+                                        <button onClick={() => setShowApiKeys(!showApiKeys)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                                            {showApiKeys ? <EyeOff size={13} /> : <Eye size={13} />}
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">API Key</label>
-                                        <div className="relative">
-                                            <input
-                                                type={showApiKeys ? 'text' : 'password'}
-                                                value={settingsMap['jotform_api_key'] || ''}
-                                                onChange={(e) => updateSetting('jotform_api_key', e.target.value)}
-                                                placeholder="Enter JotForm API Key"
-                                                className="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                            />
-                                            <button
-                                                onClick={() => setShowApiKeys(!showApiKeys)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                            >
-                                                {showApiKeys ? <EyeOff size={18} /> : <Eye size={18} />}
-                                            </button>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {[
+                                        { key: 'jotform_form_id_application', label: 'Application Form ID' },
+                                        { key: 'jotform_form_id_emergency', label: 'Emergency Contact Form ID' },
+                                        { key: 'jotform_form_id_i9', label: 'I-9 Form ID' },
+                                        { key: 'jotform_form_id_vaccination', label: 'Vaccination Form ID' },
+                                        { key: 'jotform_form_id_licenses', label: 'Licenses Form ID' },
+                                        { key: 'jotform_form_id_background', label: 'Background Check Form ID' }
+                                    ].map((field) => (
+                                        <div key={field.key}>
+                                            <label className={labelCls}>{field.label}</label>
+                                            <input type="text" value={settingsMap[field.key] || ''} onChange={(e) => updateSetting(field.key, e.target.value)} placeholder="2419..." className={inputCls} />
                                         </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {[
-                                            { key: 'jotform_form_id_application', label: 'Application Form ID' },
-                                            { key: 'jotform_form_id_emergency', label: 'Emergency Contact Form ID' },
-                                            { key: 'jotform_form_id_i9', label: 'I-9 Form ID' },
-                                            { key: 'jotform_form_id_vaccination', label: 'Vaccination Form ID' },
-                                            { key: 'jotform_form_id_licenses', label: 'Licenses Form ID' },
-                                            { key: 'jotform_form_id_background', label: 'Background Check Form ID' }
-                                        ].map((field) => (
-                                            <div key={field.key}>
-                                                <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">{field.label}</label>
-                                                <input
-                                                    type="text"
-                                                    value={settingsMap[field.key] || ''}
-                                                    onChange={(e) => updateSetting(field.key, e.target.value)}
-                                                    placeholder="2419..."
-                                                    className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
 
                             {/* Brevo */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <div className="flex items-center justify-between mb-4">
+                            <div className={sectionCls}>
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-slate-900 dark:text-white">Brevo (Sendinblue)</h4>
-                                        <p className="text-sm text-slate-500 dark:text-[#A2A1A8]">Email delivery service</p>
+                                        <p className="text-[13px] font-semibold text-foreground">Brevo (Sendinblue)</p>
+                                        <p className="text-[11px] text-muted-foreground">Email delivery service</p>
                                     </div>
-                                    <div className={`px-3 py-1 rounded-full text-sm ${settingsMap['brevo_api_key'] ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
-                                        {settingsMap['brevo_api_key'] ? 'Connected' : 'Not Configured'}
-                                    </div>
+                                    <ConnectedBadge connected={!!settingsMap['brevo_api_key']} label={settingsMap['brevo_api_key'] ? 'Connected' : 'Not Configured'} />
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">API Key</label>
+                                    <label className={labelCls}>API Key</label>
                                     <div className="relative">
-                                        <input
-                                            type={showApiKeys ? 'text' : 'password'}
-                                            value={settingsMap['brevo_api_key'] || ''}
-                                            onChange={(e) => updateSetting('brevo_api_key', e.target.value)}
-                                            placeholder="xkeysib-..."
-                                            className="w-full px-4 py-2 pr-10 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                        <button
-                                            onClick={() => setShowApiKeys(!showApiKeys)}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                                        >
-                                            {showApiKeys ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        <input type={showApiKeys ? 'text' : 'password'} value={settingsMap['brevo_api_key'] || ''} onChange={(e) => updateSetting('brevo_api_key', e.target.value)} placeholder="xkeysib-..." className={inputCls + ' pr-9'} />
+                                        <button onClick={() => setShowApiKeys(!showApiKeys)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                                            {showApiKeys ? <EyeOff size={13} /> : <Eye size={13} />}
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
                             {/* WordPress */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <div className="flex items-center justify-between mb-4">
+                            <div className={sectionCls}>
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-slate-900 dark:text-white">WordPress / LearnDash</h4>
-                                        <p className="text-sm text-slate-500 dark:text-[#A2A1A8]">Employee onboarding & LMS</p>
+                                        <p className="text-[13px] font-semibold text-foreground">WordPress / LearnDash</p>
+                                        <p className="text-[11px] text-muted-foreground">Employee onboarding &amp; LMS</p>
                                     </div>
-                                    <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm">
-                                        Connected
-                                    </div>
+                                    <ConnectedBadge connected />
                                 </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">WordPress API URL</label>
-                                        <input
-                                            type="text"
-                                            value={settingsMap['wp_api_url'] || ''}
-                                            onChange={(e) => updateSetting('wp_api_url', e.target.value)}
-                                            placeholder="https://training.yoursite.com/wp-json"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">WordPress Admin Username</label>
-                                        <input
-                                            type="text"
-                                            value={settingsMap['wp_username'] || ''}
-                                            onChange={(e) => updateSetting('wp_username', e.target.value)}
-                                            placeholder="admin_user"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Application Password</label>
-                                        <input
-                                            type={showApiKeys ? 'text' : 'password'}
-                                            value={settingsMap['wp_app_password'] || ''}
-                                            onChange={(e) => updateSetting('wp_app_password', e.target.value)}
-                                            placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[#16151C] dark:text-white mb-1.5">
-                                            LearnDash Group Map (JSON)
-                                        </label>
-                                        <textarea
-                                            value={settingsMap['learndash_group_map'] || '{}'}
-                                            onChange={(e) => updateSetting('learndash_group_map', e.target.value)}
-                                            className="w-full h-32 px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-mono text-sm"
-                                            placeholder='{ "Nurse": 123, "Caregiver": 456 }'
-                                        />
-                                        <p className="mt-1.5 text-xs text-[#A2A1A8]">
-                                            Map Job Positions to LearnDash Group IDs. Format: <code>"Position Name": [Group IDs]</code>
-                                        </p>
-                                    </div>
+                                <div>
+                                    <label className={labelCls}>WordPress API URL</label>
+                                    <input type="text" value={settingsMap['wp_api_url'] || ''} onChange={(e) => updateSetting('wp_api_url', e.target.value)} placeholder="https://training.yoursite.com/wp-json" className={inputCls} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>WordPress Admin Username</label>
+                                    <input type="text" value={settingsMap['wp_username'] || ''} onChange={(e) => updateSetting('wp_username', e.target.value)} placeholder="admin_user" className={inputCls} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Application Password</label>
+                                    <input type={showApiKeys ? 'text' : 'password'} value={settingsMap['wp_app_password'] || ''} onChange={(e) => updateSetting('wp_app_password', e.target.value)} placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" className={inputCls} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>LearnDash Group Map (JSON)</label>
+                                    <textarea
+                                        value={settingsMap['learndash_group_map'] || '{}'}
+                                        onChange={(e) => updateSetting('learndash_group_map', e.target.value)}
+                                        className="w-full h-28 px-3 py-2 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 font-mono"
+                                        placeholder='{ "Nurse": 123, "Caregiver": 456 }'
+                                    />
+                                    <p className="mt-1 text-[11px] text-muted-foreground font-mono">Map Job Positions to LearnDash Group IDs</p>
                                 </div>
                             </div>
 
-                            {/* Automation Webhooks */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <div className="flex items-center justify-between mb-4">
+                            {/* Webhooks */}
+                            <div className={sectionCls}>
+                                <div className="flex items-center justify-between">
                                     <div>
-                                        <h4 className="text-slate-900 dark:text-white">Automation Webhooks</h4>
-                                        <p className="text-sm text-slate-500 dark:text-[#A2A1A8]">n8n / Zapier integrations</p>
+                                        <p className="text-[13px] font-semibold text-foreground">Automation Webhooks</p>
+                                        <p className="text-[11px] text-muted-foreground">n8n / Zapier integrations</p>
                                     </div>
-                                    <div className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                                        Optional
-                                    </div>
+                                    <ConnectedBadge connected={false} label="Optional" />
                                 </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Offer Approved Webhook</label>
-                                        <input
-                                            value={settingsMap['webhook_offer_approved'] || ''}
-                                            onChange={(e) => updateSetting('webhook_offer_approved', e.target.value)}
-                                            placeholder="https://hooks.n8n.io/webhook/..."
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Employee Onboarded Webhook</label>
-                                        <input
-                                            value={settingsMap['webhook_employee_onboarded'] || ''}
-                                            onChange={(e) => updateSetting('webhook_employee_onboarded', e.target.value)}
-                                            placeholder="https://hooks.zapier.com/hooks/catch/..."
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
+                                <div>
+                                    <label className={labelCls}>Offer Approved Webhook</label>
+                                    <input value={settingsMap['webhook_offer_approved'] || ''} onChange={(e) => updateSetting('webhook_offer_approved', e.target.value)} placeholder="https://hooks.n8n.io/webhook/..." className={inputCls} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Employee Onboarded Webhook</label>
+                                    <input value={settingsMap['webhook_employee_onboarded'] || ''} onChange={(e) => updateSetting('webhook_employee_onboarded', e.target.value)} placeholder="https://hooks.zapier.com/hooks/catch/..." className={inputCls} />
                                 </div>
                             </div>
 
-                            <div className="flex justify-end pt-4">
-                                <button
-                                    onClick={handleSave}
-                                    className="flex items-center gap-2 px-6 py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-light"
-                                >
-                                    <Save size={18} strokeWidth={1.5} />
-                                    Save Changes
-                                </button>
-                            </div>
+                            <SaveButton />
                         </div>
                     )}
 
-                    {/* System Settings Tab */}
+                    {/* System Settings */}
                     {activeTab === 'System Settings' && (
-                        <div className="p-6 space-y-6">
-                            <div>
-                                <h3 className="text-slate-900 dark:text-white mb-4">System Configuration</h3>
-                                <p className="text-sm text-slate-600 dark:text-[#A2A1A8] mb-6">
-                                    Configure company branding and system defaults
-                                </p>
+                        <div className="p-5 space-y-4">
+                            <div className="mb-2">
+                                <p className="text-[14px] font-semibold text-foreground">System Configuration</p>
+                                <p className="text-[12px] text-muted-foreground mt-0.5">Configure company branding and system defaults</p>
                             </div>
 
                             {/* Company Branding */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <h4 className="text-slate-900 dark:text-white mb-4">Company Branding</h4>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Company Name</label>
-                                        <input
-                                            type="text"
-                                            value={settingsMap['company_name'] || ''}
-                                            onChange={(e) => updateSetting('company_name', e.target.value)}
-                                            placeholder="Prolific Homecare LLC"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Light Mode Logo URL</label>
-                                        <input
-                                            value={settingsMap['logo_light'] || ''}
-                                            onChange={(e) => updateSetting('logo_light', e.target.value)}
-                                            placeholder="https://.../logo-light.png"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                        <p className="text-xs text-slate-500 dark:text-[#A2A1A8] mt-1">
-                                            Used in light mode and emails.
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Dark Mode Logo URL</label>
-                                        <input
-                                            value={settingsMap['logo_dark'] || ''}
-                                            onChange={(e) => updateSetting('logo_dark', e.target.value)}
-                                            placeholder="https://.../logo-dark.png"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                        <p className="text-xs text-slate-500 dark:text-[#A2A1A8] mt-1">
-                                            Used in dark mode.
-                                        </p>
-                                    </div>
+                            <div className={sectionCls}>
+                                <p className="text-[13px] font-semibold text-foreground">Company Branding</p>
+                                <div>
+                                    <label className={labelCls}>Company Name</label>
+                                    <input type="text" value={settingsMap['company_name'] || ''} onChange={(e) => updateSetting('company_name', e.target.value)} placeholder="Prolific Homecare LLC" className={inputCls} />
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Light Mode Logo URL</label>
+                                    <input value={settingsMap['logo_light'] || ''} onChange={(e) => updateSetting('logo_light', e.target.value)} placeholder="https://.../logo-light.png" className={inputCls} />
+                                    <p className="text-[11px] text-muted-foreground font-mono mt-1">Used in light mode and emails</p>
+                                </div>
+                                <div>
+                                    <label className={labelCls}>Dark Mode Logo URL</label>
+                                    <input value={settingsMap['logo_dark'] || ''} onChange={(e) => updateSetting('logo_dark', e.target.value)} placeholder="https://.../logo-dark.png" className={inputCls} />
+                                    <p className="text-[11px] text-muted-foreground font-mono mt-1">Used in dark mode</p>
                                 </div>
                             </div>
 
                             {/* Document Requirements */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <h4 className="text-slate-900 dark:text-white mb-4">Document Requirements</h4>
-                                <div className="space-y-3">
-                                    {[
-                                        'Application Form',
-                                        'I-9 Form',
-                                        'Background Check',
-                                        'Emergency Contact',
-                                        'License/Certifications',
-                                        'Vaccination Records',
-                                        'CPR Card',
-                                        'TB Test',
-                                    ].map((doc) => (
-                                        <label key={doc} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                            <input
-                                                type="checkbox"
-                                                defaultChecked
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                            />
-                                            <span className="text-slate-700 dark:text-[#A2A1A8]">{doc}</span>
+                            <div className={sectionCls}>
+                                <p className="text-[13px] font-semibold text-foreground">Document Requirements</p>
+                                <div className="space-y-2">
+                                    {['Application Form', 'I-9 Form', 'Background Check', 'Emergency Contact', 'License/Certifications', 'Vaccination Records', 'CPR Card', 'TB Test'].map((doc) => (
+                                        <label
+                                            key={doc}
+                                            className="flex items-center gap-3 p-2.5 rounded-md cursor-pointer transition-colors"
+                                            style={{ background: 'hsl(0 0% 100% / 0.03)' }}
+                                            onMouseEnter={e => (e.currentTarget as HTMLLabelElement).style.background = 'hsl(0 0% 100% / 0.06)'}
+                                            onMouseLeave={e => (e.currentTarget as HTMLLabelElement).style.background = 'hsl(0 0% 100% / 0.03)'}
+                                        >
+                                            <input type="checkbox" defaultChecked className="w-3.5 h-3.5 accent-primary" />
+                                            <span className="text-[13px] text-foreground">{doc}</span>
                                         </label>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Compliance Rules */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <h4 className="text-slate-900 dark:text-white mb-4">Compliance Rules</h4>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">
-                                            Alert Days Before Document Expiration
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={settingsMap['compliance_alert_days'] || ''}
-                                            onChange={(e) => updateSetting('compliance_alert_days', e.target.value)}
-                                            placeholder="30"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                        <p className="text-xs text-slate-500 dark:text-[#A2A1A8] mt-1">
-                                            System will alert when documents are within this many days of expiring
-                                        </p>
-                                    </div>
+                            {/* Compliance */}
+                            <div className={sectionCls}>
+                                <p className="text-[13px] font-semibold text-foreground">Compliance Rules</p>
+                                <div>
+                                    <label className={labelCls}>Alert Days Before Document Expiration</label>
+                                    <input type="number" value={settingsMap['compliance_alert_days'] || ''} onChange={(e) => updateSetting('compliance_alert_days', e.target.value)} placeholder="30" className={inputCls} />
+                                    <p className="text-[11px] text-muted-foreground font-mono mt-1">System will alert when documents are within this many days of expiring</p>
                                 </div>
                             </div>
 
-                            {/* Job Roles Management */}
-                            <div className="p-6 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg">
-                                <h4 className="text-slate-900 dark:text-white mb-4">Job Roles</h4>
-                                <p className="text-sm text-slate-600 dark:text-[#A2A1A8] mb-4">
-                                    Manage the list of job roles available for applicants and filtering.
-                                </p>
-                                <div className="space-y-4">
-                                    {/* Add Role Input */}
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="text"
-                                            value={newRole}
-                                            onChange={(e) => setNewRole(e.target.value)}
-                                            placeholder="Enter new job role (e.g. Physical Therapist)"
-                                            className="flex-1 px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-[#16151C] dark:text-white"
-                                        />
-                                        <button
-                                            onClick={handleAddRole}
-                                            disabled={!newRole.trim()}
-                                            className="px-4 py-2 bg-[#7152F3] text-white rounded-lg hover:bg-[rgba(113,82,243,0.9)] disabled:opacity-50 transition-colors font-light whitespace-nowrap"
+                            {/* Job Roles */}
+                            <div className={sectionCls}>
+                                <div>
+                                    <p className="text-[13px] font-semibold text-foreground">Job Roles</p>
+                                    <p className="text-[11px] text-muted-foreground mt-0.5">Manage the list of job roles available for applicants and filtering</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <input type="text" value={newRole} onChange={(e) => setNewRole(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAddRole()} placeholder="Enter new job role…" className={inputCls + ' flex-1'} />
+                                    <button onClick={handleAddRole} disabled={!newRole.trim()} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap">
+                                        <Plus size={13} />
+                                        Add
+                                    </button>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {jobRoles.map((role, index) => (
+                                        <div
+                                            key={index}
+                                            className="flex items-center justify-between px-3 py-2 rounded-md border border-border group transition-colors"
+                                            style={{ background: 'hsl(0 0% 100% / 0.03)' }}
+                                            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'hsl(0 0% 100% / 0.06)'}
+                                            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'hsl(0 0% 100% / 0.03)'}
                                         >
-                                            <Plus size={18} className="mr-2 inline" />
-                                            Add Role
-                                        </button>
-                                    </div>
-
-                                    {/* Roles List */}
-                                    <div className="space-y-2">
-                                        {jobRoles.map((role, index) => (
-                                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg group hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                                <span className="text-slate-700 dark:text-[#A2A1A8] font-light">{role}</span>
-                                                <button
-                                                    onClick={() => handleDeleteRole(role)}
-                                                    className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
-                                                    title="Delete Role"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {jobRoles.length === 0 && (
-                                            <p className="text-sm text-slate-500 dark:text-[#A2A1A8] italic">No active job roles configured.</p>
-                                        )}
-                                    </div>
+                                            <span className="text-[13px] text-foreground">{role}</span>
+                                            <button
+                                                onClick={() => handleDeleteRole(role)}
+                                                className="opacity-0 group-hover:opacity-100 p-0.5 transition-all"
+                                                style={{ color: 'hsl(0 0% 36%)' }}
+                                                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.color = 'hsl(4 82% 58%)'}
+                                                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.color = 'hsl(0 0% 36%)'}
+                                            >
+                                                <Trash2 size={13} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {jobRoles.length === 0 && (
+                                        <p className="text-[12px] text-muted-foreground font-mono italic">No active job roles configured.</p>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="flex justify-end pt-4">
-                                <button
-                                    onClick={handleSave}
-                                    className="flex items-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                                >
-                                    <Save size={18} />
-                                    Save Settings
-                                </button>
-                            </div>
+                            <SaveButton />
                         </div>
                     )}
 
-                    {/* Team Management Tab */}
+                    {/* Team Management */}
                     {activeTab === 'Team' && (
-                        <div className="space-y-6">
-                            {/* Pending Requests Section */}
+                        <div className="p-5 space-y-5">
+                            {/* Pending Requests */}
                             {requests.length > 0 && (
-                                <div className="rounded-[20px] p-6 border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-900/20">
-                                    <h3 className="text-lg font-semibold text-amber-800 dark:text-amber-500 mb-4">Pending Profile Change Requests</h3>
-                                    <div className="space-y-4">
+                                <div
+                                    className="rounded-lg p-4 space-y-3"
+                                    style={{
+                                        background: 'hsl(38 96% 48% / 0.05)',
+                                        border: '1px solid hsl(38 96% 48% / 0.20)',
+                                    }}
+                                >
+                                    <p
+                                        className="text-[13px] font-semibold"
+                                        style={{ color: 'hsl(38 90% 58%)' }}
+                                    >
+                                        Pending Profile Change Requests
+                                    </p>
+                                    <div className="space-y-3">
                                         {requests.map((req) => (
-                                            <div key={req.id} className="bg-white dark:bg-card p-4 rounded-lg border border-amber-100 dark:border-amber-900/20 flex items-center justify-between">
+                                            <div key={req.id} className="bg-card p-4 rounded-md border border-border flex items-start justify-between gap-4">
                                                 <div>
-                                                    <div className="font-medium text-[#16151C] dark:text-white">
+                                                    <p className="text-[13px] font-semibold text-foreground">
                                                         {req.profiles?.first_name} {req.profiles?.last_name} ({req.profiles?.email})
-                                                    </div>
-                                                    <div className="text-sm text-slate-500 dark:text-[#A2A1A8] mt-1">
+                                                    </p>
+                                                    <div className="text-[12px] text-muted-foreground mt-1">
                                                         Requested changes:
-                                                        <ul className="list-disc list-inside mt-1 ml-2">
+                                                        <ul className="list-disc list-inside mt-1 ml-1 space-y-0.5">
                                                             {Object.entries(req.changes).map(([key, value]) => (
                                                                 <li key={key}>
-                                                                    <span className="capitalize">{key.replace('_', ' ')}</span>: <span className="font-medium text-[#16151C] dark:text-white">{String(value)}</span>
+                                                                    <span className="capitalize">{key.replace('_', ' ')}</span>: <span className="font-medium text-foreground">{String(value)}</span>
                                                                 </li>
                                                             ))}
                                                         </ul>
                                                     </div>
-                                                    <div className="text-xs text-slate-400 mt-2">
-                                                        Requested on {new Date(req.created_at).toLocaleDateString()}
-                                                    </div>
+                                                    <p className="text-[11px] text-muted-foreground font-mono mt-1.5">
+                                                        Requested {new Date(req.created_at).toLocaleDateString()}
+                                                    </p>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleApprove(req.id)}
-                                                        className="px-3 py-1.5 bg-emerald-500 text-white text-sm rounded-lg hover:bg-emerald-600 transition-colors"
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleReject(req.id)}
-                                                        className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
-                                                    >
-                                                        Reject
-                                                    </button>
+                                                <div className="flex gap-2 flex-shrink-0">
+                                                    <button onClick={() => handleApprove(req.id)} className="inline-flex items-center h-7 px-3 rounded-md text-white text-[12px] font-semibold transition-colors" style={{ background: 'hsl(152 58% 38%)' }} onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = 'hsl(152 58% 34%)'} onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'hsl(152 58% 38%)'}>Approve</button>
+                                                    <button onClick={() => handleReject(req.id)} className="inline-flex items-center h-7 px-3 rounded-md text-[12px] font-semibold transition-colors" style={{ color: 'hsl(4 76% 62%)', border: '1px solid hsl(4 82% 52% / 0.25)', background: 'transparent' }} onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = 'hsl(4 82% 52% / 0.08)'} onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = 'transparent'}>Reject</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -777,67 +557,63 @@ export function SettingsPage() {
                                 </div>
                             )}
 
-                            <div className="rounded-[20px] p-6 border border-gray-100 dark:border-[rgba(162,161,168,0.1)]">
-                                <div className="flex items-center justify-between mb-6">
+                            {/* Team Members */}
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
                                     <div>
-                                        <h2 className="text-lg font-semibold text-[#16151C] dark:text-white">Team Members</h2>
-                                        <p className="text-sm text-[#A2A1A8] font-light mt-1">Manage your team's access and roles</p>
+                                        <p className="text-[14px] font-semibold text-foreground">Team Members</p>
+                                        <p className="text-[12px] text-muted-foreground mt-0.5">Manage your team access and roles</p>
                                     </div>
-                                    <button
-                                        onClick={() => setShowInviteModal(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-light"
-                                    >
-                                        <Plus size={18} strokeWidth={1.5} />
+                                    <button onClick={() => setShowInviteModal(true)} className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors">
+                                        <Plus size={13} />
                                         Invite Member
                                     </button>
                                 </div>
 
-                                <div className="overflow-x-auto">
+                                <div className="overflow-x-auto rounded-lg border border-border">
                                     <table className="w-full">
                                         <thead>
-                                            <tr className="border-b border-gray-100 dark:border-[rgba(162,161,168,0.1)]">
-                                                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-[#A2A1A8]">Name</th>
-                                                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-[#A2A1A8]">Email</th>
-                                                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-[#A2A1A8]">Role</th>
-                                                <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-[#A2A1A8]">Joined</th>
-                                                <th className="text-right py-3 px-4 text-sm font-medium text-slate-500 dark:text-[#A2A1A8]">Actions</th>
+                                            <tr style={{ borderBottom: '1px solid var(--border)', background: 'hsl(0 0% 100% / 0.02)' }}>
+                                                {['Name', 'Email', 'Role', 'Joined', ''].map((h) => (
+                                                    <th key={h} className={['px-4 py-3', h === '' ? 'text-right' : 'text-left'].join(' ')}>
+                                                        <span className="zone-label">{h}</span>
+                                                    </th>
+                                                ))}
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className="divide-y divide-border/60">
                                             {users.map((user) => (
-                                                <tr key={user.id} className="border-b border-gray-100 dark:border-[rgba(162,161,168,0.1)] last:border-0 hover:bg-gray-50 dark:hover:bg-[rgba(162,161,168,0.02)] transition-colors">
-                                                    <td className="py-3 px-4 text-[#16151C] dark:text-white">
-                                                        {user.first_name || '—'} {user.last_name || ''}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-slate-600 dark:text-[#A2A1A8]">{user.email}</td>
-                                                    <td className="py-3 px-4">
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${user.role === 'admin'
-                                                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                                                            : user.role === 'hr'
-                                                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                                                                : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                                                            }`}>
+                                                <tr
+                                                    key={user.id}
+                                                    className="transition-colors"
+                                                    onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'hsl(0 0% 100% / 0.025)'}
+                                                    onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}
+                                                >
+                                                    <td className="px-4 py-3 text-[13px] text-foreground font-medium">{user.first_name || '—'} {user.last_name || ''}</td>
+                                                    <td className="px-4 py-3 text-[13px] text-muted-foreground font-mono">{user.email}</td>
+                                                    <td className="px-4 py-3">
+                                                        <span
+                                                            className="inline-flex items-center h-5 px-2 rounded text-[10px] font-mono font-semibold uppercase tracking-[0.04em]"
+                                                            style={
+                                                                user.role === 'admin'
+                                                                    ? { color: 'hsl(196 84% 60%)', background: 'hsl(196 84% 42% / 0.10)', border: '1px solid hsl(196 84% 42% / 0.20)' }
+                                                                    : user.role === 'hr'
+                                                                        ? { color: 'hsl(260 54% 68%)', background: 'hsl(260 54% 52% / 0.10)', border: '1px solid hsl(260 54% 52% / 0.20)' }
+                                                                        : { color: 'hsl(0 0% 44%)', background: 'hsl(0 0% 100% / 0.04)', border: '1px solid hsl(0 0% 100% / 0.08)' }
+                                                            }
+                                                        >
                                                             {user.role.toUpperCase()}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 px-4 text-slate-600 dark:text-[#A2A1A8] text-sm">
-                                                        {new Date(user.created_at).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right">
-                                                        <button
-                                                            onClick={() => handleEditClick(user)}
-                                                            className="text-[#7152F3] hover:text-[#5b3fd1] font-medium text-sm"
-                                                        >
-                                                            Edit
-                                                        </button>
+                                                    <td className="px-4 py-3 text-[12px] text-muted-foreground font-mono">{new Date(user.created_at).toLocaleDateString()}</td>
+                                                    <td className="px-4 py-3 text-right">
+                                                        <button onClick={() => handleEditClick(user)} className="text-[12px] font-semibold text-primary hover:text-primary/80 transition-colors">Edit</button>
                                                     </td>
                                                 </tr>
                                             ))}
                                             {users.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={5} className="py-8 text-center text-[#A2A1A8]">
-                                                        No team members found.
-                                                    </td>
+                                                    <td colSpan={5} className="px-4 py-10 text-center text-[13px] text-muted-foreground">No team members found.</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -847,98 +623,49 @@ export function SettingsPage() {
 
                             {/* Edit User Modal */}
                             {editingUser && (
-                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                                    <div className="w-full max-w-lg bg-white dark:bg-[#16151C] rounded-[20px] p-6 shadow-xl border border-gray-100 dark:border-[rgba(162,161,168,0.1)] max-h-[90vh] overflow-y-auto">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-lg font-semibold text-[#16151C] dark:text-white">Edit User</h3>
-                                            <button
-                                                onClick={() => setEditingUser(null)}
-                                                className="text-[#A2A1A8] hover:text-[#16151C] dark:hover:text-white transition-colors"
-                                            >
-                                                <X size={20} />
+                                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                                    <div className="w-full max-w-lg bg-card rounded-lg border border-border p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+                                        <div className="flex items-center justify-between mb-5">
+                                            <p className="text-[14px] font-semibold text-foreground">Edit User</p>
+                                            <button onClick={() => setEditingUser(null)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                                <X size={16} />
                                             </button>
                                         </div>
-
                                         <form onSubmit={handleUpdateUser} className="space-y-4">
-                                            <div className="grid grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-[#16151C] dark:text-[#A2A1A8] mb-2">First Name</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editFormData.first_name}
-                                                        onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg bg-transparent text-[#16151C] dark:text-white"
-                                                    />
+                                                    <label className={labelCls}>First Name</label>
+                                                    <input type="text" value={editFormData.first_name} onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })} className={inputCls} />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-[#16151C] dark:text-[#A2A1A8] mb-2">Last Name</label>
-                                                    <input
-                                                        type="text"
-                                                        value={editFormData.last_name}
-                                                        onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })}
-                                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg bg-transparent text-[#16151C] dark:text-white"
-                                                    />
+                                                    <label className={labelCls}>Last Name</label>
+                                                    <input type="text" value={editFormData.last_name} onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })} className={inputCls} />
                                                 </div>
                                             </div>
-
                                             <div>
-                                                <label className="block text-sm font-medium text-[#16151C] dark:text-[#A2A1A8] mb-2">Email</label>
-                                                <input
-                                                    type="email"
-                                                    value={editFormData.email}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg bg-transparent text-[#16151C] dark:text-white"
-                                                />
+                                                <label className={labelCls}>Email</label>
+                                                <input type="email" value={editFormData.email} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} className={inputCls} />
                                             </div>
-
                                             <div>
-                                                <label className="block text-sm font-medium text-[#16151C] dark:text-[#A2A1A8] mb-2">Phone Number</label>
-                                                <input
-                                                    type="tel"
-                                                    value={editFormData.phone_number}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, phone_number: e.target.value })}
-                                                    className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg bg-transparent text-[#16151C] dark:text-white"
-                                                />
+                                                <label className={labelCls}>Phone Number</label>
+                                                <input type="tel" value={editFormData.phone_number} onChange={(e) => setEditFormData({ ...editFormData, phone_number: e.target.value })} className={inputCls} />
                                             </div>
-
                                             <div>
-                                                <label className="block text-sm font-medium text-[#16151C] dark:text-[#A2A1A8] mb-2">Role</label>
-                                                <select
-                                                    value={editFormData.role}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value as 'admin' | 'hr' | 'staff' })}
-                                                    className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg bg-transparent text-[#16151C] dark:text-white"
-                                                >
+                                                <label className={labelCls}>Role</label>
+                                                <select value={editFormData.role} onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value as 'admin' | 'hr' | 'staff' })} className={inputCls}>
                                                     <option value="staff">Staff</option>
                                                     <option value="hr">HR</option>
                                                     <option value="admin">Admin</option>
                                                 </select>
                                             </div>
-
-                                            <div className="pt-4 border-t border-gray-100 dark:border-[rgba(162,161,168,0.1)]">
-                                                <h4 className="text-sm font-medium text-[#16151C] dark:text-white mb-3">Change Password (Optional)</h4>
-                                                <input
-                                                    type="password"
-                                                    value={editFormData.password}
-                                                    onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
-                                                    placeholder="Enter new password to reset"
-                                                    className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg bg-transparent text-[#16151C] dark:text-white"
-                                                />
+                                            <div className="pt-4 border-t border-border">
+                                                <label className={labelCls}>New Password (Optional)</label>
+                                                <input type="password" value={editFormData.password} onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })} placeholder="Enter new password to reset" className={inputCls} />
                                             </div>
-
-                                            <div className="flex justify-end gap-3 pt-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setEditingUser(null)}
-                                                    className="px-4 py-2 text-sm font-medium text-[#16151C] dark:text-white hover:bg-gray-100 dark:hover:bg-[rgba(162,161,168,0.1)] rounded-lg transition-colors"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    type="submit"
-                                                    disabled={editLoading}
-                                                    className="px-4 py-2 text-sm font-medium text-white bg-[#7152F3] hover:bg-[rgba(113,82,243,0.9)] rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-                                                >
-                                                    {editLoading ? 'Saving...' : 'Save Changes'}
+                                            <div className="flex justify-end gap-2 pt-2">
+                                                <button type="button" onClick={() => setEditingUser(null)} className="inline-flex items-center h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">Cancel</button>
+                                                <button type="submit" disabled={editLoading} className="inline-flex items-center h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50">
+                                                    {editLoading ? 'Saving…' : 'Save Changes'}
                                                 </button>
                                             </div>
                                         </form>
@@ -950,47 +677,23 @@ export function SettingsPage() {
 
                     {/* Invite Modal */}
                     {showInviteModal && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                            <div className="w-full max-w-md bg-white dark:bg-[#16151C] rounded-[20px] p-6 shadow-xl border border-gray-100 dark:border-[rgba(162,161,168,0.1)]">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-lg font-semibold text-[#16151C] dark:text-white">Invite Team Member</h3>
-                                    <button
-                                        onClick={() => setShowInviteModal(false)}
-                                        className="text-[#A2A1A8] hover:text-[#16151C] dark:hover:text-white transition-colors"
-                                    >
-                                        <X size={20} />
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                            <div className="w-full max-w-md bg-card rounded-lg border border-border p-6 shadow-xl">
+                                <div className="flex items-center justify-between mb-5">
+                                    <p className="text-[14px] font-semibold text-foreground">Invite Team Member</p>
+                                    <button onClick={() => setShowInviteModal(false)} className="text-muted-foreground hover:text-foreground transition-colors">
+                                        <X size={16} />
                                     </button>
                                 </div>
-
                                 <form onSubmit={handleInvite} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-[#16151C] dark:text-[#A2A1A8] mb-2">
-                                            Email Address
-                                        </label>
-                                        <input
-                                            type="email"
-                                            required
-                                            value={inviteEmail}
-                                            onChange={(e) => setInviteEmail(e.target.value)}
-                                            placeholder="colleague@company.com"
-                                            className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white"
-                                        />
+                                        <label className={labelCls}>Email Address</label>
+                                        <input type="email" required value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colleague@company.com" className={inputCls} />
                                     </div>
-
-                                    <div className="flex justify-end gap-3 pt-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowInviteModal(false)}
-                                            className="px-4 py-2 text-sm font-medium text-[#16151C] dark:text-white hover:bg-gray-100 dark:hover:bg-[rgba(162,161,168,0.1)] rounded-lg transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={inviteLoading}
-                                            className="px-4 py-2 text-sm font-medium text-white bg-[#7152F3] hover:bg-[rgba(113,82,243,0.9)] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                        >
-                                            {inviteLoading ? 'Sending...' : 'Send Invitation'}
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <button type="button" onClick={() => setShowInviteModal(false)} className="inline-flex items-center h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">Cancel</button>
+                                        <button type="submit" disabled={inviteLoading} className="inline-flex items-center h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                            {inviteLoading ? 'Sending…' : 'Send Invitation'}
                                         </button>
                                     </div>
                                 </form>
@@ -1000,7 +703,6 @@ export function SettingsPage() {
                 </div>
             </div>
 
-            {/* Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={confirmState.isOpen}
                 onClose={handleClose}
@@ -1011,6 +713,6 @@ export function SettingsPage() {
                 cancelText={confirmState.cancelText}
                 variant={confirmState.variant}
             />
-        </div >
+        </div>
     );
 }

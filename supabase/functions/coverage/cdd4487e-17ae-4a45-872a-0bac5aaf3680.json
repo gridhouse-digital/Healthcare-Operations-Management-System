@@ -1,0 +1,259 @@
+{
+  "scriptId": "405",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/@supabase/auth-js/2.98.0/dist/main/lib/errors.js",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 9220,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "AuthError",
+      "ranges": [
+        {
+          "startOffset": 1174,
+          "endOffset": 1364,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthError",
+      "ranges": [
+        {
+          "startOffset": 1398,
+          "endOffset": 1513,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthApiError",
+      "ranges": [
+        {
+          "startOffset": 1781,
+          "endOffset": 1953,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthApiError",
+      "ranges": [
+        {
+          "startOffset": 1993,
+          "endOffset": 2091,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthUnknownError",
+      "ranges": [
+        {
+          "startOffset": 2416,
+          "endOffset": 2567,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "CustomAuthError",
+      "ranges": [
+        {
+          "startOffset": 2915,
+          "endOffset": 3057,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthSessionMissingError",
+      "ranges": [
+        {
+          "startOffset": 3381,
+          "endOffset": 3485,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthSessionMissingError",
+      "ranges": [
+        {
+          "startOffset": 3547,
+          "endOffset": 3667,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthInvalidTokenResponseError",
+      "ranges": [
+        {
+          "startOffset": 3944,
+          "endOffset": 4061,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthInvalidCredentialsError",
+      "ranges": [
+        {
+          "startOffset": 4444,
+          "endOffset": 4543,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthImplicitGrantRedirectError",
+      "ranges": [
+        {
+          "startOffset": 4988,
+          "endOffset": 5167,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toJSON",
+      "ranges": [
+        {
+          "startOffset": 5172,
+          "endOffset": 5348,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthImplicitGrantRedirectError",
+      "ranges": [
+        {
+          "startOffset": 5424,
+          "endOffset": 5558,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthPKCEGrantCodeExchangeError",
+      "ranges": [
+        {
+          "startOffset": 5850,
+          "endOffset": 6029,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "toJSON",
+      "ranges": [
+        {
+          "startOffset": 6034,
+          "endOffset": 6210,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthPKCECodeVerifierMissingError",
+      "ranges": [
+        {
+          "startOffset": 6708,
+          "endOffset": 7158,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthPKCECodeVerifierMissingError",
+      "ranges": [
+        {
+          "startOffset": 7238,
+          "endOffset": 7376,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthRetryableFetchError",
+      "ranges": [
+        {
+          "startOffset": 7672,
+          "endOffset": 7778,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthRetryableFetchError",
+      "ranges": [
+        {
+          "startOffset": 7840,
+          "endOffset": 7960,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthWeakPasswordError",
+      "ranges": [
+        {
+          "startOffset": 8434,
+          "endOffset": 8585,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isAuthWeakPasswordError",
+      "ranges": [
+        {
+          "startOffset": 8643,
+          "endOffset": 8759,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "AuthInvalidJwtError",
+      "ranges": [
+        {
+          "startOffset": 9037,
+          "endOffset": 9132,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

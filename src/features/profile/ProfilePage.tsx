@@ -5,12 +5,14 @@ import { Shield, User, Mail, Briefcase } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/useToast';
 
+const inputCls = 'w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50 disabled:opacity-50 disabled:cursor-not-allowed';
+const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5';
+
 export function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
     const [profile, setProfile] = useState<any>(null);
 
-    // Password Change State
     const [pendingRequest, setPendingRequest] = useState<any>(null);
     const [formData, setFormData] = useState({
         first_name: '',
@@ -20,7 +22,6 @@ export function ProfilePage() {
     });
     const [requestLoading, setRequestLoading] = useState(false);
 
-    // Password Change State
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordLoading, setPasswordLoading] = useState(false);
@@ -43,13 +44,8 @@ export function ProfilePage() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
-
             if (user) {
-                const { data } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
+                const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
                 setProfile(data);
                 setFormData({
                     first_name: data.first_name || '',
@@ -69,17 +65,13 @@ export function ProfilePage() {
         e.preventDefault();
         setRequestLoading(true);
         try {
-            // Check if changes were made
             const hasChanges =
                 formData.first_name !== (profile?.first_name || '') ||
                 formData.last_name !== (profile?.last_name || '') ||
                 formData.email !== (user?.email || '') ||
                 formData.phone_number !== (profile?.phone_number || '');
 
-            if (!hasChanges) {
-                toast.info('No changes detected');
-                return;
-            }
+            if (!hasChanges) { toast.info('No changes detected'); return; }
 
             await userService.createProfileChangeRequest(formData);
             toast.success('Profile update request submitted for approval');
@@ -94,19 +86,12 @@ export function ProfilePage() {
 
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (newPassword !== confirmPassword) {
-            toast.error("Passwords don't match");
-            return;
-        }
+        if (newPassword !== confirmPassword) { toast.error("Passwords don't match"); return; }
 
         setPasswordLoading(true);
         try {
-            const { error } = await supabase.auth.updateUser({
-                password: newPassword
-            });
-
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
             if (error) throw error;
-
             toast.success('Password updated successfully');
             setNewPassword('');
             setConfirmPassword('');
@@ -118,67 +103,95 @@ export function ProfilePage() {
         }
     };
 
-    if (loading) {
-        return <div className="p-8 text-center text-[#A2A1A8]">Loading profile...</div>;
-    }
+    if (loading) return (
+        <div className="flex items-center justify-center py-20">
+            <span className="text-[13px] text-muted-foreground font-mono uppercase tracking-[0.06em]">Loading profile…</span>
+        </div>
+    );
+
+    const initials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             {/* Page Header */}
-            <div>
-                <h1 className="text-[#16151C] dark:text-white font-semibold text-xl">My Profile</h1>
-                <p className="text-[#A2A1A8] font-light text-sm">Manage your personal information and security</p>
+            <div className="pl-1">
+                <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.875rem', fontStyle: 'italic', letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                    className="text-foreground">
+                    My Profile
+                </h1>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
+                    className="uppercase text-muted-foreground mt-1">
+                    Personal information &amp; security
+                </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 {/* Profile Card */}
-                <div className="md:col-span-1 space-y-6">
-                    <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6 space-y-6">
+                <div className="md:col-span-1">
+                    <div className="bg-card border border-border rounded-lg p-5 space-y-5">
                         <div className="flex flex-col items-center text-center">
-                            <div className="w-24 h-24 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full flex items-center justify-center mb-4 overflow-hidden">
+                            {/* Avatar */}
+                            <div
+                                className="w-20 h-20 rounded-full flex items-center justify-center mb-4 overflow-hidden"
+                                style={{ background: 'hsl(196 84% 42% / 0.12)' }}
+                            >
                                 <Avatar className="h-full w-full">
-                                    <AvatarImage src="https://github.com/shadcn.png" alt={profile?.first_name} />
-                                    <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
+                                    <AvatarImage src="" alt={profile?.first_name} />
+                                    <AvatarFallback
+                                        className="text-lg font-mono"
+                                        style={{ background: 'transparent', color: 'hsl(196 84% 60%)' }}
+                                    >
+                                        {initials}
+                                    </AvatarFallback>
                                 </Avatar>
                             </div>
-                            <h2 className="text-xl font-semibold text-[#16151C] dark:text-white">
+                            <h2 className="text-[15px] font-semibold text-foreground">
                                 {profile?.first_name} {profile?.last_name}
                             </h2>
-                            <p className="text-[#A2A1A8] font-light">{profile?.role === 'admin' ? 'Administrator' : 'Staff Member'}</p>
+                            <p className="text-[13px] text-muted-foreground mt-0.5">
+                                {profile?.role === 'admin' ? 'Administrator' : 'Staff Member'}
+                            </p>
                         </div>
 
-                        <div className="space-y-4 pt-6 border-t border-gray-100 dark:border-[rgba(162,161,168,0.1)]">
-                            <div className="flex items-center gap-3 text-sm">
-                                <Mail className="text-[#A2A1A8]" size={18} />
-                                <span className="text-[#16151C] dark:text-white">{user?.email}</span>
+                        <div className="space-y-3 pt-4 border-t border-border">
+                            <div className="flex items-center gap-2.5">
+                                <Mail size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                <span className="text-[13px] text-foreground truncate">{user?.email}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-sm">
-                                <Briefcase className="text-[#A2A1A8]" size={18} />
-                                <span className="text-[#16151C] dark:text-white capitalize">{profile?.role}</span>
+                            <div className="flex items-center gap-2.5">
+                                <Briefcase size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                <span className="text-[13px] text-foreground capitalize">{profile?.role}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-sm">
-                                <User className="text-[#A2A1A8]" size={18} />
-                                <span className="text-[#16151C] dark:text-white">Member since {new Date(user?.created_at).toLocaleDateString()}</span>
+                            <div className="flex items-center gap-2.5">
+                                <User size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                <span className="text-[13px] text-muted-foreground">Since {new Date(user?.created_at).toLocaleDateString()}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Forms Section */}
-                <div className="md:col-span-2 space-y-6">
+                {/* Forms */}
+                <div className="md:col-span-2 space-y-4">
                     {/* Personal Information */}
-                    <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <div className="flex items-center gap-3">
-                                <User className="text-[#7152F3]" size={24} />
+                    <div className="bg-card border border-border rounded-lg p-5">
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2.5">
+                                <User size={14} className="text-primary flex-shrink-0" strokeWidth={2} />
                                 <div>
-                                    <h3 className="text-[#16151C] dark:text-white font-semibold">Personal Information</h3>
-                                    <p className="text-sm text-[#A2A1A8] font-light">Update your personal details</p>
+                                    <p className="text-[13px] font-semibold text-foreground">Personal Information</p>
+                                    <p className="text-[11px] text-muted-foreground">Update your personal details</p>
                                 </div>
                             </div>
                             {pendingRequest && (
-                                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium">
-                                    Update Pending Approval
+                                <span
+                                    className="inline-flex items-center h-6 px-2.5 rounded text-[10px] font-mono font-semibold uppercase tracking-[0.04em]"
+                                    style={{
+                                        color: 'hsl(38 90% 60%)',
+                                        background: 'hsl(38 96% 48% / 0.08)',
+                                        border: '1px solid hsl(38 96% 48% / 0.22)',
+                                    }}
+                                >
+                                    Pending Approval
                                 </span>
                             )}
                         </div>
@@ -186,50 +199,22 @@ export function ProfilePage() {
                         <form onSubmit={handleProfileUpdate} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">First Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.first_name}
-                                        onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                                        disabled={!!pendingRequest}
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white disabled:opacity-50"
-                                    />
+                                    <label className={labelCls}>First Name</label>
+                                    <input type="text" required value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} disabled={!!pendingRequest} className={inputCls} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Last Name</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={formData.last_name}
-                                        onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                                        disabled={!!pendingRequest}
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white disabled:opacity-50"
-                                    />
+                                    <label className={labelCls}>Last Name</label>
+                                    <input type="text" required value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} disabled={!!pendingRequest} className={inputCls} />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Email Address</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        disabled={!!pendingRequest}
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white disabled:opacity-50"
-                                    />
+                                    <label className={labelCls}>Email Address</label>
+                                    <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} disabled={!!pendingRequest} className={inputCls} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Phone Number</label>
-                                    <input
-                                        type="tel"
-                                        value={formData.phone_number}
-                                        onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                                        disabled={!!pendingRequest}
-                                        placeholder="+1 (555) 000-0000"
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white disabled:opacity-50"
-                                    />
+                                    <label className={labelCls}>Phone Number</label>
+                                    <input type="tel" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} disabled={!!pendingRequest} placeholder="+1 (555) 000-0000" className={inputCls} />
                                 </div>
                             </div>
 
@@ -238,9 +223,9 @@ export function ProfilePage() {
                                     <button
                                         type="submit"
                                         disabled={requestLoading}
-                                        className="px-6 py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-light disabled:opacity-50"
+                                        className="inline-flex items-center h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
                                     >
-                                        {requestLoading ? 'Submitting...' : 'Request Changes'}
+                                        {requestLoading ? 'Submitting…' : 'Request Changes'}
                                     </button>
                                 </div>
                             )}
@@ -248,47 +233,33 @@ export function ProfilePage() {
                     </div>
 
                     {/* Security Settings */}
-                    <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Shield className="text-[#7152F3]" size={24} />
+                    <div className="bg-card border border-border rounded-lg p-5">
+                        <div className="flex items-center gap-2.5 mb-5">
+                            <Shield size={14} className="text-primary flex-shrink-0" strokeWidth={2} />
                             <div>
-                                <h3 className="text-[#16151C] dark:text-white font-semibold">Security Settings</h3>
-                                <p className="text-sm text-[#A2A1A8] font-light">Update your password and security preferences</p>
+                                <p className="text-[13px] font-semibold text-foreground">Security Settings</p>
+                                <p className="text-[11px] text-muted-foreground">Update your password</p>
                             </div>
                         </div>
 
                         <form onSubmit={handleChangePassword} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">New Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        minLength={6}
-                                        value={newPassword}
-                                        onChange={(e) => setNewPassword(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white"
-                                    />
+                                    <label className={labelCls}>New Password</label>
+                                    <input type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputCls} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-slate-700 dark:text-[#A2A1A8] mb-2">Confirm New Password</label>
-                                    <input
-                                        type="password"
-                                        required
-                                        minLength={6}
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="w-full px-4 py-2 border border-gray-200 dark:border-[rgba(162,161,168,0.1)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white"
-                                    />
+                                    <label className={labelCls}>Confirm Password</label>
+                                    <input type="password" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputCls} />
                                 </div>
                             </div>
                             <div className="pt-2 flex justify-end">
                                 <button
                                     type="submit"
                                     disabled={passwordLoading}
-                                    className="px-6 py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-light disabled:opacity-50"
+                                    className="inline-flex items-center h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
                                 >
-                                    {passwordLoading ? 'Updating...' : 'Update Password'}
+                                    {passwordLoading ? 'Updating…' : 'Update Password'}
                                 </button>
                             </div>
                         </form>

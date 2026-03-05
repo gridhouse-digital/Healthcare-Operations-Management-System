@@ -1,0 +1,101 @@
+{
+  "scriptId": "337",
+  "url": "file:///C:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/prolific-hr-app/supabase/functions/_shared/cors.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 2236,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "getAllowedOrigins",
+      "ranges": [
+        {
+          "startOffset": 440,
+          "endOffset": 621,
+          "count": 8
+        },
+        {
+          "startOffset": 527,
+          "endOffset": 553,
+          "count": 1
+        },
+        {
+          "startOffset": 592,
+          "endOffset": 597,
+          "count": 2
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "corsHeaders",
+      "ranges": [
+        {
+          "startOffset": 791,
+          "endOffset": 1173,
+          "count": 10
+        },
+        {
+          "startOffset": 856,
+          "endOffset": 890,
+          "count": 8
+        },
+        {
+          "startOffset": 891,
+          "endOffset": 899,
+          "count": 6
+        },
+        {
+          "startOffset": 900,
+          "endOffset": 904,
+          "count": 4
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "handleCors",
+      "ranges": [
+        {
+          "startOffset": 1586,
+          "endOffset": 1805,
+          "count": 7
+        },
+        {
+          "startOffset": 1689,
+          "endOffset": 1788,
+          "count": 6
+        },
+        {
+          "startOffset": 1788,
+          "endOffset": 1804,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "withCors",
+      "ranges": [
+        {
+          "startOffset": 1920,
+          "endOffset": 2235,
+          "count": 4
+        },
+        {
+          "startOffset": 2097,
+          "endOffset": 2125,
+          "count": 16
+        }
+      ],
+      "isBlockCoverage": true
+    }
+  ]
+}

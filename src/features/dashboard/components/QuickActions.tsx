@@ -1,40 +1,76 @@
-import { UserPlus, FileCheck, Users } from 'lucide-react';
+import { UserPlus, FileCheck, Users, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 const actions = [
     {
-        name: 'Add Applicant',
-        href: '/applicants/new',
-        icon: UserPlus,
+        name:        'New Applicant',
+        description: 'Add manually or sync from JotForm',
+        href:        '/applicants',
+        icon:        UserPlus,
+        intent:      'primary',
     },
     {
-        name: 'Review Offers',
-        href: '/offers',
-        icon: FileCheck,
+        name:        'Review Offers',
+        description: 'Pending approvals and sent offers',
+        href:        '/offers',
+        icon:        FileCheck,
+        intent:      'default',
     },
     {
-        name: 'Review Employees',
-        href: '/employees',
-        icon: Users,
-    }
+        name:        'Employees',
+        description: 'Active workforce and onboarding',
+        href:        '/employees',
+        icon:        Users,
+        intent:      'default',
+    },
 ];
 
 export function QuickActions() {
     return (
-        <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] dark:border-border mt-6 p-6">
-            <h4 className="text-[#16151C] dark:text-foreground font-semibold mb-4">Quick Actions</h4>
-            <div className="space-y-3">
-                {actions.map((action) => (
-                    <Link
-                        key={action.name}
-                        to={action.href}
-                        className="w-full px-4 py-3 bg-[rgba(113,82,243,0.05)] dark:bg-primary/10 text-[#7152F3] dark:text-primary rounded-[10px] hover:bg-[rgba(113,82,243,0.1)] dark:hover:bg-primary/20 transition-colors text-left flex items-center justify-between font-light"
-                    >
-                        <span>{action.name}</span>
-                        <action.icon size={18} strokeWidth={1.5} />
-                    </Link>
-                ))}
+        <section className="animate-reveal-up delay-200 bg-card rounded-lg border border-border overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border">
+                <h3 className="text-[13px] font-semibold text-foreground">Quick Access</h3>
             </div>
-        </div>
+            <div className="p-2">
+                {actions.map((action, i) => {
+                    const Icon = action.icon;
+                    return (
+                        <Link
+                            key={action.name}
+                            to={action.href}
+                            className={cn(
+                                'animate-reveal-right',
+                                'group flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-100',
+                            )}
+                            style={{ animationDelay: `${(i + 3) * 50}ms` }}
+                            onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = 'hsl(0 0% 100% / 0.04)'}
+                            onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'}
+                        >
+                            <div
+                                className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center"
+                                style={
+                                    action.intent === 'primary'
+                                        ? { background: 'hsl(196 84% 42% / 0.10)', color: 'hsl(196 84% 60%)' }
+                                        : { background: 'hsl(0 0% 100% / 0.05)', color: 'hsl(0 0% 46%)' }
+                                }
+                            >
+                                <Icon size={14} strokeWidth={1.75} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[13px] font-semibold text-foreground leading-none">{action.name}</p>
+                                <p className="text-[11px] text-muted-foreground/60 font-medium mt-0.5 truncate">{action.description}</p>
+                            </div>
+                            <ArrowRight
+                                size={12}
+                                strokeWidth={2}
+                                style={{ color: 'hsl(0 0% 28%)', flexShrink: 0 }}
+                                className="group-hover:!text-[hsl(0_0%_48%)] transition-colors"
+                            />
+                        </Link>
+                    );
+                })}
+            </div>
+        </section>
     );
 }

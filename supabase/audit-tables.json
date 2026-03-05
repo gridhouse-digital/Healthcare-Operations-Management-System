@@ -1,0 +1,20 @@
+{
+  "_comment": "Every table in this list must have a Postgres audit trigger. CI fails if any table is missing one. Add a table here when it is created in a migration.",
+  "tables": [
+    "tenant_settings",
+    "people",
+    "tenant_users",
+    "training_events",
+    "training_records",
+    "training_adjustments",
+    "credentials",
+    "policy_acknowledgements",
+    "compliance_exports"
+  ],
+  "exempt": [
+    "tenants",
+    "audit_log",
+    "integration_log"
+  ],
+  "_exempt_reason": "tenants: read-only after creation. audit_log: is the audit trail itself (insert-only). integration_log: high-volume operational log, not a compliance table."
+}

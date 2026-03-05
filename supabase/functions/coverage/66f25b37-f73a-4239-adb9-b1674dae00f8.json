@@ -1,0 +1,155 @@
+{
+  "scriptId": "337",
+  "url": "file:///C:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/prolific-hr-app/supabase/functions/_shared/tenant-guard.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 2990,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "<instance_members_initializer>",
+      "ranges": [
+        {
+          "startOffset": 275,
+          "endOffset": 289,
+          "count": 12
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "TenantGuardError",
+      "ranges": [
+        {
+          "startOffset": 293,
+          "endOffset": 442,
+          "count": 12
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "tenantGuard",
+      "ranges": [
+        {
+          "startOffset": 1084,
+          "endOffset": 2989,
+          "count": 15
+        },
+        {
+          "startOffset": 1184,
+          "endOffset": 1196,
+          "count": 14
+        },
+        {
+          "startOffset": 1209,
+          "endOffset": 1295,
+          "count": 2
+        },
+        {
+          "startOffset": 1295,
+          "endOffset": 1420,
+          "count": 13
+        },
+        {
+          "startOffset": 1420,
+          "endOffset": 1449,
+          "count": 1
+        },
+        {
+          "startOffset": 1449,
+          "endOffset": 1496,
+          "count": 12
+        },
+        {
+          "startOffset": 1496,
+          "endOffset": 1583,
+          "count": 2
+        },
+        {
+          "startOffset": 1583,
+          "endOffset": 1644,
+          "count": 11
+        },
+        {
+          "startOffset": 1644,
+          "endOffset": 1663,
+          "count": 10
+        },
+        {
+          "startOffset": 1665,
+          "endOffset": 1742,
+          "count": 1
+        },
+        {
+          "startOffset": 1742,
+          "endOffset": 1795,
+          "count": 10
+        },
+        {
+          "startOffset": 1795,
+          "endOffset": 1822,
+          "count": 9
+        },
+        {
+          "startOffset": 1824,
+          "endOffset": 1919,
+          "count": 1
+        },
+        {
+          "startOffset": 1919,
+          "endOffset": 2020,
+          "count": 9
+        },
+        {
+          "startOffset": 2020,
+          "endOffset": 2044,
+          "count": 7
+        },
+        {
+          "startOffset": 2046,
+          "endOffset": 2147,
+          "count": 3
+        },
+        {
+          "startOffset": 2147,
+          "endOffset": 2325,
+          "count": 6
+        },
+        {
+          "startOffset": 2327,
+          "endOffset": 2442,
+          "count": 1
+        },
+        {
+          "startOffset": 2442,
+          "endOffset": 2551,
+          "count": 5
+        },
+        {
+          "startOffset": 2551,
+          "endOffset": 2562,
+          "count": 4
+        },
+        {
+          "startOffset": 2564,
+          "endOffset": 2672,
+          "count": 2
+        },
+        {
+          "startOffset": 2672,
+          "endOffset": 2988,
+          "count": 3
+        }
+      ],
+      "isBlockCoverage": true
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "scriptId": "390",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/@supabase/realtime-js/2.98.0/dist/main/lib/websocket-factory.js",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 5581,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "WebSocketFactory",
+      "ranges": [
+        {
+          "startOffset": 280,
+          "endOffset": 297,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "detectEnvironment",
+      "ranges": [
+        {
+          "startOffset": 309,
+          "endOffset": 3929,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getWebSocketConstructor",
+      "ranges": [
+        {
+          "startOffset": 4212,
+          "endOffset": 4608,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "createWebSocket",
+      "ranges": [
+        {
+          "startOffset": 4834,
+          "endOffset": 4963,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "isWebSocketSupported",
+      "ranges": [
+        {
+          "startOffset": 5228,
+          "endOffset": 5452,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

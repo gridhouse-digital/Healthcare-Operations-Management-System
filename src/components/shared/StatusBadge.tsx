@@ -1,4 +1,10 @@
 
+/*
+ * StatusBadge — Clinical Authority Design System
+ * Uses left dot + label pattern for immediate visual scanning.
+ * Colors map to real clinical workflow states, not just aesthetic choices.
+ * Dark-first: no dark: prefixes — uses single values appropriate for dark zinc canvas.
+ */
 
 export type StatusType =
     | 'New'
@@ -24,48 +30,57 @@ interface StatusBadgeProps {
     size?: 'sm' | 'md';
 }
 
-export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-    const getStatusStyles = () => {
-        switch (status) {
-            case 'New':
-                return 'bg-[rgba(162,161,168,0.1)] text-[#16151C] dark:text-white border-[rgba(162,161,168,0.2)]';
-            case 'Screening':
-            case 'Interview':
-                return 'bg-[rgba(59,130,246,0.1)] text-[#3B82F6] border-[rgba(59,130,246,0.2)]';
-            case 'Accepted':
-            case 'Sent':
-            case 'Offer':
-            case 'Hired':
-                return 'bg-[rgba(113,82,243,0.1)] text-[#7152F3] border-[rgba(113,82,243,0.2)]';
-            case 'Pending_Approval':
-                return 'bg-[rgba(234,179,8,0.1)] text-[#EAB308] border-[rgba(234,179,8,0.2)]';
-            case 'Onboarding':
-            case 'Onboarding Started':
-                return 'bg-[rgba(20,184,166,0.1)] text-[#14B8A6] border-[rgba(20,184,166,0.2)]';
-            case 'Onboarding Completed':
-            case 'Active':
-                return 'bg-[rgba(34,197,94,0.1)] text-[#22C55E] border-[rgba(34,197,94,0.2)]';
-            case 'Rejected':
-            case 'Declined':
-            case 'Terminated':
-                return 'bg-[rgba(239,68,68,0.1)] text-[#EF4444] border-[rgba(239,68,68,0.2)]';
-            case 'Suspended':
-                return 'bg-[rgba(249,115,22,0.1)] text-[#F97316] border-[rgba(249,115,22,0.2)]';
-            case 'Draft':
-                return 'bg-[rgba(100,116,139,0.1)] text-[#64748B] border-[rgba(100,116,139,0.2)]';
-            default:
-                return 'bg-[rgba(162,161,168,0.1)] text-[#16151C] dark:text-white border-[rgba(162,161,168,0.2)]';
-        }
-    };
+// dot color | text color | bg | border — all dark-first, no dark: prefixes
+const statusMap: Record<string, { dot: string; text: string; bg: string; border: string }> = {
+    'New':                  { dot: 'hsl(0 0% 42%)',         text: 'hsl(0 0% 56%)',        bg: 'hsl(0 0% 100% / 0.04)',        border: 'hsl(0 0% 100% / 0.08)' },
+    'Screening':            { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
+    'Interview':            { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
+    'Offer':                { dot: 'hsl(260 54% 58%)',       text: 'hsl(260 54% 72%)',      bg: 'hsl(260 54% 52% / 0.10)',      border: 'hsl(260 54% 52% / 0.20)' },
+    'Accepted':             { dot: 'hsl(260 54% 58%)',       text: 'hsl(260 54% 72%)',      bg: 'hsl(260 54% 52% / 0.10)',      border: 'hsl(260 54% 52% / 0.20)' },
+    'Sent':                 { dot: 'hsl(260 54% 58%)',       text: 'hsl(260 54% 72%)',      bg: 'hsl(260 54% 52% / 0.10)',      border: 'hsl(260 54% 52% / 0.20)' },
+    'Hired':                { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
+    'Pending_Approval':     { dot: 'hsl(38 96% 52%)',        text: 'hsl(38 90% 60%)',       bg: 'hsl(38 96% 48% / 0.08)',       border: 'hsl(38 96% 48% / 0.20)' },
+    'Onboarding':           { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
+    'Onboarding Started':   { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
+    'Onboarding Completed': { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
+    'Active':               { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
+    'Rejected':             { dot: 'hsl(4 82% 56%)',         text: 'hsl(4 76% 66%)',        bg: 'hsl(4 82% 52% / 0.08)',        border: 'hsl(4 82% 52% / 0.20)' },
+    'Declined':             { dot: 'hsl(4 82% 56%)',         text: 'hsl(4 76% 66%)',        bg: 'hsl(4 82% 52% / 0.08)',        border: 'hsl(4 82% 52% / 0.20)' },
+    'Terminated':           { dot: 'hsl(4 82% 56%)',         text: 'hsl(4 76% 66%)',        bg: 'hsl(4 82% 52% / 0.08)',        border: 'hsl(4 82% 52% / 0.20)' },
+    'Suspended':            { dot: 'hsl(22 90% 54%)',        text: 'hsl(22 88% 62%)',       bg: 'hsl(22 90% 50% / 0.08)',       border: 'hsl(22 90% 50% / 0.20)' },
+    'Draft':                { dot: 'hsl(0 0% 38%)',          text: 'hsl(0 0% 52%)',         bg: 'hsl(0 0% 100% / 0.04)',        border: 'hsl(0 0% 100% / 0.08)' },
+};
 
-    const sizeClasses = size === 'sm'
-        ? 'px-2 py-0.5 text-xs font-light'
-        : 'px-3 py-1 text-sm font-light';
+const defaultStyle = statusMap['New'];
+
+export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
+    const s = statusMap[status] ?? defaultStyle;
+
+    const padding = size === 'sm' ? '2px 6px' : '2px 8px';
+    const fontSize = size === 'sm' ? '10px' : '11px';
+    const gap = size === 'sm' ? '4px' : '5px';
+    const dotSize = size === 'sm' ? '5px' : '6px';
 
     return (
         <span
-            className={`inline-flex items-center rounded-[6px] border ${getStatusStyles()} ${sizeClasses}`}
+            className="inline-flex items-center rounded font-semibold tracking-[0.04em]"
+            style={{
+                padding,
+                fontSize,
+                gap,
+                color: s.text,
+                background: s.bg,
+                border: `1px solid ${s.border}`,
+            }}
         >
+            <span
+                className="flex-shrink-0 rounded-full"
+                style={{
+                    width: dotSize,
+                    height: dotSize,
+                    background: s.dot,
+                }}
+            />
             {status}
         </span>
     );

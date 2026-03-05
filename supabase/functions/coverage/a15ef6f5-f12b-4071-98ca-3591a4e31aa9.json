@@ -1,0 +1,69 @@
+{
+  "scriptId": "338",
+  "url": "file:///C:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/prolific-hr-app/supabase/functions/_shared/error-response.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 1199,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "errorResponse",
+      "ranges": [
+        {
+          "startOffset": 315,
+          "endOffset": 631,
+          "count": 8
+        },
+        {
+          "startOffset": 460,
+          "endOffset": 487,
+          "count": 1
+        },
+        {
+          "startOffset": 488,
+          "endOffset": 492,
+          "count": 7
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "handleError",
+      "ranges": [
+        {
+          "startOffset": 797,
+          "endOffset": 1198,
+          "count": 5
+        },
+        {
+          "startOffset": 864,
+          "endOffset": 930,
+          "count": 2
+        },
+        {
+          "startOffset": 930,
+          "endOffset": 959,
+          "count": 3
+        },
+        {
+          "startOffset": 959,
+          "endOffset": 1117,
+          "count": 1
+        },
+        {
+          "startOffset": 1117,
+          "endOffset": 1197,
+          "count": 2
+        }
+      ],
+      "isBlockCoverage": true
+    }
+  ]
+}

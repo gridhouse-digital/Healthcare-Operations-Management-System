@@ -12,12 +12,14 @@ import { toast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 
+const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
+const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5';
+
 export function EmployeeList() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // UI States
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [courseProgress, setCourseProgress] = useState<CourseProgress[]>([]);
     const [loadingProgress, setLoadingProgress] = useState(false);
@@ -27,17 +29,13 @@ export function EmployeeList() {
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterDept, setFilterDept] = useState('all');
 
-    // Edit mode states
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editFormData, setEditFormData] = useState<Partial<Employee>>({});
 
-    // Confirmation dialog
     const { confirm, confirmState, handleClose, handleConfirm } = useConfirm();
 
-    useEffect(() => {
-        loadEmployees();
-    }, []);
+    useEffect(() => { loadEmployees(); }, []);
 
     useEffect(() => {
         if (selectedEmployee?.wp_user_id) {
@@ -65,19 +63,12 @@ export function EmployeeList() {
             const progress = await wordpressService.getCourseProgress(userId);
             setCourseProgress(progress);
 
-            // Check if all courses are completed and update status if needed
             const allCoursesCompleted = progress.length > 0 && progress.every(course => course.status === 'completed');
-
             if (allCoursesCompleted && selectedEmployee && selectedEmployee.status === 'Onboarding') {
                 await employeeService.updateEmployee(selectedEmployee.id, { status: 'Active' });
                 toast.success('All courses completed! Employee status updated to Active.');
                 await loadEmployees();
-
-                // Update selected employee
-                setSelectedEmployee({
-                    ...selectedEmployee,
-                    status: 'Active'
-                });
+                setSelectedEmployee({ ...selectedEmployee, status: 'Active' });
             }
         } catch (err) {
             console.error('Failed to load course progress', err);
@@ -88,41 +79,22 @@ export function EmployeeList() {
 
     const handleSyncToWordPress = async (createIfNotExists: boolean = false) => {
         if (!selectedEmployee) return;
-
         setSyncingToWordPress(true);
         try {
             const result = await employeeService.syncEmployeeToWordPress(selectedEmployee.id, createIfNotExists);
-
             if (result.success) {
                 toast.success(result.message);
-
-                // Update the selected employee with new wp_user_id
-                setSelectedEmployee({
-                    ...selectedEmployee,
-                    wp_user_id: result.wp_user_id
-                });
-
-                // Reload employees list to reflect changes
+                setSelectedEmployee({ ...selectedEmployee, wp_user_id: result.wp_user_id });
                 await loadEmployees();
-
-                // Load course progress if we got a wp_user_id
                 if (result.wp_user_id) {
                     await loadCourseProgress(result.wp_user_id);
-
-                    // Check if all courses are completed and update status if needed
                     const progress = await wordpressService.getCourseProgress(result.wp_user_id);
                     const allCoursesCompleted = progress.length > 0 && progress.every(course => course.status === 'completed');
-
                     if (allCoursesCompleted && selectedEmployee.status === 'Onboarding') {
                         await employeeService.updateEmployee(selectedEmployee.id, { status: 'Active' });
                         toast.success('All courses completed! Employee status updated to Active.');
                         await loadEmployees();
-
-                        // Update selected employee
-                        setSelectedEmployee({
-                            ...selectedEmployee,
-                            status: 'Active'
-                        });
+                        setSelectedEmployee({ ...selectedEmployee, status: 'Active' });
                     }
                 }
             } else {
@@ -132,10 +104,7 @@ export function EmployeeList() {
                     confirmText: 'Create User',
                     cancelText: 'Cancel',
                 });
-
-                if (shouldCreate) {
-                    await handleSyncToWordPress(true);
-                }
+                if (shouldCreate) await handleSyncToWordPress(true);
             }
         } catch (err: any) {
             console.error('Failed to sync to WordPress:', err);
@@ -160,22 +129,15 @@ export function EmployeeList() {
         }
     };
 
-    const handleCancelEdit = () => {
-        setIsEditing(false);
-        setEditFormData({});
-    };
+    const handleCancelEdit = () => { setIsEditing(false); setEditFormData({}); };
 
     const handleSaveEdit = async () => {
         if (!selectedEmployee || !editFormData) return;
-
         setIsSaving(true);
         try {
             const updatedEmployee = await employeeService.updateEmployee(selectedEmployee.id, editFormData);
-
-            // Update local state
             setSelectedEmployee(updatedEmployee);
             setEmployees(employees.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
-
             setIsEditing(false);
             setEditFormData({});
             toast.success('Employee updated successfully!');
@@ -189,7 +151,6 @@ export function EmployeeList() {
 
     const handleSyncApplicantStatus = async () => {
         if (!selectedEmployee) return;
-
         try {
             await employeeService.syncApplicantStatusToHired(selectedEmployee.id);
             toast.success('Applicant status synced to "Hired"');
@@ -204,148 +165,156 @@ export function EmployeeList() {
         const matchesSearch =
             `${employee.first_name} ${employee.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
             employee.email.toLowerCase().includes(searchTerm.toLowerCase());
-        // Note: Department filtering would go here if we had department data
         return matchesStatus && matchesSearch;
     });
 
-    if (loading) return <div className="p-8 text-center text-[#A2A1A8]">Loading employees...</div>;
-    if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
+    if (loading) return (
+        <div className="flex items-center justify-center py-20">
+            <span className="text-[13px] text-muted-foreground font-mono uppercase tracking-[0.06em]">Loading employees…</span>
+        </div>
+    );
+    if (error) return (
+        <div className="flex items-center justify-center py-20">
+            <span className="text-[13px] text-[hsl(4,82%,52%)]">{error}</span>
+        </div>
+    );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-5">
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="pl-1">
-                    <h1 className="text-[#16151C] dark:text-white font-semibold text-xl">Employees</h1>
-                    <p className="text-[#A2A1A8] font-light text-sm">Manage your team members and their roles</p>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pl-1">
+                <div>
+                    <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.875rem', fontStyle: 'italic', letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                        className="text-foreground">
+                        Employees
+                    </h1>
+                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
+                        className="uppercase text-muted-foreground mt-1">
+                        {employees.length} team members
+                    </p>
                 </div>
-                <button
-                    className="flex justify-center items-center gap-2 px-6 py-2.5 sm:px-4 sm:py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-light whitespace-nowrap w-full sm:w-auto text-sm sm:text-base"
-                >
-                    <Plus size={16} />
+                <button className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors whitespace-nowrap">
+                    <Plus size={14} strokeWidth={2.5} />
                     Add Employee
                 </button>
             </div>
 
             {/* Filters & Search */}
-            <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {/* Search */}
-                    <div className="md:col-span-2">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A2A1A8]" size={18} strokeWidth={1.5} />
-                            <input
-                                type="text"
-                                placeholder="Search employees..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-light"
-                            />
-                        </div>
+            <div className="bg-card border border-border rounded-lg p-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="md:col-span-2 relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} strokeWidth={2} />
+                        <input
+                            type="text"
+                            placeholder="Search by name or email…"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-8 pr-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60"
+                        />
                     </div>
-
-                    {/* Department Filter */}
-                    <div>
-                        <select
-                            value={filterDept}
-                            onChange={(e) => setFilterDept(e.target.value)}
-                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent dark:bg-card font-light"
-                        >
-                            <option value="all">All Departments</option>
-                            <option value="Nursing">Nursing</option>
-                            <option value="Care">Care</option>
-                            <option value="Admin">Admin</option>
-                        </select>
-                    </div>
-
-                    {/* Status Filter */}
-                    <div>
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent dark:bg-card font-light"
-                        >
-                            <option value="all">All Statuses</option>
-                            <option value="Active">Active</option>
-                            <option value="Onboarding">Onboarding</option>
-                            <option value="Suspended">Suspended</option>
-                            <option value="Terminated">Terminated</option>
-                        </select>
-                    </div>
+                    <select
+                        value={filterDept}
+                        onChange={(e) => setFilterDept(e.target.value)}
+                        className={inputCls}
+                    >
+                        <option value="all">All Departments</option>
+                        <option value="Nursing">Nursing</option>
+                        <option value="Care">Care</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                    <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className={inputCls}
+                    >
+                        <option value="all">All Statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Onboarding">Onboarding</option>
+                        <option value="Suspended">Suspended</option>
+                        <option value="Terminated">Terminated</option>
+                    </select>
                 </div>
             </div>
 
             {/* Employees Table */}
-            <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] overflow-hidden">
+            <div className="bg-card border border-border rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-[rgba(162,161,168,0.02)] border-b border-[rgba(162,161,168,0.1)]">
+                        <thead className="border-b border-border">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs text-[#A2A1A8] uppercase tracking-wider font-light">
-                                    Employee Name
+                                <th className="px-5 py-3 text-left">
+                                    <span className="zone-label">Employee</span>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs text-[#A2A1A8] uppercase tracking-wider font-light">
-                                    Role
+                                <th className="px-5 py-3 text-left">
+                                    <span className="zone-label">Role</span>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs text-[#A2A1A8] uppercase tracking-wider font-light">
-                                    Status
+                                <th className="px-5 py-3 text-left">
+                                    <span className="zone-label">Status</span>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs text-[#A2A1A8] uppercase tracking-wider font-light">
-                                    Start Date
+                                <th className="px-5 py-3 text-left">
+                                    <span className="zone-label">Start Date</span>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs text-[#A2A1A8] uppercase tracking-wider font-light">
-                                    Department
+                                <th className="px-5 py-3 text-left">
+                                    <span className="zone-label">Dept</span>
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs text-[#A2A1A8] uppercase tracking-wider font-light">
-                                    Actions
+                                <th className="px-5 py-3 text-left">
+                                    <span className="zone-label sr-only">Actions</span>
                                 </th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[rgba(162,161,168,0.05)]">
+                        <tbody className="divide-y divide-border/60">
                             {filteredEmployees.map((employee) => (
                                 <tr
                                     key={employee.id}
-                                    className="hover:bg-[rgba(113,82,243,0.02)] transition-colors cursor-pointer"
+                                    className="transition-colors duration-75 cursor-pointer"
                                     onClick={() => setSelectedEmployee(employee)}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--secondary)'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
                                 >
-                                    <td className="px-6 py-4">
+                                    <td className="px-5 py-3.5">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-full bg-[rgba(113,82,243,0.1)] flex items-center justify-center text-[#7152F3]">
+                                            <div
+                                                className="h-8 w-8 rounded-full text-[11px] font-mono font-semibold flex items-center justify-center flex-shrink-0"
+                                                style={{ background: 'hsl(196 84% 52% / 0.12)', color: 'hsl(196 84% 62%)' }}
+                                            >
                                                 {employee.first_name[0]}{employee.last_name[0]}
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[#16151C] dark:text-white font-light">
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-[13px] text-foreground font-medium truncate">
                                                     {employee.first_name} {employee.last_name}
                                                 </span>
-                                                <span className="text-xs text-[#A2A1A8]">{employee.email}</span>
+                                                <span className="text-[11px] text-muted-foreground font-mono truncate">{employee.email}</span>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-[#16151C] dark:text-white font-light">{employee.position}</span>
+                                    <td className="px-5 py-3.5">
+                                        <span className="text-[13px] text-foreground">{employee.position}</span>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="px-5 py-3.5">
                                         <StatusBadge status={employee.status} size="sm" />
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-[#16151C] dark:text-white font-light">
-                                            {employee.start_date ? format(new Date(employee.start_date), 'MMM d, yyyy') : '-'}
+                                    <td className="px-5 py-3.5">
+                                        <span className="text-[13px] text-foreground font-mono">
+                                            {employee.start_date ? format(new Date(employee.start_date), 'MMM d, yyyy') : '—'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-[#16151C] dark:text-white font-light">Nursing</span>
+                                    <td className="px-5 py-3.5">
+                                        <span className="text-[13px] text-muted-foreground">Nursing</span>
                                     </td>
-                                    <td className="px-6 py-4">
-                                        <button className="text-[#A2A1A8] hover:text-[#7152F3] transition-colors">
-                                            <MoreHorizontal size={20} />
+                                    <td className="px-5 py-3.5">
+                                        <button
+                                            className="text-muted-foreground/50 hover:text-primary transition-colors"
+                                            onClick={(e) => { e.stopPropagation(); setSelectedEmployee(employee); }}
+                                        >
+                                            <MoreHorizontal size={16} />
                                         </button>
                                     </td>
                                 </tr>
                             ))}
                             {filteredEmployees.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-12 text-center text-[#A2A1A8] font-light">
-                                        No employees found matching your filters.
+                                    <td colSpan={6} className="px-5 py-16 text-center">
+                                        <p className="text-[13px] text-muted-foreground">No employees match your filters.</p>
                                     </td>
                                 </tr>
                             )}
@@ -357,23 +326,26 @@ export function EmployeeList() {
             {/* Employee Detail Drawer */}
             <SlideOver
                 isOpen={!!selectedEmployee}
-                onClose={() => setSelectedEmployee(null)}
+                onClose={() => { setSelectedEmployee(null); setIsEditing(false); setEditFormData({}); }}
                 title="Employee Profile"
                 width="lg"
             >
                 {selectedEmployee && (
-                    <div className="space-y-8">
-                        {/* Header Profile */}
-                        <div className="flex items-center justify-between pb-6 border-b border-[rgba(162,161,168,0.1)]">
+                    <div className="space-y-6">
+                        {/* Header */}
+                        <div className="flex items-start justify-between pb-5 border-b border-border">
                             <div className="flex items-center gap-4">
-                                <div className="h-20 w-20 rounded-full bg-[rgba(113,82,243,0.1)] flex items-center justify-center text-[#7152F3] text-2xl font-light">
+                                <div
+                                    className="h-16 w-16 rounded-full text-xl font-mono font-semibold flex items-center justify-center flex-shrink-0"
+                                    style={{ background: 'hsl(196 84% 52% / 0.12)', color: 'hsl(196 84% 62%)' }}
+                                >
                                     {selectedEmployee.first_name[0]}{selectedEmployee.last_name[0]}
                                 </div>
                                 <div>
-                                    <h3 className="text-[#16151C] dark:text-white text-xl font-semibold">
+                                    <h3 className="text-[15px] font-semibold text-foreground leading-tight">
                                         {selectedEmployee.first_name} {selectedEmployee.last_name}
                                     </h3>
-                                    <p className="text-[#A2A1A8] font-light">{selectedEmployee.position}</p>
+                                    <p className="text-[13px] text-muted-foreground mt-0.5">{selectedEmployee.position}</p>
                                     <div className="mt-2">
                                         <StatusBadge status={selectedEmployee.status} size="sm" />
                                     </div>
@@ -382,11 +354,13 @@ export function EmployeeList() {
                             {selectedEmployee.applicant_id && (
                                 <button
                                     onClick={handleSyncApplicantStatus}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-[8px] hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                    title="Sync applicant status to Hired"
+                                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[11px] font-mono font-semibold uppercase tracking-[0.04em] transition-colors"
+                                    style={{ background: 'hsl(196 84% 52% / 0.1)', color: 'hsl(196 84% 60%)', border: '1px solid hsl(196 84% 52% / 0.2)' }}
+                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'hsl(196 84% 52% / 0.16)'}
+                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'hsl(196 84% 52% / 0.1)'}
                                 >
-                                    <RefreshCw size={14} />
-                                    Fix Applicant Status
+                                    <RefreshCw size={11} />
+                                    Fix Status
                                 </button>
                             )}
                         </div>
@@ -396,48 +370,51 @@ export function EmployeeList() {
                             <OnboardingSummaryPanel employee={selectedEmployee} status={selectedEmployee.status} />
                         )}
 
-                        {/* Training Progress (New Section) */}
+                        {/* Training Progress */}
                         <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h4 className="text-[#16151C] dark:text-white font-medium flex items-center gap-2">
-                                    <BookOpen size={18} className="text-[#7152F3]" />
-                                    Training Progress
-                                </h4>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <BookOpen size={13} className="text-primary" strokeWidth={2} />
+                                    <span className="zone-label">Training Progress</span>
+                                </div>
                                 {!selectedEmployee.wp_user_id && (
                                     <button
                                         onClick={() => handleSyncToWordPress(false)}
                                         disabled={syncingToWordPress}
-                                        className="flex items-center gap-2 px-3 py-1.5 text-xs bg-[#7152F3] text-white rounded-[8px] hover:bg-[rgba(113,82,243,0.9)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[11px] font-semibold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <RefreshCw size={14} className={syncingToWordPress ? 'animate-spin' : ''} />
-                                        {syncingToWordPress ? 'Syncing...' : 'Sync to WordPress'}
+                                        <RefreshCw size={11} className={syncingToWordPress ? 'animate-spin' : ''} />
+                                        {syncingToWordPress ? 'Syncing…' : 'Sync WordPress'}
                                     </button>
                                 )}
                             </div>
                             {loadingProgress ? (
-                                <div className="text-sm text-[#A2A1A8]">Loading progress...</div>
+                                <div className="text-[12px] text-muted-foreground font-mono">Loading progress…</div>
                             ) : courseProgress.length > 0 ? (
-                                <div className="space-y-4">
+                                <div className="space-y-3">
                                     {courseProgress.map((course) => (
-                                        <div key={course.course_id} className="p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px] border border-[rgba(162,161,168,0.1)]">
-                                            <div className="flex justify-between items-center mb-2">
-                                                <span className="text-[#16151C] dark:text-white font-medium text-sm">
+                                        <div key={course.course_id} className="p-3.5 bg-muted/30 rounded-md border border-border">
+                                            <div className="flex justify-between items-center mb-2.5">
+                                                <span className="text-[13px] text-foreground font-medium">
                                                     {course.course_title || `Course #${course.course_id}`}
                                                 </span>
-                                                <span className={`text-xs px-2 py-1 rounded-full ${course.status === 'completed'
-                                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                                    }`}>
-                                                    {course.status === 'completed' ? 'Completed' : 'In Progress'}
-                                                </span>
+                                                {course.status === 'completed' ? (
+                                                    <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.04em] px-2 py-0.5 rounded border bg-[hsl(152,58%,38%)]/8 text-[hsl(152,50%,30%)] dark:text-[hsl(152,54%,52%)] border-[hsl(152,58%,38%)]/20">
+                                                        Completed
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.04em] px-2 py-0.5 rounded border bg-[hsl(38,96%,48%)]/8 text-[hsl(38,74%,36%)] dark:text-[hsl(38,90%,56%)] border-[hsl(38,96%,48%)]/20">
+                                                        In Progress
+                                                    </span>
+                                                )}
                                             </div>
-                                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+                                            <div className="w-full bg-border rounded-full h-1.5 mb-2">
                                                 <div
-                                                    className="bg-[#7152F3] h-2 rounded-full transition-all duration-500"
+                                                    className="bg-primary h-1.5 rounded-full transition-all duration-500"
                                                     style={{ width: `${course.percentage}%` }}
-                                                ></div>
+                                                />
                                             </div>
-                                            <div className="flex justify-between text-xs text-[#A2A1A8]">
+                                            <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
                                                 <span>{course.steps_completed} / {course.steps_total} steps</span>
                                                 <span>{course.percentage}%</span>
                                             </div>
@@ -445,10 +422,10 @@ export function EmployeeList() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px] border border-[rgba(162,161,168,0.1)] text-center">
-                                    <p className="text-sm text-[#A2A1A8]">No training data available.</p>
+                                <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
+                                    <p className="text-[12px] text-muted-foreground">No training data available.</p>
                                     {!selectedEmployee.wp_user_id && (
-                                        <p className="text-xs text-red-400 mt-1">Employee not synced to WordPress.</p>
+                                        <p className="text-[11px] text-[hsl(4,82%,52%)] mt-1 font-mono">Employee not synced to WordPress.</p>
                                     )}
                                 </div>
                             )}
@@ -456,70 +433,38 @@ export function EmployeeList() {
 
                         {/* Contact Information */}
                         <div>
-                            <h4 className="text-[#16151C] dark:text-white font-medium mb-4">Contact Information</h4>
+                            <p className="zone-label mb-3">Contact Information</p>
                             {isEditing ? (
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm text-[#A2A1A8] mb-2">First Name</label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.first_name || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })}
-                                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-light"
-                                        />
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className={labelCls}>First Name</label>
+                                            <input type="text" value={editFormData.first_name || ''} onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })} className={inputCls} />
+                                        </div>
+                                        <div>
+                                            <label className={labelCls}>Last Name</label>
+                                            <input type="text" value={editFormData.last_name || ''} onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })} className={inputCls} />
+                                        </div>
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-[#A2A1A8] mb-2">Last Name</label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.last_name || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })}
-                                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-light"
-                                        />
+                                        <label className={labelCls}>Email</label>
+                                        <input type="email" value={editFormData.email || ''} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} className={inputCls} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-[#A2A1A8] mb-2">Email</label>
-                                        <input
-                                            type="email"
-                                            value={editFormData.email || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-light"
-                                        />
+                                        <label className={labelCls}>Phone</label>
+                                        <input type="tel" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} className={inputCls} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-[#A2A1A8] mb-2">Phone</label>
-                                        <input
-                                            type="tel"
-                                            value={editFormData.phone || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-light"
-                                        />
+                                        <label className={labelCls}>Position</label>
+                                        <input type="text" value={editFormData.position || ''} onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })} className={inputCls} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-[#A2A1A8] mb-2">Position</label>
-                                        <input
-                                            type="text"
-                                            value={editFormData.position || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, position: e.target.value })}
-                                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-light"
-                                        />
+                                        <label className={labelCls}>Start Date</label>
+                                        <input type="date" value={editFormData.start_date || ''} onChange={(e) => setEditFormData({ ...editFormData, start_date: e.target.value })} className={inputCls} />
                                     </div>
                                     <div>
-                                        <label className="block text-sm text-[#A2A1A8] mb-2">Start Date</label>
-                                        <input
-                                            type="date"
-                                            value={editFormData.start_date || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, start_date: e.target.value })}
-                                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent font-light"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm text-[#A2A1A8] mb-2">Status</label>
-                                        <select
-                                            value={editFormData.status || ''}
-                                            onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                                            className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] text-[#16151C] dark:text-white bg-transparent dark:bg-card font-light"
-                                        >
+                                        <label className={labelCls}>Status</label>
+                                        <select value={editFormData.status || ''} onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })} className={inputCls}>
                                             <option value="Active">Active</option>
                                             <option value="Onboarding">Onboarding</option>
                                             <option value="Suspended">Suspended</option>
@@ -528,20 +473,20 @@ export function EmployeeList() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px] border border-[rgba(162,161,168,0.1)]">
-                                        <div className="flex items-center gap-3 text-[#A2A1A8] mb-1">
-                                            <Mail size={16} />
-                                            <span className="text-xs uppercase tracking-wider">Email</span>
+                                <div className="divide-y divide-border/60 rounded-md border border-border overflow-hidden">
+                                    <div className="flex items-center gap-3 px-4 py-3">
+                                        <Mail size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                        <div className="min-w-0">
+                                            <p className="zone-label mb-0.5">Email</p>
+                                            <p className="text-[13px] text-foreground truncate">{selectedEmployee.email}</p>
                                         </div>
-                                        <p className="text-[#16151C] dark:text-white font-light">{selectedEmployee.email}</p>
                                     </div>
-                                    <div className="p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px] border border-[rgba(162,161,168,0.1)]">
-                                        <div className="flex items-center gap-3 text-[#A2A1A8] mb-1">
-                                            <Phone size={16} />
-                                            <span className="text-xs uppercase tracking-wider">Phone</span>
+                                    <div className="flex items-center gap-3 px-4 py-3">
+                                        <Phone size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                        <div>
+                                            <p className="zone-label mb-0.5">Phone</p>
+                                            <p className="text-[13px] text-foreground">{selectedEmployee.phone || '—'}</p>
                                         </div>
-                                        <p className="text-[#16151C] dark:text-white font-light">{selectedEmployee.phone || '(555) 123-4567'}</p>
                                     </div>
                                 </div>
                             )}
@@ -549,58 +494,52 @@ export function EmployeeList() {
 
                         {/* Employment Details */}
                         <div>
-                            <h4 className="text-[#16151C] dark:text-white font-medium mb-4">Employment Details</h4>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px] border border-[rgba(162,161,168,0.1)]">
-                                    <div className="flex items-center gap-3">
-                                        <Calendar className="text-[#A2A1A8]" size={20} />
-                                        <div>
-                                            <p className="text-xs text-[#A2A1A8] uppercase tracking-wider">Start Date</p>
-                                            <p className="text-[#16151C] dark:text-white font-light">
-                                                {selectedEmployee.start_date ? format(new Date(selectedEmployee.start_date), 'MMMM d, yyyy') : '-'}
-                                            </p>
-                                        </div>
+                            <p className="zone-label mb-3">Employment Details</p>
+                            <div className="divide-y divide-border/60 rounded-md border border-border overflow-hidden">
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <Calendar size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                    <div>
+                                        <p className="zone-label mb-0.5">Start Date</p>
+                                        <p className="text-[13px] text-foreground font-mono">
+                                            {selectedEmployee.start_date ? format(new Date(selectedEmployee.start_date), 'MMMM d, yyyy') : '—'}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px] border border-[rgba(162,161,168,0.1)]">
-                                    <div className="flex items-center gap-3">
-                                        <Building className="text-[#A2A1A8]" size={20} />
-                                        <div>
-                                            <p className="text-xs text-[#A2A1A8] uppercase tracking-wider">Department</p>
-                                            <p className="text-[#16151C] dark:text-white font-light">Nursing</p>
-                                        </div>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <Building size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                    <div>
+                                        <p className="zone-label mb-0.5">Department</p>
+                                        <p className="text-[13px] text-foreground">Nursing</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px] border border-[rgba(162,161,168,0.1)]">
-                                    <div className="flex items-center gap-3">
-                                        <MapPin className="text-[#A2A1A8]" size={20} />
-                                        <div>
-                                            <p className="text-xs text-[#A2A1A8] uppercase tracking-wider">Location</p>
-                                            <p className="text-[#16151C] dark:text-white font-light">Main Branch</p>
-                                        </div>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <MapPin size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                    <div>
+                                        <p className="zone-label mb-0.5">Location</p>
+                                        <p className="text-[13px] text-foreground">Main Branch</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="flex gap-3 pt-4 border-t border-[rgba(162,161,168,0.1)]">
+                        <div className="flex gap-2.5 pt-4 border-t border-border">
                             {isEditing ? (
                                 <>
                                     <button
                                         onClick={handleSaveEdit}
                                         disabled={isSaving}
-                                        className="flex-1 px-4 py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <Save size={18} />
-                                        {isSaving ? 'Saving...' : 'Save Changes'}
+                                        <Save size={13} />
+                                        {isSaving ? 'Saving…' : 'Save Changes'}
                                     </button>
                                     <button
                                         onClick={handleCancelEdit}
                                         disabled={isSaving}
-                                        className="flex-1 px-4 py-2 bg-white dark:bg-card border border-[rgba(162,161,168,0.2)] text-[#A2A1A8] rounded-[10px] hover:bg-[rgba(162,161,168,0.05)] transition-colors font-light disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <X size={18} />
+                                        <X size={13} />
                                         Cancel
                                     </button>
                                 </>
@@ -608,13 +547,13 @@ export function EmployeeList() {
                                 <>
                                     <button
                                         onClick={handleEditClick}
-                                        className="flex-1 px-4 py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-light flex items-center justify-center gap-2"
+                                        className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors"
                                     >
-                                        <Edit2 size={18} />
+                                        <Edit2 size={13} />
                                         Edit Profile
                                     </button>
-                                    <button className="flex-1 px-4 py-2 bg-white dark:bg-card border border-[rgba(162,161,168,0.2)] text-[#EF4444] rounded-[10px] hover:bg-[rgba(239,68,68,0.05)] transition-colors font-light">
-                                        Terminate Employment
+                                    <button className="flex-1 inline-flex items-center justify-center h-8 px-4 rounded-md border border-[hsl(4,82%,52%)]/30 text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)] text-[13px] font-semibold hover:bg-[hsl(4,82%,52%)]/6 transition-colors">
+                                        Terminate
                                     </button>
                                 </>
                             )}
@@ -623,7 +562,6 @@ export function EmployeeList() {
                 )}
             </SlideOver>
 
-            {/* Confirmation Dialog */}
             <ConfirmDialog
                 isOpen={confirmState.isOpen}
                 onClose={handleClose}

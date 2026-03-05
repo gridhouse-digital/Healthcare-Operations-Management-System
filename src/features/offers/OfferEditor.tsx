@@ -5,7 +5,6 @@ import { offerService } from '@/services/offerService';
 import { applicantService } from '@/services/applicantService';
 import type { Applicant } from '@/types';
 import { ArrowLeft, Save, User, Briefcase, DollarSign, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { OfferLetterDraftPanel } from '@/components/ai/OfferLetterDraftPanel';
 import { toast } from '@/hooks/useToast';
 
@@ -16,6 +15,10 @@ interface OfferFormData {
     salary: number;
 }
 
+const fieldCls = 'w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50';
+const fieldWithIconCls = 'w-full h-9 pl-8 pr-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50';
+const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5';
+
 export function OfferEditor() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -25,46 +28,30 @@ export function OfferEditor() {
 
     const { register, handleSubmit, watch, formState: { errors }, reset, setValue } = useForm<OfferFormData>();
 
-    useEffect(() => {
-        loadApplicants();
-    }, []);
+    useEffect(() => { loadApplicants(); }, []);
+    useEffect(() => { if (id) loadOffer(id); }, [id]);
 
-    useEffect(() => {
-        if (id) {
-            loadOffer(id);
-        }
-    }, [id]);
-
-    // Handle auto-population from location state
     useEffect(() => {
         if (location.state?.applicant && applicants.length > 0) {
             const app = location.state.applicant;
-
-            // Check if applicant is in the list
             const exists = applicants.find(a => a.id === app.id);
             if (!exists) {
-                // If not in list (e.g. filtered out), add them temporarily so we can select them
                 setApplicants(prev => [...prev, {
                     id: app.id,
                     first_name: app.first_name,
                     last_name: app.last_name,
                     email: app.email,
-                    status: 'New', // Use a valid status
+                    status: 'New',
                     created_at: new Date().toISOString()
                 } as unknown as Applicant]);
             }
-
             setValue('applicant_id', app.id);
         }
     }, [applicants.length, location.state, setValue]);
 
     const loadApplicants = async () => {
         const data = await applicantService.getApplicants();
-        // Filter out applicants who are already Hired or Rejected
-        // BUT if we are coming from details page, we might want to offer regardless of status
-        // So let's keep all for now, or just filter Hired.
-        const eligibleApplicants = data.filter(app => app.status !== 'Hired');
-        setApplicants(eligibleApplicants);
+        setApplicants(data.filter(app => app.status !== 'Hired'));
     };
 
     const loadOffer = async (offerId: string) => {
@@ -81,15 +68,9 @@ export function OfferEditor() {
         setLoading(true);
         try {
             if (id) {
-                await offerService.updateOffer(id, {
-                    ...data,
-                    status: 'Draft',
-                });
+                await offerService.updateOffer(id, { ...data, status: 'Draft' });
             } else {
-                await offerService.createOffer({
-                    ...data,
-                    status: 'Draft',
-                });
+                await offerService.createOffer({ ...data, status: 'Draft' });
             }
             navigate('/offers');
         } catch (error) {
@@ -101,154 +82,124 @@ export function OfferEditor() {
     };
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 pl-1">
                 <button
                     onClick={() => navigate('/offers')}
-                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+                    className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                 >
-                    <ArrowLeft className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                    <ArrowLeft size={14} />
                 </button>
                 <div>
-                    <h1 className="text-2xl font-bold text-[#16151C] dark:text-white">
-                        {id ? 'Edit Offer' : 'Create New Offer'}
+                    <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.875rem', fontStyle: 'italic', letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                        className="text-foreground">
+                        {id ? 'Edit Offer' : 'Create Offer'}
                     </h1>
-                    <p className="text-sm text-[#A2A1A8] font-light">
-                        {id ? 'Update the offer details below' : 'Fill in the details to create a new offer letter'}
+                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
+                        className="uppercase text-muted-foreground mt-0.5">
+                        {id ? 'Update offer details' : 'New offer letter'}
                     </p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Form Column */}
-                <div className="lg:col-span-2 bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-8 shadow-sm">
-                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-                        {/* ... form content ... */}
-                        <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
-
-                            {/* Applicant Selection */}
-                            <div className="sm:col-span-2">
-                                <label htmlFor="applicant" className="block text-sm font-medium text-[#16151C] dark:text-white mb-2">
-                                    Applicant
-                                </label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <User className="h-5 w-5 text-[#A2A1A8]" aria-hidden="true" />
-                                    </div>
-                                    <select
-                                        id="applicant"
-                                        {...register('applicant_id', { required: 'Applicant is required' })}
-                                        className="block w-full rounded-[10px] border border-[rgba(162,161,168,0.2)] bg-transparent py-3 pl-10 pr-10 text-[#16151C] dark:text-white placeholder:text-[#A2A1A8] focus:border-[#7152F3] focus:ring-1 focus:ring-[#7152F3] sm:text-sm font-light appearance-none"
-                                    >
-                                        <option value="" className="text-[#A2A1A8] dark:bg-[#1E1E24]">Select an applicant</option>
-                                        {applicants.map((app) => (
-                                            <option key={app.id} value={app.id} className="text-[#16151C] dark:text-white dark:bg-[#1E1E24]">
-                                                {app.first_name} {app.last_name} ({app.email})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {/* Custom Chevron for Select */}
-                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                                        <svg className="h-5 w-5 text-[#A2A1A8]" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                            <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </div>
-                                {errors.applicant_id && (
-                                    <p className="mt-2 text-sm text-red-500">{errors.applicant_id.message}</p>
-                                )}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Form */}
+                <div className="lg:col-span-2 bg-card border border-border rounded-lg p-6">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        {/* Applicant */}
+                        <div>
+                            <label className={labelCls}>Applicant</label>
+                            <div className="relative">
+                                <User size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                <select
+                                    {...register('applicant_id', { required: 'Applicant is required' })}
+                                    className={fieldWithIconCls + ' appearance-none pr-7'}
+                                >
+                                    <option value="">Select an applicant</option>
+                                    {applicants.map((app) => (
+                                        <option key={app.id} value={app.id}>
+                                            {app.first_name} {app.last_name} ({app.email})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
+                            {errors.applicant_id && (
+                                <p className="mt-1.5 text-[11px] text-[hsl(4,82%,52%)] font-mono">{errors.applicant_id.message}</p>
+                            )}
+                        </div>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             {/* Position Title */}
-                            <div className="sm:col-span-1">
-                                <label htmlFor="position" className="block text-sm font-medium text-[#16151C] dark:text-white mb-2">
-                                    Position Title
-                                </label>
+                            <div>
+                                <label className={labelCls}>Position Title</label>
                                 <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <Briefcase className="h-5 w-5 text-[#A2A1A8]" aria-hidden="true" />
-                                    </div>
+                                    <Briefcase size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                                     <input
                                         type="text"
-                                        id="position"
-                                        placeholder="e.g. Senior Developer"
+                                        placeholder="e.g. Registered Nurse"
                                         {...register('position_title', { required: 'Position title is required' })}
-                                        className="block w-full rounded-[10px] border border-[rgba(162,161,168,0.2)] bg-transparent py-3 pl-10 pr-10 text-[#16151C] dark:text-white placeholder:text-[#A2A1A8] focus:border-[#7152F3] focus:ring-1 focus:ring-[#7152F3] sm:text-sm font-light"
+                                        className={fieldWithIconCls}
                                     />
                                 </div>
                                 {errors.position_title && (
-                                    <p className="mt-2 text-sm text-red-500">{errors.position_title.message}</p>
+                                    <p className="mt-1.5 text-[11px] text-[hsl(4,82%,52%)] font-mono">{errors.position_title.message}</p>
                                 )}
                             </div>
 
                             {/* Salary */}
-                            <div className="sm:col-span-1">
-                                <label htmlFor="salary" className="block text-sm font-medium text-[#16151C] dark:text-white mb-2">
-                                    Salary Rate
-                                </label>
+                            <div>
+                                <label className={labelCls}>Pay Rate</label>
                                 <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <DollarSign className="h-5 w-5 text-[#A2A1A8]" aria-hidden="true" />
-                                    </div>
+                                    <DollarSign size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                                     <input
                                         type="number"
-                                        id="salary"
                                         placeholder="0.00"
                                         {...register('salary', { required: 'Salary is required', min: 0 })}
-                                        className="block w-full rounded-[10px] border border-[rgba(162,161,168,0.2)] bg-transparent py-3 pl-10 pr-10 text-[#16151C] dark:text-white placeholder:text-[#A2A1A8] focus:border-[#7152F3] focus:ring-1 focus:ring-[#7152F3] sm:text-sm font-light"
+                                        className={fieldWithIconCls}
                                     />
                                 </div>
                             </div>
 
                             {/* Start Date */}
-                            <div className="sm:col-span-2">
-                                <label htmlFor="start_date" className="block text-sm font-medium text-[#16151C] dark:text-white mb-2">
-                                    Start Date
-                                </label>
+                            <div>
+                                <label className={labelCls}>Start Date</label>
                                 <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <Calendar className="h-5 w-5 text-[#A2A1A8]" aria-hidden="true" />
-                                    </div>
+                                    <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                                     <input
                                         type="date"
-                                        id="start_date"
                                         {...register('start_date', { required: 'Start date is required' })}
-                                        className="block w-full rounded-[10px] border border-[rgba(162,161,168,0.2)] bg-transparent py-3 pl-10 pr-10 text-[#16151C] dark:text-white placeholder:text-[#A2A1A8] focus:border-[#7152F3] focus:ring-1 focus:ring-[#7152F3] sm:text-sm font-light"
+                                        className={fieldWithIconCls}
                                     />
                                 </div>
+                                {errors.start_date && (
+                                    <p className="mt-1.5 text-[11px] text-[hsl(4,82%,52%)] font-mono">{errors.start_date.message}</p>
+                                )}
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-end gap-x-4 pt-6 border-t border-[rgba(162,161,168,0.1)]">
-                            <Button
+                        <div className="flex items-center justify-end gap-3 pt-5 border-t border-border">
+                            <button
                                 type="button"
-                                variant="outline"
                                 onClick={() => navigate('/offers')}
-                                className="h-11 px-6"
+                                className="inline-flex items-center h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                             >
                                 Cancel
-                            </Button>
-                            <Button
+                            </button>
+                            <button
                                 type="submit"
                                 disabled={loading}
-                                className="h-11 px-6 bg-[#7152F3] hover:bg-[#5E43D8] text-white"
+                                className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {loading ? (
-                                    <>Saving...</>
-                                ) : (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Save Offer
-                                    </>
-                                )}
-                            </Button>
+                                <Save size={13} />
+                                {loading ? 'Saving…' : 'Save Offer'}
+                            </button>
                         </div>
                     </form>
                 </div>
 
-                {/* AI Assistant Column */}
-                <div className="space-y-6">
+                {/* AI Assistant */}
+                <div>
                     <OfferLetterDraftPanel
                         employeeDetails={{
                             name: applicants.find(a => a.id === watch('applicant_id')) ?

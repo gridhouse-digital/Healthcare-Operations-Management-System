@@ -1,0 +1,75 @@
+{
+  "scriptId": "337",
+  "url": "file:///C:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/prolific-hr-app/supabase/functions/_shared/audit-logger.ts",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 1313,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "logAudit",
+      "ranges": [
+        {
+          "startOffset": 624,
+          "endOffset": 763,
+          "count": 9
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 685,
+          "endOffset": 759,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "_writeAudit",
+      "ranges": [
+        {
+          "startOffset": 764,
+          "endOffset": 1312,
+          "count": 9
+        },
+        {
+          "startOffset": 935,
+          "endOffset": 942,
+          "count": 6
+        },
+        {
+          "startOffset": 942,
+          "endOffset": 1265,
+          "count": 3
+        },
+        {
+          "startOffset": 1265,
+          "endOffset": 1272,
+          "count": 1
+        },
+        {
+          "startOffset": 1297,
+          "endOffset": 1304,
+          "count": 1
+        },
+        {
+          "startOffset": 1310,
+          "endOffset": 1311,
+          "count": 2
+        }
+      ],
+      "isBlockCoverage": true
+    }
+  ]
+}

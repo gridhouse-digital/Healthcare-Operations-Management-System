@@ -6,29 +6,37 @@ export function ThemeToggle({ className }: { className?: string }) {
     const { theme, setTheme } = useTheme()
 
     return (
-        <div className={cn("flex items-center p-1 bg-[#F9FAFB] dark:bg-card border border-[rgba(162,161,168,0.1)] rounded-[10px]", className)}>
+        <div
+            className={cn("flex items-center p-0.5 rounded-md w-full", className)}
+            style={{
+                background: 'hsl(0 0% 100% / 0.03)',
+                border: '1px solid hsl(0 0% 100% / 0.07)',
+            }}
+        >
             <button
                 onClick={() => setTheme("light")}
                 className={cn(
-                    "flex items-center justify-center gap-2 flex-1 px-4 py-2 text-sm font-medium rounded-[8px] transition-all",
-                    theme === "light"
-                        ? "bg-white dark:bg-[#7152F3] text-[#16151C] dark:text-white shadow-sm border border-[rgba(162,161,168,0.1)] dark:border-none"
-                        : "text-[#A2A1A8] hover:text-[#16151C] dark:hover:text-white"
+                    "flex items-center justify-center gap-1.5 flex-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-all duration-150",
                 )}
+                style={{
+                    background: theme === "light" ? 'hsl(0 0% 100% / 0.10)' : 'transparent',
+                    color: theme === "light" ? 'hsl(0 0% 88%)' : 'hsl(0 0% 28%)',
+                }}
             >
-                <Sun className="h-4 w-4" />
+                <Sun className="h-3 w-3" />
                 <span>Light</span>
             </button>
             <button
                 onClick={() => setTheme("dark")}
                 className={cn(
-                    "flex items-center justify-center gap-2 flex-1 px-4 py-2 text-sm font-medium rounded-[8px] transition-all",
-                    theme === "dark"
-                        ? "bg-white dark:bg-[#7152F3] text-[#16151C] dark:text-white shadow-sm border border-[rgba(162,161,168,0.1)] dark:border-none"
-                        : "text-[#A2A1A8] hover:text-[#16151C] dark:hover:text-white"
+                    "flex items-center justify-center gap-1.5 flex-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-md transition-all duration-150",
                 )}
+                style={{
+                    background: theme === "dark" ? 'hsl(196 84% 42% / 0.16)' : 'transparent',
+                    color: theme === "dark" ? 'hsl(196 84% 64%)' : 'hsl(0 0% 28%)',
+                }}
             >
-                <Moon className="h-4 w-4" />
+                <Moon className="h-3 w-3" />
                 <span>Dark</span>
             </button>
         </div>

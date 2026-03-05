@@ -1,0 +1,350 @@
+{
+  "scriptId": "403",
+  "url": "file:///C:/Users/oyiny/AppData/Local/deno/npm/registry.npmjs.org/@supabase/auth-js/2.98.0/dist/main/lib/helpers.js",
+  "functions": [
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 0,
+          "endOffset": 15454,
+          "count": 1
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "expiresAt",
+      "ranges": [
+        {
+          "startOffset": 1117,
+          "endOffset": 1233,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "generateCallbackId",
+      "ranges": [
+        {
+          "startOffset": 1873,
+          "endOffset": 1942,
+          "count": 3
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "isBrowser",
+      "ranges": [
+        {
+          "startOffset": 1961,
+          "endOffset": 2031,
+          "count": 15
+        },
+        {
+          "startOffset": 1997,
+          "endOffset": 2031,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "supportsLocalStorage",
+      "ranges": [
+        {
+          "startOffset": 2238,
+          "endOffset": 3297,
+          "count": 1
+        },
+        {
+          "startOffset": 2310,
+          "endOffset": 2415,
+          "count": 0
+        },
+        {
+          "startOffset": 2426,
+          "endOffset": 3296,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "parseParametersFromURL",
+      "ranges": [
+        {
+          "startOffset": 3434,
+          "endOffset": 4028,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "resolveFetch",
+      "ranges": [
+        {
+          "startOffset": 4050,
+          "endOffset": 4189,
+          "count": 6
+        },
+        {
+          "startOffset": 4090,
+          "endOffset": 4147,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 4107,
+          "endOffset": 4140,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "",
+      "ranges": [
+        {
+          "startOffset": 4159,
+          "endOffset": 4186,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "looksLikeFetchResponse",
+      "ranges": [
+        {
+          "startOffset": 4259,
+          "endOffset": 4520,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "setItemAsync",
+      "ranges": [
+        {
+          "startOffset": 4619,
+          "endOffset": 4706,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getItemAsync",
+      "ranges": [
+        {
+          "startOffset": 4766,
+          "endOffset": 4979,
+          "count": 9
+        },
+        {
+          "startOffset": 4882,
+          "endOffset": 4977,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": true
+    },
+    {
+      "functionName": "removeItemAsync",
+      "ranges": [
+        {
+          "startOffset": 5042,
+          "endOffset": 5104,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "Deferred",
+      "ranges": [
+        {
+          "startOffset": 5374,
+          "endOffset": 5707,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "decodeJWT",
+      "ranges": [
+        {
+          "startOffset": 5778,
+          "endOffset": 6579,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "sleep",
+      "ranges": [
+        {
+          "startOffset": 6648,
+          "endOffset": 6775,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "retryable",
+      "ranges": [
+        {
+          "startOffset": 6980,
+          "endOffset": 7736,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "dec2hex",
+      "ranges": [
+        {
+          "startOffset": 7737,
+          "endOffset": 7810,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "generatePKCEVerifier",
+      "ranges": [
+        {
+          "startOffset": 7966,
+          "endOffset": 8543,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "sha256",
+      "ranges": [
+        {
+          "startOffset": 8544,
+          "endOffset": 8877,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "generatePKCEChallenge",
+      "ranges": [
+        {
+          "startOffset": 8878,
+          "endOffset": 9393,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getCodeChallengeAndMethod",
+      "ranges": [
+        {
+          "startOffset": 9394,
+          "endOffset": 9965,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "parseResponseAPIVersion",
+      "ranges": [
+        {
+          "startOffset": 10105,
+          "endOffset": 10498,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "validateExp",
+      "ranges": [
+        {
+          "startOffset": 10499,
+          "endOffset": 10723,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "getAlgorithm",
+      "ranges": [
+        {
+          "startOffset": 10724,
+          "endOffset": 11159,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "validateUUID",
+      "ranges": [
+        {
+          "startOffset": 11245,
+          "endOffset": 11402,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "userNotAvailableProxy",
+      "ranges": [
+        {
+          "startOffset": 11403,
+          "endOffset": 13140,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "insecureUserWarningProxy",
+      "ranges": [
+        {
+          "startOffset": 13556,
+          "endOffset": 15217,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    },
+    {
+      "functionName": "deepClone",
+      "ranges": [
+        {
+          "startOffset": 15347,
+          "endOffset": 15418,
+          "count": 0
+        }
+      ],
+      "isBlockCoverage": false
+    }
+  ]
+}

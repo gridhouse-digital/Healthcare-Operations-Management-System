@@ -108,43 +108,56 @@ export function ApplicantDetailsPage() {
     // Handle "new" applicant route
     if (id === 'new') {
         return (
-            <div className="space-y-6">
-                <div className="flex items-center gap-4">
+            <div className="space-y-5 animate-fade-in">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate('/applicants')}
-                        className="p-2 hover:bg-[rgba(162,161,168,0.1)] rounded-full transition-colors"
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
                     >
-                        <ArrowLeft size={24} className="text-[#16151C] dark:text-white" />
+                        <ArrowLeft size={16} strokeWidth={2} />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-[#16151C] dark:text-white">Add New Applicant</h1>
-                        <p className="text-[#A2A1A8] font-light">Create a new applicant profile</p>
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.875rem', fontWeight: 400, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
+                            Add Applicant
+                        </h1>
                     </div>
                 </div>
-
-                <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-12 text-center">
-                    <UserPlus size={64} className="mx-auto mb-6 text-[#A2A1A8]" />
-                    <h2 className="text-xl font-semibold text-[#16151C] dark:text-white mb-3">
-                        Applicants are added through the application form
+                <div className="bg-card border border-border rounded-lg p-12 text-center">
+                    <UserPlus size={36} className="mx-auto mb-4 text-muted-foreground/30" strokeWidth={1.25} />
+                    <h2 className="text-[15px] font-semibold text-foreground mb-2">
+                        Applicants are added through JotForm
                     </h2>
-                    <p className="text-[#A2A1A8] mb-6 max-w-md mx-auto">
-                        New applicants submit their information through our JotForm application system.
-                        Once submitted, they will automatically appear in the applicants list.
+                    <p className="text-[13px] text-muted-foreground mb-6 max-w-md mx-auto">
+                        New applicants submit their information via the JotForm application system. Use the Sync button on the list page to import them.
                     </p>
                     <button
                         onClick={() => navigate('/applicants')}
-                        className="px-6 py-3 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-medium"
+                        className="h-8 px-4 bg-primary text-primary-foreground rounded-md text-[13px] font-semibold hover:bg-primary/90 transition-colors"
                     >
-                        View All Applicants
+                        View Applicants
                     </button>
                 </div>
             </div>
         );
     }
 
-    if (isLoading) return <div className="p-8 text-center text-[#A2A1A8]">Loading applicant details...</div>;
-    if (error) return <div className="p-8 text-center text-red-500">Failed to load applicant: {error.message}</div>;
-    if (!applicant) return <div className="p-8 text-center text-[#A2A1A8]">Applicant not found</div>;
+    if (isLoading) return (
+        <div className="flex items-center justify-center h-64">
+            <div className="w-5 h-5 rounded-full border-2 border-border border-t-primary animate-spin" />
+        </div>
+    );
+    if (error) return (
+        <div className="severity-critical rounded-md bg-[hsl(4,82%,52%)]/6 border border-[hsl(4,82%,52%)]/20 p-4">
+            <p className="text-[13px] font-semibold text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)]">
+                Failed to load applicant: {error.message}
+            </p>
+        </div>
+    );
+    if (!applicant) return (
+        <div className="p-8 text-center">
+            <p className="text-[13px] text-muted-foreground/50">Applicant not found</p>
+        </div>
+    );
 
     // Helper to extract answer safely
     const getAnswer = (key: string) => applicant.answers?.[key] || 'N/A';
@@ -225,129 +238,118 @@ export function ApplicantDetailsPage() {
     };
 
     return (
-        <div className="space-y-6 relative">
-            {/* Header */}
+        <div className="space-y-5 animate-fade-in relative">
+            {/* ── Page header ── */}
             <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <button
                         onClick={() => navigate('/applicants')}
-                        className="p-2 hover:bg-[rgba(162,161,168,0.1)] rounded-full transition-colors"
+                        className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
                     >
-                        <ArrowLeft size={24} className="text-[#16151C] dark:text-white" />
+                        <ArrowLeft size={16} strokeWidth={2} />
                     </button>
                     <div>
-                        <h1 className="text-2xl font-bold text-[#16151C] dark:text-white">
-                            {getAnswer('fullName')?.first} {getAnswer('fullName')?.last}
+                        <h1
+                            className="text-foreground"
+                            style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.875rem', fontWeight: 400, letterSpacing: '-0.025em', lineHeight: 1.1 }}
+                        >
+                            {applicant.first_name} {applicant.last_name}
                         </h1>
-                        <p className="text-[#A2A1A8] font-light">Applicant Profile</p>
+                        <p className="mt-0.5 text-muted-foreground/55" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6875rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                            Applicant Profile
+                        </p>
                     </div>
                 </div>
-
-                <div className="flex items-center gap-3">
-                    <StatusBadge status={applicant.status} />
-                </div>
+                <StatusBadge status={applicant.status} />
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 flex-wrap">
+            {/* ── Action bar ── */}
+            <div className="flex gap-2 flex-wrap">
                 <button
                     onClick={handleSendOffer}
-                    className="flex-1 min-w-[150px] px-6 py-3 bg-green-600 text-white rounded-[10px] hover:bg-green-700 transition-colors font-medium shadow-lg shadow-green-600/20"
+                    className="flex items-center gap-2 h-8 px-4 bg-[hsl(152,58%,38%)] text-white rounded-md text-[13px] font-semibold hover:bg-[hsl(152,58%,34%)] transition-colors"
                 >
                     Send Offer
                 </button>
                 <button
                     onClick={handleMoveToEmployee}
                     disabled={moveToEmployeeLoading || hasEmployeeRecord}
-                    className="flex-1 min-w-[150px] px-6 py-3 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors font-medium shadow-lg shadow-[#7152F3]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex items-center gap-2 h-8 px-4 bg-primary text-primary-foreground rounded-md text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                    <UserCheck size={18} />
-                    {moveToEmployeeLoading ? 'Moving...' : hasEmployeeRecord ? 'Already Employee' : 'Move to Employees'}
+                    <UserCheck size={13} strokeWidth={2} />
+                    {moveToEmployeeLoading ? 'Moving…' : hasEmployeeRecord ? 'Already Employee' : 'Move to Employees'}
                 </button>
                 <button
                     onClick={() => handleStatusUpdate('Interview')}
-                    className="flex-1 min-w-[150px] px-6 py-3 bg-yellow-500 text-white rounded-[10px] hover:bg-yellow-600 transition-colors font-medium shadow-lg shadow-yellow-500/20"
+                    className="flex items-center gap-2 h-8 px-4 bg-[hsl(38,96%,48%)] text-white rounded-md text-[13px] font-semibold hover:bg-[hsl(38,96%,44%)] transition-colors"
                 >
                     Interview
                 </button>
                 <button
                     onClick={() => handleStatusUpdate('Rejected')}
-                    className="flex-1 min-w-[150px] px-6 py-3 bg-red-600 text-white rounded-[10px] hover:bg-red-700 transition-colors font-medium shadow-lg shadow-red-600/20"
+                    className="flex items-center gap-2 h-8 px-4 bg-[hsl(4,82%,52%)] text-white rounded-md text-[13px] font-semibold hover:bg-[hsl(4,82%,46%)] transition-colors"
                 >
                     Reject
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 {/* Main Info Column */}
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2 space-y-5">
                     {/* Personal Information */}
-                    <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
-                        <h2 className="text-lg font-semibold text-[#16151C] dark:text-white mb-4 flex items-center gap-2">
-                            <FileText size={20} className="text-[#7152F3]" />
-                            Personal Information
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="text-xs text-[#A2A1A8] uppercase tracking-wider">Email</label>
-                                <div className="flex items-center gap-2 mt-1 text-[#16151C] dark:text-white">
-                                    <Mail size={16} className="text-[#A2A1A8]" />
-                                    {getAnswer('email')}
+                    <div className="bg-card border border-border rounded-lg overflow-hidden">
+                        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border">
+                            <FileText size={13} strokeWidth={2} className="text-primary" />
+                            <h3 className="text-[13px] font-semibold text-foreground">Personal Information</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y divide-border/50 md:divide-y-0">
+                            {[
+                                { label: 'Email', icon: Mail, value: getAnswer('email') },
+                                { label: 'Phone', icon: Phone, value: getAnswer('phoneNumber')?.full || getAnswer('phoneNumber') },
+                                { label: 'Position Applied', icon: FileText, value: getAnswer('positionApplied') },
+                                { label: 'Date Applied', icon: Calendar, value: format(new Date(applicant.created_at), 'MMM d, yyyy') },
+                            ].map(({ label, icon: Icon, value }) => (
+                                <div key={label} className="px-5 py-3.5">
+                                    <p className="zone-label mb-1">{label}</p>
+                                    <div className="flex items-center gap-2">
+                                        <Icon size={12} strokeWidth={1.75} className="text-muted-foreground/40 flex-shrink-0" />
+                                        <span className="text-[13px] font-medium text-foreground">{value}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <div>
-                                <label className="text-xs text-[#A2A1A8] uppercase tracking-wider">Phone</label>
-                                <div className="flex items-center gap-2 mt-1 text-[#16151C] dark:text-white">
-                                    <Phone size={16} className="text-[#A2A1A8]" />
-                                    {getAnswer('phoneNumber')?.full || getAnswer('phoneNumber')}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-xs text-[#A2A1A8] uppercase tracking-wider">Position Applied</label>
-                                <div className="mt-1 text-[#16151C] dark:text-white">
-                                    {getAnswer('positionApplied')}
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-xs text-[#A2A1A8] uppercase tracking-wider">Date Applied</label>
-                                <div className="flex items-center gap-2 mt-1 text-[#16151C] dark:text-white">
-                                    <Calendar size={16} className="text-[#A2A1A8]" />
-                                    {format(new Date(applicant.created_at), 'MMM d, yyyy')}
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* Documents & Forms Status */}
-                    <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
-                        <h2 className="text-lg font-semibold text-[#16151C] dark:text-white mb-4 flex items-center gap-2">
-                            <Shield size={20} className="text-[#7152F3]" />
-                            Requirements
-                        </h2>
-                        <div className="space-y-4">
+                    {/* Requirements */}
+                    <div className="bg-card border border-border rounded-lg overflow-hidden">
+                        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border">
+                            <Shield size={13} strokeWidth={2} className="text-primary" />
+                            <h3 className="text-[13px] font-semibold text-foreground">Requirements</h3>
+                        </div>
+                        <div className="divide-y divide-border/50">
                             {[
                                 { key: 'emergency_contact', label: 'Emergency Contact Form' },
                                 { key: 'i9_eligibility', label: 'I-9 Eligibility Form' },
                                 { key: 'vaccination', label: 'Vaccination Form' },
                                 { key: 'licenses', label: 'Licenses & Certifications' },
-                                { key: 'background_check', label: 'Background Check' }
+                                { key: 'background_check', label: 'Background Check' },
                             ].map((req) => {
                                 const submission = applicant[req.key as keyof typeof applicant];
                                 const isSubmitted = !!submission?.id;
 
                                 return (
-                                    <div key={req.key} className="flex items-center justify-between p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px]">
+                                    <div key={req.key} className="flex items-center justify-between px-5 py-3 hover:bg-secondary/30 transition-colors">
                                         <div className="flex items-center gap-3">
                                             {isSubmitted ? (
-                                                <CheckCircle size={20} className="text-green-500" />
+                                                <CheckCircle size={14} strokeWidth={2} className="text-[hsl(152,58%,38%)] dark:text-[hsl(152,54%,50%)] flex-shrink-0" />
                                             ) : (
-                                                <AlertCircle size={20} className="text-orange-500" />
+                                                <AlertCircle size={14} strokeWidth={2} className="text-[hsl(38,90%,48%)] dark:text-[hsl(38,90%,54%)] flex-shrink-0" />
                                             )}
                                             <div>
-                                                <p className="text-[#16151C] dark:text-white font-medium">{req.label}</p>
-                                                <p className="text-xs text-[#A2A1A8]">
+                                                <p className="text-[13px] font-medium text-foreground">{req.label}</p>
+                                                <p className="text-[11px] text-muted-foreground/55 mt-0.5">
                                                     {isSubmitted
-                                                        ? `Submitted on ${new Date(submission.created_at).toLocaleDateString()}`
+                                                        ? `Submitted ${new Date(submission.created_at).toLocaleDateString()}`
                                                         : 'Not submitted yet'}
                                                 </p>
                                             </div>
@@ -355,15 +357,15 @@ export function ApplicantDetailsPage() {
                                         {isSubmitted ? (
                                             <button
                                                 onClick={() => setViewingDoc({ url: submission.url, title: req.label })}
-                                                className="text-[#7152F3] text-sm hover:underline flex items-center gap-1"
+                                                className="flex items-center gap-1 text-[12px] font-semibold text-primary hover:text-primary/70 transition-colors"
                                             >
-                                                View <ExternalLink size={14} />
+                                                View <ExternalLink size={11} strokeWidth={2} />
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={() => handleRequestRequirement(req.key, req.label, submission?.formUrl)}
                                                 disabled={requestLoading[req.key]}
-                                                className="text-[#7152F3] text-sm hover:underline disabled:opacity-50"
+                                                className="text-[12px] font-semibold text-primary hover:text-primary/70 transition-colors disabled:opacity-40"
                                             >
                                                 Request
                                             </button>
@@ -378,102 +380,31 @@ export function ApplicantDetailsPage() {
                     <ApplicantTimeline applicant={applicant} />
                 </div>
 
-                {/* Sidebar Column */}
-                <div className="space-y-6">
+                {/* Right sidebar */}
+                <div className="space-y-5">
                     <EnhancedApplicantSummaryPanel applicant={applicant} />
                 </div>
             </div>
 
-            {/* Offer Modal */}
-            {
-                showOfferModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                        <div className="bg-white dark:bg-[#1C1C24] w-full max-w-md rounded-[20px] p-6 shadow-xl">
-                            <div className="flex items-center justify-between mb-6">
-                                <h3 className="text-xl font-bold text-[#16151C] dark:text-white">Send Offer Letter</h3>
-                                <button onClick={() => setShowOfferModal(false)} className="text-[#A2A1A8] hover:text-[#16151C] dark:hover:text-white">
-                                    <X size={24} />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleSendOffer} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#16151C] dark:text-white mb-1">Position Title</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={offerForm.position}
-                                        onChange={e => setOfferForm(prev => ({ ...prev, position: e.target.value }))}
-                                        className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#16151C] dark:text-white mb-1">Annual Salary / Hourly Rate</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        value={offerForm.salary}
-                                        onChange={e => setOfferForm(prev => ({ ...prev, salary: e.target.value }))}
-                                        className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#16151C] dark:text-white mb-1">Start Date</label>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={offerForm.startDate}
-                                        onChange={e => setOfferForm(prev => ({ ...prev, startDate: e.target.value }))}
-                                        className="w-full px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#7152F3] bg-transparent text-[#16151C] dark:text-white"
-                                    />
-                                </div>
-                                <div className="pt-4 flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowOfferModal(false)}
-                                        className="flex-1 px-4 py-2 border border-[rgba(162,161,168,0.1)] rounded-[10px] text-[#16151C] dark:text-white hover:bg-[rgba(162,161,168,0.05)]"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={offerLoading}
-                                        className="flex-1 px-4 py-2 bg-[#7152F3] text-white rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] disabled:opacity-50"
-                                    >
-                                        {offerLoading ? 'Sending...' : 'Send Offer'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )
-            }
-
             {/* Document Viewer Modal */}
-            {
-                viewingDoc && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-                        <div className="bg-white dark:bg-[#1C1C24] w-full h-full max-w-6xl rounded-xl overflow-hidden flex flex-col relative">
-                            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800">
-                                <h3 className="text-lg font-semibold text-[#16151C] dark:text-white">{viewingDoc.title}</h3>
-                                <button
-                                    onClick={() => setViewingDoc(null)}
-                                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-                                >
-                                    <X size={24} className="text-[#16151C] dark:text-white" />
-                                </button>
-                            </div>
-                            <div className="flex-1 bg-gray-100 dark:bg-gray-900 relative">
-                                <iframe
-                                    src={viewingDoc.url}
-                                    className="w-full h-full border-0"
-                                    title={viewingDoc.title}
-                                />
-                            </div>
+            {viewingDoc && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                    <div className="bg-card border border-border w-full h-full max-w-6xl rounded-lg overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+                            <h3 className="text-[13px] font-semibold text-foreground">{viewingDoc.title}</h3>
+                            <button
+                                onClick={() => setViewingDoc(null)}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                            >
+                                <X size={15} strokeWidth={2} />
+                            </button>
+                        </div>
+                        <div className="flex-1 bg-muted relative">
+                            <iframe src={viewingDoc.url} className="w-full h-full border-0" title={viewingDoc.title} />
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
             {/* Confirmation Dialog */}
             <ConfirmDialog

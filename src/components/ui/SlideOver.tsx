@@ -23,20 +23,48 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/50 z-40 transition-opacity backdrop-blur-sm"
+                className="fixed inset-0 bg-black/60 z-40 transition-opacity backdrop-blur-sm"
                 onClick={onClose}
             />
 
-            {/* Slide Over Panel */}
-            <div className={`fixed top-0 ${side === 'right' ? 'right-0 border-l' : 'left-0 border-r'} h-full ${widthClasses[width]} w-full bg-white dark:bg-card shadow-2xl z-50 overflow-y-auto border-[rgba(162,161,168,0.1)]`}>
+            {/* Panel */}
+            <div
+                className={`fixed top-0 ${side === 'right' ? 'right-0' : 'left-0'} h-full ${widthClasses[width]} w-full z-50 overflow-y-auto`}
+                style={{
+                    background: 'var(--card)',
+                    borderLeft: side === 'right' ? '1px solid var(--border)' : 'none',
+                    borderRight: side === 'left' ? '1px solid var(--border)' : 'none',
+                    boxShadow: 'var(--shadow-xl, 0 20px 60px hsl(0 0% 0% / 0.6))',
+                }}
+            >
                 {/* Header */}
-                <div className="sticky top-0 bg-white dark:bg-card border-b border-[rgba(162,161,168,0.1)] px-6 py-4 flex items-center justify-between z-10">
-                    <h2 className="text-[#16151C] dark:text-white font-semibold text-lg">{title}</h2>
+                <div
+                    className="sticky top-0 z-10 flex items-center justify-between px-6 py-4"
+                    style={{
+                        background: 'var(--card)',
+                        borderBottom: '1px solid var(--border)',
+                    }}
+                >
+                    <h2
+                        className="font-semibold"
+                        style={{ color: 'var(--foreground)', fontSize: '15px' }}
+                    >
+                        {title}
+                    </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 text-[#A2A1A8] hover:text-[#16151C] dark:hover:text-white hover:bg-[rgba(162,161,168,0.05)] rounded-[8px] transition-colors"
+                        className="flex items-center justify-center w-7 h-7 rounded-md transition-colors"
+                        style={{ color: 'hsl(0 0% 40%)' }}
+                        onMouseEnter={e => {
+                            (e.currentTarget as HTMLButtonElement).style.background = 'hsl(0 0% 100% / 0.06)';
+                            (e.currentTarget as HTMLButtonElement).style.color = 'hsl(0 0% 72%)';
+                        }}
+                        onMouseLeave={e => {
+                            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+                            (e.currentTarget as HTMLButtonElement).style.color = 'hsl(0 0% 40%)';
+                        }}
                     >
-                        <X size={20} strokeWidth={1.5} />
+                        <X size={16} strokeWidth={1.75} />
                     </button>
                 </div>
 

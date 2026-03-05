@@ -198,10 +198,14 @@ src/
 ### When Working with React Frontend
 
 - Use `@/` alias for imports (configured in vite.config.ts)
-- Supabase client initialized in `src/lib/supabaseClient.ts`
-- React Query used for data fetching (configured in App.tsx)
-- Forms use react-hook-form + zod validation
-- UI components from shadcn/ui (imported from `@/components/ui/`)
+- Supabase client initialized in `src/lib/supabase.ts` (export name: `supabase`) — NOT `supabaseClient.ts`
+- React Query used for data fetching — custom hooks in `src/hooks/` wrap `useQuery`/`useMutation`
+- Forms use react-hook-form + zod validation via `zodResolver(schema)`
+- UI components from shadcn/ui (imported from `@/components/ui/`) — never modify these directly
+- Conditional Tailwind classes: use `cn()` from `@/lib/utils` — never string concatenation
+- ALL AI calls go through `aiClient` from `@/lib/aiClient` — never invoke AI Edge Functions directly
+- User roles: `'admin' | 'hr' | 'staff'` — use `useUserRole()` hook (`isAdmin`, `isHR`, `isStaff` booleans)
+- When calling `supabase.functions.invoke()`: check BOTH `error` (network) AND `data.error` (body)
 
 ## Environment Variables
 

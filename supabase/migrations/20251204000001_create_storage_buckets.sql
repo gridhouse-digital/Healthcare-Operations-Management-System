@@ -57,5 +57,3 @@ USING (
   )
 );
 
--- Add helpful comments
-COMMENT ON TABLE storage.buckets IS 'Supabase Storage buckets for file uploads';

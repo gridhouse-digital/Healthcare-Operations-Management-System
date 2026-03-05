@@ -1,8 +1,6 @@
 -- Add 'hr' as a valid role option
--- This migration extends the role check constraint to include 'hr'
+-- This migration extends the user_role enum to include 'hr'.
+-- The previous version attempted a CHECK constraint on an enum column,
+-- which fails on db reset. The correct fix is ALTER TYPE.
 
-ALTER TABLE public.profiles
-DROP CONSTRAINT IF EXISTS profiles_role_check;
-
-ALTER TABLE public.profiles
-ADD CONSTRAINT profiles_role_check CHECK (role IN ('admin', 'hr', 'staff'));
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'hr';

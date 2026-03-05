@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Search, ChevronDown, User, LogOut } from 'lucide-react';
+import { Bell, Search, ChevronDown, User, LogOut, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/lib/supabase';
+import { useSidebar } from './SidebarContext';
+import { settingsService } from '@/services/settingsService';
+import { cn } from '@/lib/utils';
+import defaultLogoLight from '@/assets/logo-light.png';
+import defaultLogoDark from '@/assets/logo-dark.png';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,31 +17,32 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { Menu } from 'lucide-react';
-
 interface HeaderProps {
     onOpenMobileNav: () => void;
 }
 
 export function Header({ onOpenMobileNav }: HeaderProps) {
     const navigate = useNavigate();
+    const { pinned, expanded } = useSidebar();
     const [profile, setProfile] = useState<any>(null);
+    const [logoLight, setLogoLight] = useState(defaultLogoDark);
+    const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
 
-    useEffect(() => {
-        loadUser();
-    }, []);
+    useEffect(() => { loadUser(); loadLogos(); }, []);
 
     const loadUser = async () => {
         const { data: { user } } = await supabase.auth.getUser();
-
         if (user) {
-            const { data } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
+            const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
             setProfile(data);
         }
+    };
+
+    const loadLogos = () => {
+        settingsService.getSettings().then(settings => {
+            if (settings['logo_light']) setLogoLight(settings['logo_light']);
+            if (settings['logo_dark'])  setLogoDark(settings['logo_dark']);
+        }).catch(() => {});
     };
 
     const handleLogout = async () => {
@@ -44,78 +50,172 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
         navigate('/login');
     };
 
-    return (
+    // Sidebar panel width — matches Sidebar.tsx widths
+    const sidebarW = expanded ? 248 : 56;
 
-        <header className="bg-[#F9FAFB]/80 dark:bg-background/80 backdrop-blur-md h-[82px] fixed top-0 lg:top-5 right-0 lg:right-8 left-0 lg:left-[340px] z-40 px-6 lg:px-0 transition-all duration-200 border-b lg:border-none border-[rgba(162,161,168,0.1)]">
-            <div className="h-full flex items-center justify-between">
-                {/* Left Side: Hamburger & Greeting */}
-                <div className="flex items-center gap-4">
+    return (
+        <header
+            className="h-[56px] fixed top-0 left-0 right-0 z-30 flex items-center"
+            style={{ borderBottom: '1px solid var(--border)' }}
+        >
+            {/* ── Sidebar brand zone — same bg as sidebar, full sidebar width ── */}
+            <div
+                className={cn(
+                    'hidden lg:flex items-center flex-shrink-0 h-full sidebar-transition overflow-hidden',
+                    expanded ? 'gap-3 px-4' : 'justify-center px-0',
+                )}
+                style={{
+                    width: sidebarW,
+                    minWidth: sidebarW,
+                    background: 'var(--sidebar)',
+                    borderRight: '1px solid var(--sidebar-border)',
+                }}
+            >
+                {/* Monogram icon — always visible */}
+                <div
+                    className="w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center"
+                    style={{ background: 'hsl(196 84% 52% / 0.14)' }}
+                >
+                    <span
+                        className="text-[11px] font-bold select-none"
+                        style={{ fontFamily: 'var(--font-mono)', color: 'hsl(196 84% 60%)' }}
+                    >
+                        P
+                    </span>
+                </div>
+
+                {/* Logo — only when expanded */}
+                {expanded && (
+                    <>
+                        <img src={logoLight} alt="Prolific HR" className="h-5 w-auto object-contain block dark:hidden min-w-0 max-w-[130px]" />
+                        <img src={logoDark}  alt="Prolific HR" className="h-5 w-auto object-contain hidden dark:block min-w-0 max-w-[130px]" />
+                    </>
+                )}
+            </div>
+
+            {/* ── Main header content ── */}
+            <div
+                className="flex-1 flex items-center justify-between h-full px-5 lg:px-6"
+                style={{ background: 'var(--background)' }}
+            >
+                {/* Left: mobile menu + search */}
+                <div className="flex items-center gap-3">
                     <button
                         onClick={onOpenMobileNav}
-                        className="lg:hidden p-2 -ml-2 text-[#16151C] dark:text-white hover:bg-[rgba(162,161,168,0.1)] rounded-lg transition-colors"
+                        className="lg:hidden p-1.5 -ml-0.5 rounded-md transition-colors"
+                        style={{ color: 'var(--muted-foreground)' }}
+                        aria-label="Open navigation"
                     >
-                        <Menu size={24} />
+                        <Menu size={16} strokeWidth={2} />
                     </button>
-                    <div>
-                        <h1 className="text-[#16151C] dark:text-white text-[20px] font-semibold leading-[30px]">
-                            Hello {profile?.first_name || 'User'} 👋🏻
-                        </h1>
-                        <p className="text-[#A2A1A8] text-[14px] font-light leading-[22px]">Good Morning</p>
+
+                    {/* Search */}
+                    <div className="hidden md:flex items-center relative">
+                        <Search
+                            size={12}
+                            strokeWidth={2}
+                            className="absolute left-2.5 pointer-events-none"
+                            style={{ color: 'var(--muted-foreground)', opacity: 0.4 }}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Search…"
+                            className="h-7 pl-7 pr-10 rounded-md text-[12px] transition-all duration-200 focus:outline-none focus:w-[220px]"
+                            style={{
+                                width: '172px',
+                                background: 'var(--secondary)',
+                                border: '1px solid var(--border)',
+                                color: 'var(--foreground)',
+                                fontFamily: 'var(--font-sans)',
+                            }}
+                            onFocus={e => {
+                                e.currentTarget.style.borderColor = 'var(--border-strong)';
+                                e.currentTarget.style.width = '220px';
+                            }}
+                            onBlur={e => {
+                                e.currentTarget.style.borderColor = 'var(--border)';
+                                e.currentTarget.style.width = '172px';
+                            }}
+                        />
+                        <kbd className="absolute right-2 hidden lg:block text-[10px]" style={{ color: 'var(--muted-foreground)', opacity: 0.35 }}>⌘K</kbd>
                     </div>
                 </div>
 
-                {/* Right Side - Search, Notification, Profile */}
-                <div className="flex items-center gap-5">
-                    {/* Search */}
-                    <div className="relative hidden md:block">
-                        <div className="flex items-center gap-3 px-4 py-[13px] border border-[rgba(162,161,168,0.1)] rounded-[10px] w-[261px] bg-white dark:bg-card">
-                            <Search size={20} className="text-[#16151C] dark:text-gray-400" strokeWidth={1.5} />
-                            <input
-                                type="text"
-                                placeholder="Search"
-                                className="flex-1 bg-transparent text-[#16151C] dark:text-white text-sm font-light placeholder:text-[rgba(22,21,28,0.2)] dark:placeholder:text-gray-500 focus:outline-none"
-                            />
-                        </div>
-                    </div>
+                {/* Right: notifications + profile */}
+                <div className="flex items-center gap-1">
 
-                    {/* Notification */}
-                    <button className="bg-[rgba(162,161,168,0.1)] p-[13px] rounded-[10px] hover:bg-[rgba(162,161,168,0.15)] transition-colors relative bg-white dark:bg-card">
-                        <Bell size={20} className="text-[#16151C] dark:text-gray-400" strokeWidth={1.5} />
-                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                    {/* Notifications */}
+                    <button
+                        className="relative flex items-center justify-center w-8 h-8 rounded-md transition-colors"
+                        style={{ color: 'var(--muted-foreground)' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--secondary)'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                    >
+                        <Bell size={14} strokeWidth={1.75} />
+                        <span
+                            className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
+                            style={{ background: 'var(--severity-critical)', outline: '2px solid var(--background)' }}
+                        />
                     </button>
 
-                    {/* Profile Dropdown */}
+                    {/* Divider */}
+                    <div className="w-px h-4 mx-1 hidden md:block" style={{ background: 'var(--border)' }} />
+
+                    {/* Profile */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <div className="flex items-center gap-3 border border-[rgba(162,161,168,0.2)] rounded-[8px] px-[5px] py-[5px] pr-3 hover:border-[rgba(113,82,243,0.3)] transition-colors cursor-pointer bg-white dark:bg-card">
-                                <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-purple-600 rounded-[8px] flex items-center justify-center overflow-hidden">
-                                    <Avatar className="h-full w-full rounded-[8px]">
-                                        <AvatarImage src="https://github.com/shadcn.png" alt={profile?.first_name} className="object-cover" />
-                                        <AvatarFallback>{profile?.first_name?.[0]}{profile?.last_name?.[0]}</AvatarFallback>
+                            <button
+                                className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-md transition-colors cursor-pointer"
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--secondary)'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                            >
+                                <div
+                                    className="w-6 h-6 rounded-md flex-shrink-0 overflow-hidden"
+                                    style={{ background: 'hsl(196 84% 36% / 0.3)' }}
+                                >
+                                    <Avatar className="h-full w-full rounded-md">
+                                        <AvatarImage src="" alt={profile?.first_name} className="object-cover" />
+                                        <AvatarFallback
+                                            className="text-[9px] font-bold bg-transparent rounded-md"
+                                            style={{ fontFamily: 'var(--font-mono)', color: 'hsl(196 84% 62%)' }}
+                                        >
+                                            {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+                                        </AvatarFallback>
                                     </Avatar>
                                 </div>
-                                <div className="hidden md:block text-left">
-                                    <p className="text-[#16151C] dark:text-white text-sm font-semibold leading-[24px]">
+                                <div className="hidden lg:block text-left min-w-0">
+                                    <p className="text-[12px] font-medium leading-none truncate max-w-[110px]" style={{ color: 'var(--foreground)' }}>
                                         {profile?.first_name} {profile?.last_name}
                                     </p>
-                                    <p className="text-[#A2A1A8] text-xs font-light leading-[18px] capitalize">
+                                    <p
+                                        className="text-[10px] capitalize mt-0.5 leading-none"
+                                        style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}
+                                    >
                                         {profile?.role || 'Staff'}
                                     </p>
                                 </div>
-                                <ChevronDown size={16} className="text-[#16151C] dark:text-gray-400 ml-1" strokeWidth={1.5} />
-                            </div>
+                                <ChevronDown size={10} strokeWidth={2.5} className="ml-0.5 flex-shrink-0" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
+                            </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                        <DropdownMenuContent align="end" className="w-44 mt-1">
+                            <DropdownMenuLabel
+                                className="text-[10px] font-medium uppercase"
+                                style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', color: 'var(--muted-foreground)' }}
+                            >
+                                Account
+                            </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
-                                <User className="mr-2 h-4 w-4" />
-                                <span>Profile</span>
+                            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer text-[13px]">
+                                <User className="mr-2 h-3.5 w-3.5" />
+                                Profile
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
-                                <LogOut className="mr-2 h-4 w-4" />
-                                <span>Log out</span>
+                            <DropdownMenuItem
+                                onClick={handleLogout}
+                                className="cursor-pointer text-[13px] text-destructive focus:text-destructive"
+                            >
+                                <LogOut className="mr-2 h-3.5 w-3.5" />
+                                Sign out
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>

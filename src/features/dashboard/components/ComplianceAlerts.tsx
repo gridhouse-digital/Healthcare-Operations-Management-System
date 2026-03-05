@@ -1,4 +1,5 @@
-import { AlertTriangle } from 'lucide-react';
+import { ShieldAlert, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Alert {
     id: string;
@@ -6,85 +7,117 @@ interface Alert {
     person: string;
     expiry: string;
     daysLeft: number;
-    severity: 'high' | 'medium' | 'low';
+    severity: 'critical' | 'high' | 'medium' | 'low';
 }
 
 const alerts: Alert[] = [
-    {
-        id: '1',
-        type: 'CPR',
-        person: 'Jennifer Martinez',
-        expiry: '2025-12-05',
-        daysLeft: 2,
-        severity: 'high'
-    },
-    {
-        id: '2',
-        type: 'TB Test',
-        person: 'Michael Brown',
-        expiry: '2025-12-15',
-        daysLeft: 12,
-        severity: 'medium'
-    },
-    {
-        id: '3',
-        type: 'CNA License',
-        person: 'Lisa Anderson',
-        expiry: '2026-01-10',
-        daysLeft: 45,
-        severity: 'low'
-    },
-    {
-        id: '4',
-        type: 'CPR',
-        person: 'Robert Wilson',
-        expiry: '2025-12-08',
-        daysLeft: 10,
-        severity: 'medium'
-    }
+    { id: '1', type: 'CPR',         person: 'Jennifer Martinez', expiry: '2025-12-05', daysLeft: 2,  severity: 'critical' },
+    { id: '2', type: 'CPR',         person: 'Robert Wilson',     expiry: '2025-12-08', daysLeft: 5,  severity: 'high' },
+    { id: '3', type: 'TB Test',     person: 'Michael Brown',     expiry: '2025-12-15', daysLeft: 12, severity: 'medium' },
+    { id: '4', type: 'CNA License', person: 'Lisa Anderson',     expiry: '2026-01-10', daysLeft: 45, severity: 'low' },
 ];
 
-export function ComplianceAlerts() {
-    return (
-        <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] dark:border-border overflow-hidden">
-            <div className="p-6 border-b border-[rgba(162,161,168,0.1)] dark:border-border">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-[#16151C] dark:text-foreground font-semibold">Compliance Alerts</h3>
-                    <AlertTriangle size={20} className="text-orange-500" strokeWidth={1.5} />
-                </div>
-            </div>
-            <div className="divide-y divide-[rgba(162,161,168,0.05)] dark:divide-border/50">
-                {alerts.map((alert) => {
-                    const severityColors = {
-                        high: 'text-red-600 bg-[rgba(239,68,68,0.1)] border-[rgba(239,68,68,0.2)] dark:bg-red-900/20 dark:border-red-900/30 dark:text-red-400',
-                        medium: 'text-orange-600 bg-[rgba(249,115,22,0.1)] border-[rgba(249,115,22,0.2)] dark:bg-orange-900/20 dark:border-orange-900/30 dark:text-orange-400',
-                        low: 'text-yellow-600 bg-[rgba(234,179,8,0.1)] border-[rgba(234,179,8,0.2)] dark:bg-yellow-900/20 dark:border-yellow-900/30 dark:text-yellow-400',
-                    };
+const severityConfig = {
+    critical: {
+        barClass:  'severity-critical',
+        dotColor:  'hsl(4 82% 52%)',
+        labelStyle: { color: 'hsl(4 76% 62%)', background: 'hsl(4 82% 52% / 0.10)' },
+        dayColor:  'hsl(4 76% 62%)',
+        dayWeight: '700',
+    },
+    high: {
+        barClass:  'severity-high',
+        dotColor:  'hsl(22 88% 52%)',
+        labelStyle: { color: 'hsl(22 88% 62%)', background: 'hsl(22 88% 52% / 0.10)' },
+        dayColor:  'hsl(22 88% 62%)',
+        dayWeight: '600',
+    },
+    medium: {
+        barClass:  'severity-medium',
+        dotColor:  'hsl(38 96% 50%)',
+        labelStyle: { color: 'hsl(38 92% 60%)', background: 'hsl(38 96% 50% / 0.10)' },
+        dayColor:  'hsl(38 92% 60%)',
+        dayWeight: '500',
+    },
+    low: {
+        barClass:  'severity-low',
+        dotColor:  'hsl(48 96% 50%)',
+        labelStyle: { color: 'hsl(48 90% 62%)', background: 'hsl(48 96% 50% / 0.08)' },
+        dayColor:  'hsl(0 0% 44%)',
+        dayWeight: '500',
+    },
+};
 
+export function ComplianceAlerts() {
+    const urgentCount = alerts.filter(a => a.severity === 'critical' || a.severity === 'high').length;
+
+    return (
+        <section className="animate-reveal-up delay-300 bg-card rounded-lg border border-border overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                    <ShieldAlert
+                        size={14}
+                        strokeWidth={2}
+                        style={{ color: 'hsl(38 90% 54%)' }}
+                    />
+                    <h3 className="text-[13px] font-semibold text-foreground">Compliance Alerts</h3>
+                    {urgentCount > 0 && (
+                        <span className="inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-bold text-white"
+                            style={{ background: 'hsl(4 82% 54%)' }}>
+                            {urgentCount}
+                        </span>
+                    )}
+                </div>
+                <button className="text-[11px] font-medium text-primary hover:text-primary/70 transition-colors flex items-center gap-0.5">
+                    Manage <ChevronRight size={11} strokeWidth={2.5} />
+                </button>
+            </div>
+
+            <div className="divide-y divide-border/50">
+                {alerts.map((alert, i) => {
+                    const cfg = severityConfig[alert.severity];
                     return (
-                        <div key={alert.id} className="p-4 hover:bg-[rgba(113,82,243,0.02)] dark:hover:bg-primary/5 transition-colors">
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className={`px-2 py-0.5 text-xs font-light rounded-[6px] border ${severityColors[alert.severity]}`}>
-                                            {alert.type}
-                                        </span>
-                                        <span className="text-sm text-[#16151C] dark:text-foreground font-light">{alert.person}</span>
-                                    </div>
-                                    <p className="text-xs text-[#A2A1A8] font-light">
-                                        Expires: {alert.expiry} ({alert.daysLeft} days)
-                                    </p>
+                        <div
+                            key={alert.id}
+                            className={cn(
+                                'animate-reveal-right flex items-center gap-4 px-5 py-3 transition-colors cursor-pointer',
+                                cfg.barClass,
+                            )}
+                            style={{ animationDelay: `${(i + 4) * 50}ms` }}
+                            onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'hsl(0 0% 100% / 0.03)'}
+                            onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = 'transparent'}
+                        >
+                            <div
+                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                style={{ background: cfg.dotColor }}
+                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-baseline gap-1.5 flex-wrap">
+                                    <span className="text-[13px] font-semibold text-foreground">{alert.person}</span>
+                                    <span
+                                        className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                                        style={cfg.labelStyle}
+                                    >
+                                        {alert.type}
+                                    </span>
                                 </div>
-                                <AlertTriangle
-                                    size={18}
-                                    strokeWidth={1.5}
-                                    className={alert.severity === 'high' ? 'text-red-500' : alert.severity === 'medium' ? 'text-orange-500' : 'text-yellow-500'}
-                                />
+                                <p className="text-[11px] text-muted-foreground/60 font-medium mt-0.5">
+                                    Expires {alert.expiry}
+                                </p>
+                            </div>
+                            <div className="flex-shrink-0 text-right">
+                                <p
+                                    className="text-[13px] leading-none tabular-nums"
+                                    style={{ color: cfg.dayColor, fontWeight: cfg.dayWeight }}
+                                >
+                                    {alert.daysLeft}d
+                                </p>
+                                <p className="text-[10px] text-muted-foreground/40 font-medium mt-0.5">left</p>
                             </div>
                         </div>
                     );
                 })}
             </div>
-        </div>
+        </section>
     );
 }
