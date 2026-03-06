@@ -26,6 +26,12 @@
   - Two-tenant RLS isolation test passed
   - ALLOWED_ORIGIN_1 secret set in Supabase Dashboard
 
+### Hotfix — Settings pages not showing on Vercel
+- **Root cause:** `useUserRole` was reading from legacy `profiles` table (local DB had row, production did not)
+- **Fix:** `useUserRole` now reads `role` from `session.user.app_metadata` (JWT) — consistent with Epic 1 architecture
+- **Files changed:** `src/hooks/useUserRole.ts`, `src/App.tsx`, `src/features/settings/SettingsPage.tsx`
+- **DB fix:** Inserted `tenant_users` row for `gridhouse.digital10@gmail.com` (role=tenant_admin) on production Supabase — was missing, so JWT hook had nothing to inject
+
 ### What broke / known issues
 - Legacy EFs (jotform-webhook, listApplicants, etc.) are NOT multi-tenant aware — bypass tenant_guard. Addressed in Epic 2+ scope.
 - deno.lock version incompatibility deleted; regenerates on next deploy.
