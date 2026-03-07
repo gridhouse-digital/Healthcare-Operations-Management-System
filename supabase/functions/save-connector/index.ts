@@ -9,9 +9,13 @@ import { logAudit } from "../_shared/audit-logger.ts";
 // FR-22: profile_source set at connector save (first connector configured wins).
 
 interface SaveConnectorBody {
-  source: "bamboohr" | "jazzhr";
+  source: "bamboohr" | "jazzhr" | "wordpress" | "jotform";
   subdomain?: string; // BambooHR only
-  apiKey: string;
+  apiKey?: string; // BambooHR / JazzHR / JotForm
+  // WordPress-specific fields
+  wpSiteUrl?: string;
+  wpUsername?: string;
+  wpAppPassword?: string;
 }
 
 const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY") ?? "";
@@ -31,13 +35,28 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json() as SaveConnectorBody;
-    const { source, apiKey, subdomain } = body;
+    const { source, apiKey, subdomain, wpSiteUrl, wpUsername, wpAppPassword } = body;
 
-    if (!source || !apiKey) {
-      return withCors(errorResponse("MISSING_FIELDS", "source and apiKey required", 400), req);
+    if (!source) {
+      return withCors(errorResponse("MISSING_FIELDS", "source required", 400), req);
     }
-    if (source === "bamboohr" && !subdomain) {
-      return withCors(errorResponse("MISSING_FIELDS", "subdomain required for BambooHR", 400), req);
+
+    if (source === "bamboohr" || source === "jazzhr" || source === "jotform") {
+      if (!apiKey) {
+        return withCors(errorResponse("MISSING_FIELDS", "apiKey required", 400), req);
+      }
+      if (source === "bamboohr" && !subdomain) {
+        return withCors(errorResponse("MISSING_FIELDS", "subdomain required for BambooHR", 400), req);
+      }
+    }
+
+    if (source === "wordpress") {
+      if (!wpSiteUrl || !wpUsername || !wpAppPassword) {
+        return withCors(
+          errorResponse("MISSING_FIELDS", "wpSiteUrl, wpUsername, wpAppPassword required", 400),
+          req,
+        );
+      }
     }
 
     // Use service role to encrypt + write — RLS bypassed for encryption operation
@@ -47,25 +66,24 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    // Build the update payload with pgcrypto encryption
-    // pgp_sym_encrypt(plaintext, key) is called via RPC to keep key server-side
     type SettingsUpdate = {
-      active_connectors: string[];
-      profile_source: string;
+      active_connectors?: string[];
+      profile_source?: string;
       bamboohr_subdomain?: string;
       bamboohr_api_key_encrypted?: string;
       jazzhr_api_key_encrypted?: string;
+      jotform_api_key_encrypted?: string;
+      wp_site_url?: string;
+      wp_username_encrypted?: string;
+      wp_app_password_encrypted?: string;
       updated_at: string;
     };
 
     const updatePayload: SettingsUpdate = {
-      active_connectors: [source],
-      profile_source: source,
       updated_at: new Date().toISOString(),
     };
 
     if (source === "bamboohr") {
-      // Encrypt via pgcrypto RPC call
       const { data: encryptedKey, error: encErr } = await adminClient.rpc(
         "pgp_sym_encrypt_text",
         { plaintext: apiKey, passphrase: PGCRYPTO_KEY },
@@ -73,13 +91,40 @@ Deno.serve(async (req: Request) => {
       if (encErr) throw encErr;
       updatePayload.bamboohr_subdomain = subdomain;
       updatePayload.bamboohr_api_key_encrypted = encryptedKey as string;
-    } else {
+      updatePayload.active_connectors = [source];
+      updatePayload.profile_source = source;
+    } else if (source === "jazzhr") {
       const { data: encryptedKey, error: encErr } = await adminClient.rpc(
         "pgp_sym_encrypt_text",
         { plaintext: apiKey, passphrase: PGCRYPTO_KEY },
       );
       if (encErr) throw encErr;
       updatePayload.jazzhr_api_key_encrypted = encryptedKey as string;
+      updatePayload.active_connectors = [source];
+      updatePayload.profile_source = source;
+    } else if (source === "jotform") {
+      const { data: encryptedKey, error: encErr } = await adminClient.rpc(
+        "pgp_sym_encrypt_text",
+        { plaintext: apiKey, passphrase: PGCRYPTO_KEY },
+      );
+      if (encErr) throw encErr;
+      updatePayload.jotform_api_key_encrypted = encryptedKey as string;
+      // JotForm is not a profile_source or ATS connector — don't set those
+    } else {
+      // wordpress — encrypt username and app password
+      const { data: encUser, error: encUserErr } = await adminClient.rpc(
+        "pgp_sym_encrypt_text",
+        { plaintext: wpUsername, passphrase: PGCRYPTO_KEY },
+      );
+      if (encUserErr) throw encUserErr;
+      const { data: encPass, error: encPassErr } = await adminClient.rpc(
+        "pgp_sym_encrypt_text",
+        { plaintext: wpAppPassword, passphrase: PGCRYPTO_KEY },
+      );
+      if (encPassErr) throw encPassErr;
+      updatePayload.wp_site_url = wpSiteUrl.endsWith("/") ? wpSiteUrl.slice(0, -1) : wpSiteUrl;
+      updatePayload.wp_username_encrypted = encUser as string;
+      updatePayload.wp_app_password_encrypted = encPass as string;
     }
 
     const { error: updateErr } = await adminClient
@@ -88,14 +133,19 @@ Deno.serve(async (req: Request) => {
 
     if (updateErr) throw updateErr;
 
-    // Audit log — never log the raw key, only the action
+    // Audit log — never log raw credentials
     void logAudit({
       tenantId: ctx.tenantId,
       actorId: ctx.userId,
       action: "connector.saved",
       tableName: "tenant_settings",
       recordId: ctx.tenantId,
-      after: { source, subdomain: subdomain ?? null, key_configured: true },
+      after: {
+        source,
+        subdomain: subdomain ?? null,
+        wp_site_url: wpSiteUrl ?? null,
+        key_configured: true,
+      },
     });
 
     return withCors(

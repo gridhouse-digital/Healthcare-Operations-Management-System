@@ -4,7 +4,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useEffect, useState } from 'react';
 import { settingsService } from '@/services/settingsService';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { LayoutDashboard, Users, FileText, Briefcase, Settings, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Briefcase, Plug, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
 import defaultLogoDark from '@/assets/logo-dark.png';
@@ -15,7 +15,7 @@ const navigation = [
     { name: 'Offers',       href: '/offers',                icon: FileText },
     { name: 'Employees',    href: '/employees',             icon: Briefcase },
     { name: 'AI Dashboard', href: '/admin/ai-dashboard',    icon: Sparkles,  adminOnly: true },
-    { name: 'Settings',     href: '/settings',              icon: Settings,  adminOnly: true },
+    { name: 'Connectors',   href: '/settings/connectors',   icon: Plug,      adminOnly: true },
 ];
 
 interface MobileNavProps {

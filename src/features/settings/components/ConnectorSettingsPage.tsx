@@ -1,14 +1,29 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { Plug, Pencil, Trash2, Plus, Check, X } from "lucide-react";
 import {
   useTenantSettings,
   useTestConnector,
   useSaveBambooHR,
   useSaveJazzHR,
+  useSaveWordPress,
+  useSaveJotForm,
 } from "../hooks/useTenantSettings";
+import { useLdGroupMappings, useSaveLdMappings } from "../hooks/useLdGroupMappings";
 import { ConnectorStatusBadge } from "./ConnectorStatusBadge";
-import type { ConnectorStatus } from "../types/tenant-settings";
+import type { ConnectorStatus, LdGroupMapping } from "../types/tenant-settings";
+import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// Shared styles (matches SystemSettingsPage)
+// ---------------------------------------------------------------------------
+
+const inputCls =
+  "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50";
+const labelCls =
+  "block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5";
+const sectionCls = "p-5 border border-border rounded-lg space-y-4";
 
 // ---------------------------------------------------------------------------
 // BambooHR form
@@ -19,9 +34,9 @@ interface BambooHRFormValues {
   apiKey: string;
 }
 
-function BambooHRConnector({ configured }: { configured: boolean }) {
+function BambooHRConnector({ configured, savedSubdomain }: { configured: boolean; savedSubdomain: string | null }) {
   const { register, handleSubmit, watch, formState: { isSubmitting } } =
-    useForm<BambooHRFormValues>();
+    useForm<BambooHRFormValues>({ defaultValues: { subdomain: savedSubdomain ?? "" } });
 
   const testConnector = useTestConnector();
   const saveBambooHR = useSaveBambooHR();
@@ -51,17 +66,22 @@ function BambooHRConnector({ configured }: { configured: boolean }) {
   }
 
   async function onSave(values: BambooHRFormValues) {
-    await saveBambooHR.mutateAsync(values);
-    setStatus("active");
-    toast.success("BambooHR connector saved");
+    try {
+      await saveBambooHR.mutateAsync(values);
+      setStatus("active");
+      toast.success("BambooHR connector saved");
+    } catch (err) {
+      setStatus("failed");
+      toast.error(err instanceof Error ? err.message : "Failed to save BambooHR connector");
+    }
   }
 
   return (
-    <div className="rounded-[20px] bg-[#1A1D26] border border-[#1F2433] p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className={sectionCls}>
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-white font-semibold text-base">BambooHR</h3>
-          <p className="text-[#6B7280] text-sm mt-0.5">
+          <p className="text-[13px] font-semibold text-foreground">BambooHR</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
             Polls every 15 minutes for new hires
           </p>
         </div>
@@ -70,53 +90,49 @@ function BambooHRConnector({ configured }: { configured: boolean }) {
 
       <form onSubmit={handleSubmit(onSave)} className="space-y-4">
         <div>
-          <label className="block text-xs font-mono uppercase tracking-widest text-[#6B7280] mb-1.5">
-            Subdomain
-          </label>
+          <label className={labelCls}>Subdomain</label>
           <input
             {...register("subdomain", { required: true })}
             placeholder="yourcompany"
-            className="w-full rounded-[10px] bg-[#0D0F14] border border-[#1F2433] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#00C9B1] transition-colors"
+            className={inputCls}
           />
-          <p className="text-[#6B7280] text-xs mt-1">
-            yourcompany.bamboohr.com → enter <span className="font-mono text-[#9CA3AF]">yourcompany</span>
+          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+            yourcompany.bamboohr.com &rarr; enter <span className="text-foreground/70">yourcompany</span>
           </p>
         </div>
 
         <div>
-          <label className="block text-xs font-mono uppercase tracking-widest text-[#6B7280] mb-1.5">
-            API Key
-          </label>
+          <label className={labelCls}>API Key</label>
           <input
             {...register("apiKey", { required: true })}
             type="password"
-            placeholder={configured ? "••••••••••••••••" : "Enter API key"}
+            placeholder={configured ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "Enter API key"}
             autoComplete="off"
-            className="w-full rounded-[10px] bg-[#0D0F14] border border-[#1F2433] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#00C9B1] transition-colors"
+            className={inputCls}
           />
           {configured && (
-            <p className="text-[#6B7280] text-xs mt-1">
+            <p className="text-[11px] text-muted-foreground font-mono mt-1">
               A key is already configured. Enter a new key to replace it.
             </p>
           )}
         </div>
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-1">
           <button
             type="button"
             disabled={!subdomain || !apiKey || testConnector.isPending}
             onClick={onTest}
-            className="rounded-[10px] border border-[#00C9B1] text-[#00C9B1] px-4 py-2 text-sm font-medium hover:bg-[#00C9B1]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center h-8 px-3 rounded-md border border-primary text-primary text-[13px] font-medium hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {testConnector.isPending ? "Testing…" : "Test Connection"}
+            {testConnector.isPending ? "Testing\u2026" : "Test Connection"}
           </button>
 
           <button
             type="submit"
             disabled={!testPassed || isSubmitting || saveBambooHR.isPending}
-            className="rounded-[10px] bg-[#00C9B1] text-[#0D0F14] px-4 py-2 text-sm font-semibold hover:bg-[#00C9B1]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {saveBambooHR.isPending ? "Saving…" : "Save"}
+            {saveBambooHR.isPending ? "Saving\u2026" : "Save"}
           </button>
         </div>
       </form>
@@ -159,17 +175,22 @@ function JazzHRConnector({ configured }: { configured: boolean }) {
   }
 
   async function onSave(values: JazzHRFormValues) {
-    await saveJazzHR.mutateAsync(values);
-    setStatus("active");
-    toast.success("JazzHR connector saved");
+    try {
+      await saveJazzHR.mutateAsync(values);
+      setStatus("active");
+      toast.success("JazzHR connector saved");
+    } catch (err) {
+      setStatus("failed");
+      toast.error(err instanceof Error ? err.message : "Failed to save JazzHR connector");
+    }
   }
 
   return (
-    <div className="rounded-[20px] bg-[#1A1D26] border border-[#1F2433] p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className={sectionCls}>
+      <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-white font-semibold text-base">JazzHR</h3>
-          <p className="text-[#6B7280] text-sm mt-0.5">
+          <p className="text-[13px] font-semibold text-foreground">JazzHR</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
             Polls every 15 minutes for hired applicants
           </p>
         </div>
@@ -178,42 +199,462 @@ function JazzHRConnector({ configured }: { configured: boolean }) {
 
       <form onSubmit={handleSubmit(onSave)} className="space-y-4">
         <div>
-          <label className="block text-xs font-mono uppercase tracking-widest text-[#6B7280] mb-1.5">
-            API Key
-          </label>
+          <label className={labelCls}>API Key</label>
           <input
             {...register("apiKey", { required: true })}
             type="password"
-            placeholder={configured ? "••••••••••••••••" : "Enter API key"}
+            placeholder={configured ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "Enter API key"}
             autoComplete="off"
-            className="w-full rounded-[10px] bg-[#0D0F14] border border-[#1F2433] text-white px-3 py-2 text-sm focus:outline-none focus:border-[#00C9B1] transition-colors"
+            className={inputCls}
           />
           {configured && (
-            <p className="text-[#6B7280] text-xs mt-1">
+            <p className="text-[11px] text-muted-foreground font-mono mt-1">
               A key is already configured. Enter a new key to replace it.
             </p>
           )}
         </div>
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-1">
           <button
             type="button"
             disabled={!apiKey || testConnector.isPending}
             onClick={onTest}
-            className="rounded-[10px] border border-[#00C9B1] text-[#00C9B1] px-4 py-2 text-sm font-medium hover:bg-[#00C9B1]/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center h-8 px-3 rounded-md border border-primary text-primary text-[13px] font-medium hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {testConnector.isPending ? "Testing…" : "Test Connection"}
+            {testConnector.isPending ? "Testing\u2026" : "Test Connection"}
           </button>
 
           <button
             type="submit"
             disabled={!testPassed || isSubmitting || saveJazzHR.isPending}
-            className="rounded-[10px] bg-[#00C9B1] text-[#0D0F14] px-4 py-2 text-sm font-semibold hover:bg-[#00C9B1]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {saveJazzHR.isPending ? "Saving…" : "Save"}
+            {saveJazzHR.isPending ? "Saving\u2026" : "Save"}
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// WordPress form
+// ---------------------------------------------------------------------------
+
+interface WordPressFormValues {
+  wpSiteUrl: string;
+  wpUsername: string;
+  wpAppPassword: string;
+}
+
+function WordPressConnector({ configured, savedSiteUrl }: { configured: boolean; savedSiteUrl: string | null }) {
+  const { register, handleSubmit, formState: { isSubmitting } } =
+    useForm<WordPressFormValues>({ defaultValues: { wpSiteUrl: savedSiteUrl ?? "" } });
+
+  const saveWordPress = useSaveWordPress();
+
+  const [status, setStatus] = useState<ConnectorStatus>(
+    configured ? "active" : "not_configured",
+  );
+
+  async function onSave(values: WordPressFormValues) {
+    try {
+      await saveWordPress.mutateAsync(values);
+      setStatus("active");
+      toast.success("WordPress connector saved");
+    } catch (err) {
+      setStatus("failed");
+      toast.error(err instanceof Error ? err.message : "Failed to save WordPress connector");
+    }
+  }
+
+  return (
+    <div className={sectionCls}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[13px] font-semibold text-foreground">WordPress / LearnDash</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Creates WP users and enrolls into LearnDash training groups
+          </p>
+        </div>
+        <ConnectorStatusBadge status={status} />
+      </div>
+
+      <form onSubmit={handleSubmit(onSave)} className="space-y-4">
+        <div>
+          <label className={labelCls}>Site URL</label>
+          <input
+            {...register("wpSiteUrl", { required: !configured })}
+            type="url"
+            placeholder="https://training.yourcompany.com"
+            className={inputCls}
+          />
+        </div>
+
+        <div>
+          <label className={labelCls}>Username</label>
+          <input
+            {...register("wpUsername", { required: !configured })}
+            placeholder={configured ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "admin"}
+            autoComplete="off"
+            className={inputCls}
+          />
+          {configured && (
+            <p className="text-[11px] text-muted-foreground font-mono mt-1">
+              Already configured. Enter a new value to replace it.
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className={labelCls}>Application Password</label>
+          <input
+            {...register("wpAppPassword", { required: !configured })}
+            type="password"
+            placeholder={configured ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "Enter application password"}
+            autoComplete="off"
+            className={inputCls}
+          />
+          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+            Generate in WP Admin &rarr; Users &rarr; Profile &rarr; Application Passwords
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={isSubmitting || saveWordPress.isPending}
+            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {saveWordPress.isPending ? "Saving\u2026" : "Save"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// JotForm form
+// ---------------------------------------------------------------------------
+
+interface JotFormFormValues {
+  apiKey: string;
+}
+
+function JotFormConnector({ configured }: { configured: boolean }) {
+  const { register, handleSubmit, formState: { isSubmitting } } =
+    useForm<JotFormFormValues>();
+
+  const saveJotForm = useSaveJotForm();
+
+  const [status, setStatus] = useState<ConnectorStatus>(
+    configured ? "active" : "not_configured",
+  );
+
+  async function onSave(values: JotFormFormValues) {
+    try {
+      await saveJotForm.mutateAsync(values);
+      setStatus("active");
+      toast.success("JotForm connector saved");
+    } catch (err) {
+      setStatus("failed");
+      toast.error(err instanceof Error ? err.message : "Failed to save JotForm connector");
+    }
+  }
+
+  return (
+    <div className={sectionCls}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[13px] font-semibold text-foreground">JotForm</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Ingests applicant credentials and policy documents
+          </p>
+        </div>
+        <ConnectorStatusBadge status={status} />
+      </div>
+
+      <form onSubmit={handleSubmit(onSave)} className="space-y-4">
+        <div>
+          <label className={labelCls}>API Key</label>
+          <input
+            {...register("apiKey", { required: true })}
+            type="password"
+            placeholder={configured ? "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" : "Enter API key"}
+            autoComplete="off"
+            className={inputCls}
+          />
+          {configured && (
+            <p className="text-[11px] text-muted-foreground font-mono mt-1">
+              A key is already configured. Enter a new key to replace it.
+            </p>
+          )}
+          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+            Find your API key at JotForm &rarr; Settings &rarr; API
+          </p>
+        </div>
+
+        <div className="flex gap-3 pt-1">
+          <button
+            type="submit"
+            disabled={isSubmitting || saveJotForm.isPending}
+            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {saveJotForm.isPending ? "Saving\u2026" : "Save"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// LD Group Mapping — row editing
+// ---------------------------------------------------------------------------
+
+interface MappingRowProps {
+  mapping: LdGroupMapping;
+  onEdit: (updated: LdGroupMapping) => void;
+  onDelete: () => void;
+}
+
+function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
+  const [editing, setEditing] = useState(false);
+  const { register, handleSubmit, reset } = useForm<LdGroupMapping>({
+    defaultValues: mapping,
+  });
+
+  function onSave(values: LdGroupMapping) {
+    onEdit(values);
+    setEditing(false);
+  }
+
+  function onCancel() {
+    reset(mapping);
+    setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <tr className="border-b border-border">
+        <td className="px-4 py-3">
+          <input
+            {...register("job_title", { required: true })}
+            className={cn(inputCls, "h-8")}
+          />
+        </td>
+        <td className="px-4 py-3">
+          <input
+            {...register("group_id", { required: true })}
+            className={cn(inputCls, "h-8 font-mono")}
+          />
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex gap-2">
+            <button
+              onClick={handleSubmit(onSave)}
+              className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors"
+              title="Save"
+            >
+              <Check size={14} />
+            </button>
+            <button
+              onClick={onCancel}
+              className="p-1.5 rounded-md text-muted-foreground hover:bg-muted/20 transition-colors"
+              title="Cancel"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="border-b border-border hover:bg-muted/5 transition-colors">
+      <td className="px-4 py-3 text-foreground text-[13px]">{mapping.job_title}</td>
+      <td className="px-4 py-3 text-muted-foreground text-[13px] font-mono">{mapping.group_id}</td>
+      <td className="px-4 py-3">
+        <div className="flex gap-2">
+          <button
+            onClick={() => setEditing(true)}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+            title="Edit"
+          >
+            <Pencil size={14} />
+          </button>
+          <button
+            onClick={onDelete}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// LD Group Mapping — add new row
+// ---------------------------------------------------------------------------
+
+interface AddRowProps {
+  onAdd: (mapping: LdGroupMapping) => void;
+  onCancel: () => void;
+}
+
+function AddRow({ onAdd, onCancel }: AddRowProps) {
+  const { register, handleSubmit } = useForm<LdGroupMapping>();
+
+  return (
+    <tr className="border-b border-border bg-primary/5">
+      <td className="px-4 py-3">
+        <input
+          {...register("job_title", { required: true })}
+          placeholder="e.g. Registered Nurse"
+          className={cn(inputCls, "h-8")}
+          autoFocus
+        />
+      </td>
+      <td className="px-4 py-3">
+        <input
+          {...register("group_id", { required: true })}
+          placeholder="e.g. 42"
+          className={cn(inputCls, "h-8 font-mono")}
+        />
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex gap-2">
+          <button
+            onClick={handleSubmit(onAdd)}
+            className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors"
+            title="Add"
+          >
+            <Check size={14} />
+          </button>
+          <button
+            onClick={onCancel}
+            className="p-1.5 rounded-md text-muted-foreground hover:bg-muted/20 transition-colors"
+            title="Cancel"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// LD Group Mappings section
+// ---------------------------------------------------------------------------
+
+function LdGroupMappingsSection() {
+  const { data: mappings = [], isLoading } = useLdGroupMappings();
+  const saveMappings = useSaveLdMappings();
+  const [localMappings, setLocalMappings] = useState<LdGroupMapping[] | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  const displayed = localMappings ?? mappings;
+
+  async function commitSave(updated: LdGroupMapping[]) {
+    await saveMappings.mutateAsync(updated);
+    setLocalMappings(null);
+    toast.success("Mappings saved");
+  }
+
+  function handleEdit(index: number, updated: LdGroupMapping) {
+    const next = displayed.map((m, i) => (i === index ? updated : m));
+    setLocalMappings(next);
+    void commitSave(next);
+  }
+
+  function handleDelete(index: number) {
+    const next = displayed.filter((_, i) => i !== index);
+    setLocalMappings(next);
+    void commitSave(next);
+  }
+
+  function handleAdd(mapping: LdGroupMapping) {
+    const next = [...displayed, mapping];
+    setLocalMappings(next);
+    setAdding(false);
+    void commitSave(next);
+  }
+
+  if (isLoading) {
+    return (
+      <div className={sectionCls}>
+        <p className="text-[13px] font-semibold text-foreground">LearnDash Group Mappings</p>
+        <div className="flex items-center justify-center h-20">
+          <span className="text-muted-foreground font-mono text-[13px]">Loading mappings&hellip;</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <div className="p-5 pb-0">
+        <p className="text-[13px] font-semibold text-foreground">LearnDash Group Mappings</p>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          Map job titles to LearnDash group IDs. New hires are automatically enrolled
+          in the matching groups when onboarded.
+        </p>
+      </div>
+
+      <div className="mt-4">
+        <table className="w-full">
+          <thead>
+            <tr className="border-y border-border">
+              <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">
+                Job Title
+              </th>
+              <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">
+                LearnDash Group ID
+              </th>
+              <th className="px-4 py-2.5 w-24" />
+            </tr>
+          </thead>
+          <tbody>
+            {displayed.length === 0 && !adding && (
+              <tr>
+                <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground text-[13px]">
+                  No mappings yet. Add your first job title &rarr; group ID mapping below.
+                </td>
+              </tr>
+            )}
+            {displayed.map((mapping, i) => (
+              <MappingRow
+                key={`${mapping.job_title}-${i}`}
+                mapping={mapping}
+                onEdit={(updated) => handleEdit(i, updated)}
+                onDelete={() => handleDelete(i)}
+              />
+            ))}
+            {adding && (
+              <AddRow
+                onAdd={handleAdd}
+                onCancel={() => setAdding(false)}
+              />
+            )}
+          </tbody>
+        </table>
+
+        <div className={cn("px-4 py-3 border-t border-border", adding && "hidden")}>
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-1.5 text-primary text-[13px] font-medium hover:text-primary/80 transition-colors"
+          >
+            <Plus size={14} />
+            Add Mapping
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -228,31 +669,40 @@ export function ConnectorSettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="text-[#6B7280] font-mono text-sm">Loading settings…</span>
+        <span className="text-muted-foreground font-mono text-[13px]">Loading settings&hellip;</span>
       </div>
     );
   }
 
   if (error || !settings) {
     return (
-      <div className="rounded-[20px] bg-red-500/10 border border-red-500/20 p-6">
-        <p className="text-red-400 text-sm">Failed to load connector settings.</p>
+      <div className="p-5 border border-red-500/20 rounded-lg bg-red-500/5">
+        <p className="text-red-400 text-[13px]">Failed to load connector settings.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h2 className="text-white text-xl font-semibold">Connector Settings</h2>
-        <p className="text-[#6B7280] text-sm mt-1">
+        <h2 className="!font-sans !text-xl !font-semibold !normal-case !tracking-normal !text-foreground flex items-center gap-2">
+          <Plug size={20} className="text-primary" />
+          Connector Settings
+        </h2>
+        <p className="text-muted-foreground text-[13px] mt-1">
           Configure your ATS integrations. API keys are encrypted at rest and
           never returned to the browser after saving.
         </p>
       </div>
 
-      <BambooHRConnector configured={settings.bamboohr_key_configured} />
-      <JazzHRConnector configured={settings.jazzhr_key_configured} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <BambooHRConnector configured={settings.bamboohr_key_configured} savedSubdomain={settings.bamboohr_subdomain} />
+        <JazzHRConnector configured={settings.jazzhr_key_configured} />
+        <WordPressConnector configured={settings.wp_key_configured} savedSiteUrl={settings.wp_site_url} />
+        <JotFormConnector configured={settings.jotform_key_configured} />
+      </div>
+
+      <LdGroupMappingsSection />
     </div>
   );
 }

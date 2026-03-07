@@ -1,7 +1,7 @@
 // FR-16, FR-17, FR-22 — Tenant settings types
-// verbatimModuleSyntax: all type-only imports must use `import type`
+// verbatimModuleSyntax: all type-only imports must use import type
 
-export type ConnectorSource = "bamboohr" | "jazzhr";
+export type ConnectorSource = "bamboohr" | "jazzhr" | "wordpress" | "jotform";
 
 export interface LdGroupMapping {
   job_title: string;
@@ -16,6 +16,8 @@ export interface TenantSettings {
   // API keys are NEVER returned — only a masked indicator is shown
   bamboohr_key_configured: boolean;
   jazzhr_key_configured: boolean;
+  wp_key_configured: boolean;
+  jotform_key_configured: boolean;
   active_connectors: ConnectorSource[];
   ld_group_mappings: LdGroupMapping[];
   profile_source: ConnectorSource | null;

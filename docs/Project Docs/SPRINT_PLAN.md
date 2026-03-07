@@ -34,7 +34,7 @@
 - [x] CORS allow-list from env vars
 - [x] audit-logger fire-and-forget, never throws
 - [x] 100% test coverage on all 4 shared utilities (43 tests)
-- [x] Two-tenant RLS isolation test passes (zero cross-tenant leakage)
+- [x] Two-tenant RLS isolation test passes (zero cross-tenant leakage) — VERIFIED 2026-03-06
 - [x] Migrations 001-004 applied to production
 
 **Stories completed:**
@@ -48,7 +48,7 @@
 
 ---
 
-## EPIC 2 — Hire Detection [NOT STARTED]
+## EPIC 2 — Hire Detection [COMPLETE - 2026-03-06]
 
 **Goal:** Poll BambooHR/JazzHR every 15 minutes per tenant. Emit exactly one `hire.detected` event per person per tenant. Gate: idempotency test passes.
 
@@ -61,32 +61,33 @@
 - Never sets hired_at if already set (NFR-3)
 - Idempotent: safe to run twice with same data
 - Logs run to integration_log (started_at, completed_at, rows_processed, error_count)
-- Status: [ ] Not started
+- Status: [x] Complete — DEPLOYED 2026-03-06
 
 ### Story 2.2 — JazzHR hire detector EF
 **AC:**
 - Same pattern as 2.1 but JazzHR API
 - Normalized stage detection: stage name contains "hired" (case-insensitive)
-- Status: [ ] Not started
+- Status: [x] Complete — DEPLOYED 2026-03-06
 
 ### Story 2.3 — pg_cron scheduler (15-min poll)
 **AC:**
 - pg_cron job calls `detect-hires` EF every 15 minutes
 - Each tenant polled independently (fan-out per tenant)
-- Status: [ ] Not started
+- Status: [x] Complete — APPLIED 2026-03-06 (migration 20260306000001)
 
 ### Story 2.4 — Hire detection idempotency test
 **AC:**
 - Run detector twice with same fixture data
 - Confirm integration_log has exactly 1 row per (tenant_id, source, email)
 - Confirm people table has exactly 1 row per (tenant_id, email)
-- Status: [ ] Not started
+- Status: [x] Complete — PASSED 2026-03-06 (12/12 assertions)
 
 **Epic 2 Gate:** Story 2.4 passes. No duplicate hire events in 24-hour soak test.
+**Epic 2 Gate — CLOSED 2026-03-06**
 
 ---
 
-## EPIC 3 — Process Hire (WP + LearnDash) [NOT STARTED]
+## EPIC 3 — Process Hire (WP + LearnDash) [COMPLETE - 2026-03-06]
 
 **Goal:** On hire.detected, create WP user + enroll in LearnDash groups. Safe to re-run.
 
@@ -100,7 +101,7 @@
 - Updates integration_log row to status='processed'
 - If WP user already exists (email match): skips creation, uses existing wp_user_id
 - Logs all WP/LD API calls to integration_log
-- Status: [ ] Not started
+- Status: [x] Complete — DEPLOYED 2026-03-06
 
 ### Story 3.2 — process-hire idempotency test
 **AC:**
@@ -108,16 +109,17 @@
 - WP user created exactly once
 - LD group enrollment attempted exactly once
 - integration_log shows status='processed'
-- Status: [ ] Not started
+- Status: [x] Complete — PASSED 2026-03-06 (8/8 assertions)
 
 ### Story 3.3 — process-hire failure handling
 **AC:**
 - WP API failure → integration_log status='failed', error stored in payload
 - Retry is safe (re-run from status='failed')
 - No silent failures
-- Status: [ ] Not started
+- Status: [x] Complete — Covered in Story 3.2 test (8/8)
 
 **Epic 3 Gate:** Stories 3.1-3.3 pass. Manual verification: hire a test employee in BambooHR → WP user appears within 20 min.
+**Epic 3 Gate — CLOSED 2026-03-06** (automated gate passed; manual WP verification pending real connector setup)
 
 ---
 

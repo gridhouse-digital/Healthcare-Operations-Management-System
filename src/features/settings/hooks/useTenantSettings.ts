@@ -26,7 +26,9 @@ async function fetchSettings(): Promise<TenantSettings> {
     // Indicate whether keys are configured without exposing them
     bamboohr_key_configured: !!(data as Record<string, unknown>)["bamboohr_api_key_encrypted"],
     jazzhr_key_configured: !!(data as Record<string, unknown>)["jazzhr_api_key_encrypted"],
-    active_connectors: (data.active_connectors as string[] | null) ?? [],
+    wp_key_configured: !!(data.wp_site_url),
+    jotform_key_configured: !!(data as Record<string, unknown>)["jotform_api_key_encrypted"],
+    active_connectors: ((data.active_connectors as string[] | null) ?? []) as TenantSettings["active_connectors"],
     ld_group_mappings: (data.ld_group_mappings as LdGroupMapping[] | null) ?? [],
     profile_source: (data.profile_source as "bamboohr" | "jazzhr" | null) ?? null,
   } satisfies TenantSettings;
@@ -109,6 +111,56 @@ export function useSaveJazzHR() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: saveJazzHR,
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: QK.settings }); },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Save WordPress connector
+// ---------------------------------------------------------------------------
+
+interface SaveWordPressPayload {
+  wpSiteUrl: string;
+  wpUsername: string;
+  wpAppPassword: string;
+}
+
+async function saveWordPress(payload: SaveWordPressPayload): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("save-connector", {
+    body: { source: "wordpress", ...payload },
+  });
+  if (error) throw error;
+  if ((data as { error?: { message: string } } | null)?.error) {
+    throw new Error((data as { error: { message: string } }).error.message);
+  }
+}
+
+export function useSaveWordPress() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: saveWordPress,
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: QK.settings }); },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Save JotForm connector
+// ---------------------------------------------------------------------------
+
+async function saveJotForm(payload: { apiKey: string }): Promise<void> {
+  const { data, error } = await supabase.functions.invoke("save-connector", {
+    body: { source: "jotform", ...payload },
+  });
+  if (error) throw error;
+  if ((data as { error?: { message: string } } | null)?.error) {
+    throw new Error((data as { error: { message: string } }).error.message);
+  }
+}
+
+export function useSaveJotForm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: saveJotForm,
     onSuccess: () => { void qc.invalidateQueries({ queryKey: QK.settings }); },
   });
 }

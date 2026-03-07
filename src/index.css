@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @config "../tailwind.config.js";
 
@@ -7,7 +7,7 @@
    PROLIFIC HR — "Dark Infrastructure" Design System
    Inspired by: Supabase · Linear · Vercel Dashboard
    Tone: data-dense · enterprise authority · AI-native · dark-first
-   Fonts: DM Serif Display (display) + IBM Plex Sans (UI) + IBM Plex Mono (data)
+   Fonts: Plus Jakarta Sans (display) + IBM Plex Sans (UI) + IBM Plex Mono (data)
    Accent: Electric cyan on deep zinc canvas
 ───────────────────────────────────────────────────────── */
 
@@ -84,7 +84,7 @@
 
         /* ── Typography ── */
         --font-sans:     'IBM Plex Sans', system-ui, sans-serif;
-        --font-display:  'DM Serif Display', Georgia, serif;
+        --font-display:  'Plus Jakarta Sans', system-ui, sans-serif;
         --font-mono:     'IBM Plex Mono', 'Fira Code', monospace;
 
         /* ── Shadows — deep, directional ── */
@@ -261,11 +261,11 @@
     .font-display { font-family: var(--font-display); }
     .font-mono    { font-family: var(--font-mono); }
 
-    /* H1 — DM Serif Display, page titles */
+    /* H1 — Plus Jakarta Sans, page titles */
     h1 {
         font-family: var(--font-display);
         font-size: var(--text-2xl);
-        font-weight: 400;
+        font-weight: 800;
         letter-spacing: var(--tracking-tight);
         line-height: 1.15;
     }
@@ -418,7 +418,7 @@
     /* ── Data value (display numbers) ── */
     .data-value {
         font-family: var(--font-display);
-        font-style: italic;
+        font-weight: 700;
         letter-spacing: -0.02em;
         line-height: 1;
     }
@@ -513,9 +513,8 @@
     /* ── Page header block ── */
     .page-header-title {
         font-family: var(--font-display);
-        font-style: italic;
         font-size: 1.875rem;
-        font-weight: 400;
+        font-weight: 800;
         letter-spacing: -0.025em;
         line-height: 1.15;
         color: var(--foreground);

@@ -12,27 +12,26 @@ const LABELS: Record<ConnectorStatus, string> = {
 };
 
 const STYLES: Record<ConnectorStatus, string> = {
-  active: "bg-[#00C9B1]/15 text-[#00C9B1] border border-[#00C9B1]/30",
-  not_configured: "bg-[#1A1D26] text-[#6B7280] border border-[#1F2433]",
+  active: "bg-primary/15 text-primary border border-primary/30",
+  not_configured: "bg-muted/10 text-muted-foreground border border-border",
   failed: "bg-red-500/10 text-red-400 border border-red-500/30",
+};
+
+const DOT_STYLES: Record<ConnectorStatus, string> = {
+  active: "bg-primary",
+  not_configured: "bg-muted-foreground",
+  failed: "bg-red-400",
 };
 
 export function ConnectorStatusBadge({ status }: ConnectorStatusBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium font-mono",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium font-mono",
         STYLES[status],
       )}
     >
-      <span
-        className={cn(
-          "h-1.5 w-1.5 rounded-full",
-          status === "active" && "bg-[#00C9B1]",
-          status === "not_configured" && "bg-[#6B7280]",
-          status === "failed" && "bg-red-400",
-        )}
-      />
+      <span className={cn("h-1.5 w-1.5 rounded-full", DOT_STYLES[status])} />
       {LABELS[status]}
     </span>
   );
