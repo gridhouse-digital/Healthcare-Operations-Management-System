@@ -123,7 +123,7 @@
 
 ---
 
-## EPIC 4 — Training Sync (3-Layer Compliance Model) [NOT STARTED]
+## EPIC 4 — Training Sync (3-Layer Compliance Model) [IN PROGRESS]
 
 **Goal:** Pull LearnDash course progress. Store in compliance-grade 3-layer model. Effective values never overwritten by sync.
 
@@ -134,7 +134,9 @@
 - `training_adjustments`: append-only overrides by HR (no destructive edits)
 - Effective value = latest adjustment override if exists, else raw training_record value
 - All tables: tenant_id, RLS, audit triggers
-- Status: [ ] Not started
+- `v_training_compliance` VIEW (Layer C) computes effective values
+- Event-generating triggers: enrolled, completed, adjusted (auto-populated)
+- Status: [x] Complete — APPLIED 2026-03-07
 
 ### Story 4.2 — LearnDash sync EF
 **AC:**
