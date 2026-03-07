@@ -4,6 +4,48 @@
 
 ---
 
+## 2026-03-07 (session 2) -- Epic 4 Story 4.2: LearnDash Training Sync EF
+
+### What shipped
+
+- sync-training Edge Function deployed to production
+  - Fetches course progress from LearnDash REST API per employee with wp_user_id
+  - UPSERTS training_records (Layer A) using ON CONFLICT (tenant_id, person_id, course_id)
+  - Intentionally omits training_hours + expires_at from upsert (NFR-3 -- protects Layer B overrides)
+  - Course name resolution via GET /ldlms/v2/courses/{id} with per-run Map cache
+  - Pagination via per_page=100 + x-wp-totalpages header
+  - Run dedup: checks integration_log for running status, marks stale if >1hr old
+  - 200ms rate limiting for tenants with >50 employees
+  - Sequential tenant processing (avoids overwhelming WP)
+  - Manual trigger with optional tenant_id and force params
+  - Status mapping: not-started to not_started, in-progress to in_progress, completed to completed
+  - Unknown statuses skipped (not defaulted) to avoid data regression
+- Migration 20260307000002: pg_cron daily at 7:00 AM UTC for sync-training
+
+### Design decisions
+
+- Sequential tenant processing instead of Promise.allSettled -- each tenant fans out to N employees x M courses, parallel would overwhelm WP
+- Course name cache scoped to processTenant() -- not global (prevents cross-tenant leaks)
+- Run dedup with 1-hour stale threshold (matching detect-hires pattern)
+- Unknown LD statuses skipped rather than defaulted to null -- prevents overwriting valid data
+
+### Files changed
+
+- supabase/functions/sync-training/index.ts (new -- 473 lines)
+- supabase/migrations/20260307000002_epic4_training_sync_cron.sql (new)
+- docs/plans/2026-03-07-epic4-sync-training-design.md (new -- approved design)
+- docs/plans/2026-03-07-epic4-story42-plan.md (new -- implementation plan)
+- docs/Project Docs/SPRINT_PLAN.md (Story 4.2 marked complete)
+- docs/Project Docs/PROJECT_LOG.md (this entry)
+- docs/Project Docs/INTEGRATIONS.md (LearnDash sync details added)
+
+### Next
+
+- Story 4.3 -- Training compliance dashboard UI
+
+---
+
+
 ## 2026-03-07 -- Epic 4 Story 4.1: Training Ledger Schema Migration
 
 ### What shipped

@@ -66,7 +66,7 @@
 | Sync cadence | On hire (process-hire EF) + daily training sync |
 | Idempotency | WP user lookup before create; LD enrollment checked before POST |
 | Failure handling | integration_log status='failed'; retry safe |
-| Edge Functions | `process-hire` (Epic 3), `sync-training` (Epic 4) — not yet built |
+| Edge Functions | `process-hire` (Epic 3, deployed), `sync-training` (Epic 4, deployed) |
 | LD group mappings | `tenant_settings.ld_group_mappings` JSONB: `[{job_title, group_id}]` |
 
 **Notes:**
@@ -74,6 +74,17 @@
 - LearnDash REST API requires WP 5.0+ and LearnDash 3.0+.
 - `wp_user_id` stored on `people` record after creation.
 - Training sync uses 3-layer compliance model (see SCHEMA.md).
+
+**Training sync details (Story 4.2):**
+- Endpoint: `GET {wp_site_url}/wp-json/ldlms/v2/users/{wp_user_id}/course-progress`
+- Course name: `GET {wp_site_url}/wp-json/ldlms/v2/courses/{course_id}` -> `title.rendered`
+- Pagination: `per_page=100`, loop via `x-wp-totalpages` header
+- UPSERT: `ON CONFLICT (tenant_id, person_id, course_id) DO UPDATE SET course_name, status, completion_pct, completed_at, last_synced_at, updated_at`
+- Omitted from upsert: `training_hours`, `expires_at` (NFR-3 protection)
+- Status mapping: `not-started` -> `not_started`, `in-progress` -> `in_progress`, `completed` -> `completed`
+- Schedule: Daily 7:00 AM UTC via pg_cron
+- Run dedup: integration_log `running` status check, 1hr stale threshold
+- Rate limit: 200ms delay between employees if >50 per tenant
 
 ---
 

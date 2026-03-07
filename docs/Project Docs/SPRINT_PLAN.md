@@ -145,7 +145,11 @@
 - Never touches training_adjustments
 - Never overwrites effective compliance dates
 - Logs sync run to integration_log
-- Status: [ ] Not started
+- pg_cron daily at 7:00 AM UTC (migration 20260307000002)
+- Run dedup: skip if running <1hr, mark stale if >1hr
+- Rate limiting: 200ms delay between employees if >50 per tenant
+- Manual trigger: POST with optional tenant_id and force params
+- Status: [x] Complete -- DEPLOYED 2026-03-07
 
 ### Story 4.3 — Training compliance dashboard (frontend)
 **AC:**
