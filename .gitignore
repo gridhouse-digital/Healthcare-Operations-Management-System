@@ -25,3 +25,29 @@ dist-ssr
 .env
 .mcp.json
 
+# Working copy (dev server runs here, git tracks root copies)
+prolific-hr-app/
+
+# AI agent / tool configs
+.agent/
+.agents/
+.claude/
+.cursor/
+.gemini/
+.github/
+
+# BMAD framework files
+BMAD/
+_bmad/
+_bmad-output/
+
+# Reference / prototype directories
+Backup/
+Design Inspiration/
+Files from Worker/
+Offer Form/
+ai-summarize-applicant/
+
+# Misc
+2CLAUDE-OLD.md
+CLAUDE-Zeus.md
