@@ -2,6 +2,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
+import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
 
 // Story 3.1 — process-hire
 //
@@ -129,7 +130,7 @@ interface HireRow {
 async function processHire(
   admin: ReturnType<typeof createClient>,
   hire: HireRow,
-): Promise<"processed" | "skipped"> {
+): Promise<"processed" | "skipped" | "partial_failure"> {
   const email = hire.idempotency_key;
 
   // Fetch people record
@@ -203,11 +204,12 @@ async function processHire(
     }
   }
 
-  // Mark processed (even with partial LD errors — WP user exists)
+  // Mark processed or partial_failure depending on LD enrollment results
+  const finalStatus = enrollErrors.length > 0 ? "partial_failure" : "processed";
   await admin
     .from("integration_log")
     .update({
-      status: "processed",
+      status: finalStatus,
       completed_at: new Date().toISOString(),
       payload: {
         wp_user_id: wpUserId,
@@ -231,7 +233,7 @@ async function processHire(
     },
   });
 
-  return "processed";
+  return finalStatus as "processed" | "partial_failure";
 }
 
 Deno.serve(async (req: Request) => {
@@ -239,17 +241,26 @@ Deno.serve(async (req: Request) => {
   if (preflight) return preflight;
 
   try {
+    const ctx = cronOrTenantGuard(req);
+
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false },
     });
 
-    // Fetch up to 100 unprocessed hire_detected rows across all tenants
-    const { data: hires, error: hiresErr } = await admin
+    // Fetch up to 100 unprocessed hire_detected rows
+    let hiresQuery = admin
       .from("integration_log")
       .select("id, tenant_id, idempotency_key")
       .eq("status", "hire_detected")
       .order("created_at", { ascending: true })
       .limit(100);
+
+    // Authenticated user: restrict to own tenant only
+    if (ctx.mode === "user") {
+      hiresQuery = hiresQuery.eq("tenant_id", ctx.tenantId);
+    }
+
+    const { data: hires, error: hiresErr } = await hiresQuery;
 
     if (hiresErr) throw hiresErr;
     if (!hires || hires.length === 0) {
@@ -286,6 +297,9 @@ Deno.serve(async (req: Request) => {
       total: hires.length,
       processed: results.filter(
         (r) => r.status === "fulfilled" && r.value === "processed",
+      ).length,
+      partial_failure: results.filter(
+        (r) => r.status === "fulfilled" && r.value === "partial_failure",
       ).length,
       skipped: results.filter(
         (r) => r.status === "fulfilled" && r.value === "skipped",

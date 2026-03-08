@@ -2,6 +2,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { handleError, errorResponse } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
+import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
 
 // Story 2.1 — BambooHR Hire Detector
 //
@@ -146,8 +147,8 @@ async function processTenant(config: TenantConfig): Promise<{
         continue;
       }
 
-      // Upsert people record — NFR-3: never overwrite hired_at if set
-      const { error: peopleErr } = await admin.from("people").upsert(
+      // Insert people record if new — profile_source set only on first insert
+      await admin.from("people").insert(
         {
           tenant_id: config.tenantId,
           email,
@@ -156,14 +157,21 @@ async function processTenant(config: TenantConfig): Promise<{
           job_title: emp.jobTitle || null,
           type: "employee",
           profile_source: "bamboohr",
-          // hired_at only set on insert — DB trigger / default handles it
-          // We use ON CONFLICT to skip updating hired_at if row exists
         },
-        {
-          onConflict: "tenant_id,email",
-          ignoreDuplicates: false,
-        },
+        { onConflict: "tenant_id,email", ignoreDuplicates: true },
       );
+
+      // Update non-protected fields (profile_source excluded — first connector wins)
+      const { error: peopleErr } = await admin.from("people").update(
+        {
+          first_name: emp.firstName || null,
+          last_name: emp.lastName || null,
+          job_title: emp.jobTitle || null,
+          type: "employee",
+        },
+      )
+        .eq("tenant_id", config.tenantId)
+        .eq("email", email);
 
       if (peopleErr) {
         errors++;
@@ -224,14 +232,14 @@ Deno.serve(async (req: Request) => {
   if (preflight) return preflight;
 
   try {
-    // This EF is called by pg_cron (no user JWT) or manually by platform_admin.
-    // It reads connector config for ALL tenants that have BambooHR configured.
+    const ctx = cronOrTenantGuard(req);
+
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false },
     });
 
-    // Fetch all tenants with BambooHR configured
-    const { data: settings, error: settingsErr } = await admin
+    // Fetch tenants with BambooHR configured
+    let settingsQuery = admin
       .from("tenant_settings")
       .select(
         "tenant_id, bamboohr_subdomain, bamboohr_api_key_encrypted, active_connectors",
@@ -239,6 +247,13 @@ Deno.serve(async (req: Request) => {
       .contains("active_connectors", ["bamboohr"])
       .not("bamboohr_api_key_encrypted", "is", null)
       .not("bamboohr_subdomain", "is", null);
+
+    // Authenticated user: restrict to own tenant only
+    if (ctx.mode === "user") {
+      settingsQuery = settingsQuery.eq("tenant_id", ctx.tenantId);
+    }
+
+    const { data: settings, error: settingsErr } = await settingsQuery;
 
     if (settingsErr) throw settingsErr;
     if (!settings || settings.length === 0) {

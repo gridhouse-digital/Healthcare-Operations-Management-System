@@ -2,6 +2,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
+import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
 
 // Story 4.2 — sync-training (LearnDash course progress sync)
 //
@@ -419,17 +420,25 @@ Deno.serve(async (req: Request) => {
   if (preflight) return preflight;
 
   try {
+    const ctx = cronOrTenantGuard(req);
+
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false },
     });
 
-    // Parse optional POST body (tenant_id, force)
+    // Parse optional POST body (force flag only; tenant scoping from guard)
     let filterTenantId: string | undefined;
     let force = false;
+
+    if (ctx.mode === "user") {
+      // Authenticated user: restrict to own tenant only
+      filterTenantId = ctx.tenantId;
+    }
+
     try {
       if (req.method === "POST") {
         const body = await req.json();
-        filterTenantId = body?.tenant_id;
+        // Ignore body.tenant_id — tenant scoping comes from the JWT guard
         force = body?.force === true;
       }
     } catch {

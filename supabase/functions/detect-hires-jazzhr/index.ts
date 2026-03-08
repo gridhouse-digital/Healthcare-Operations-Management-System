@@ -2,6 +2,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
+import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
 
 // Story 2.2 — JazzHR Hire Detector
 //
@@ -126,8 +127,8 @@ async function processTenant(config: TenantConfig): Promise<{
         continue;
       }
 
-      // Upsert people record
-      const { error: peopleErr } = await admin.from("people").upsert(
+      // Insert people record if new — profile_source set only on first insert
+      await admin.from("people").insert(
         {
           tenant_id: config.tenantId,
           email,
@@ -137,8 +138,20 @@ async function processTenant(config: TenantConfig): Promise<{
           type: "employee",
           profile_source: "jazzhr",
         },
-        { onConflict: "tenant_id,email", ignoreDuplicates: false },
+        { onConflict: "tenant_id,email", ignoreDuplicates: true },
       );
+
+      // Update non-protected fields (profile_source excluded — first connector wins)
+      const { error: peopleErr } = await admin.from("people").update(
+        {
+          first_name: applicant.first_name || null,
+          last_name: applicant.last_name || null,
+          job_title: applicant.desired_job || null,
+          type: "employee",
+        },
+      )
+        .eq("tenant_id", config.tenantId)
+        .eq("email", email);
 
       if (peopleErr) {
         errors++;
@@ -198,15 +211,24 @@ Deno.serve(async (req: Request) => {
   if (preflight) return preflight;
 
   try {
+    const ctx = cronOrTenantGuard(req);
+
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false },
     });
 
-    const { data: settings, error: settingsErr } = await admin
+    let settingsQuery = admin
       .from("tenant_settings")
       .select("tenant_id, jazzhr_api_key_encrypted, active_connectors")
       .contains("active_connectors", ["jazzhr"])
       .not("jazzhr_api_key_encrypted", "is", null);
+
+    // Authenticated user: restrict to own tenant only
+    if (ctx.mode === "user") {
+      settingsQuery = settingsQuery.eq("tenant_id", ctx.tenantId);
+    }
+
+    const { data: settings, error: settingsErr } = await settingsQuery;
 
     if (settingsErr) throw settingsErr;
     if (!settings || settings.length === 0) {

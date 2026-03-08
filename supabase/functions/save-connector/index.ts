@@ -83,6 +83,14 @@ Deno.serve(async (req: Request) => {
       updated_at: new Date().toISOString(),
     };
 
+    // FR-22: profile_source — first connector wins. Only set if currently NULL.
+    const { data: currentSettings } = await adminClient
+      .from("tenant_settings")
+      .select("profile_source")
+      .eq("tenant_id", ctx.tenantId)
+      .maybeSingle();
+    const profileSourceIsEmpty = !currentSettings?.profile_source;
+
     if (source === "bamboohr") {
       const { data: encryptedKey, error: encErr } = await adminClient.rpc(
         "pgp_sym_encrypt_text",
@@ -92,7 +100,7 @@ Deno.serve(async (req: Request) => {
       updatePayload.bamboohr_subdomain = subdomain;
       updatePayload.bamboohr_api_key_encrypted = encryptedKey as string;
       updatePayload.active_connectors = [source];
-      updatePayload.profile_source = source;
+      if (profileSourceIsEmpty) updatePayload.profile_source = source;
     } else if (source === "jazzhr") {
       const { data: encryptedKey, error: encErr } = await adminClient.rpc(
         "pgp_sym_encrypt_text",
@@ -101,7 +109,7 @@ Deno.serve(async (req: Request) => {
       if (encErr) throw encErr;
       updatePayload.jazzhr_api_key_encrypted = encryptedKey as string;
       updatePayload.active_connectors = [source];
-      updatePayload.profile_source = source;
+      if (profileSourceIsEmpty) updatePayload.profile_source = source;
     } else if (source === "jotform") {
       const { data: encryptedKey, error: encErr } = await adminClient.rpc(
         "pgp_sym_encrypt_text",

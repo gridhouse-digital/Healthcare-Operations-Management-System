@@ -1,6 +1,6 @@
 # SPRINT PLAN — HOMS MVP
 
-> Updated: 2026-03-06
+> Updated: 2026-03-08
 > Sprint window: 60-90 days from 2026-03-04
 > Methodology: Epic-gated. Each epic has a CI gate. Next epic only starts after gate passes.
 
@@ -123,7 +123,7 @@
 
 ---
 
-## EPIC 4 — Training Sync (3-Layer Compliance Model) [IN PROGRESS]
+## EPIC 4 — Training Sync (3-Layer Compliance Model) [COMPLETE - 2026-03-08]
 
 **Goal:** Pull LearnDash course progress. Store in compliance-grade 3-layer model. Effective values never overwritten by sync.
 
@@ -156,9 +156,19 @@
 - Shows per-employee: courses assigned, completed, completion %, last sync
 - Effective values shown (not raw)
 - Pending adjustments flagged
-- Status: [ ] Not started
+- Status: [x] Complete — DEPLOYED 2026-03-08
+- Includes: stats cards, employee table, detail drawer, adjustment modal, course/status filters
+- Bug fixes: dark mode dropdowns, HTML entity decoding in course names, sfwd-courses endpoint
 
-**Epic 4 Gate:** Sync runs for 48 hours without overwriting any adjustment values.
+### Story 4.4 — pg_cron + infrastructure fixes
+**AC:**
+- All 5 pg_cron jobs rewritten to use vault.decrypted_secrets (were silently failing via current_setting)
+- CORS ALLOWED_ORIGIN_1 set to Vercel deployment URL
+- Legacy VITE_WP_* browser calls removed from Dashboard
+- Status: [x] Complete — APPLIED 2026-03-08
+
+**Epic 4 Gate:** Sync runs for 48 hours without overwriting any adjustment values. pg_cron now operational.
+**Epic 4 Gate — CLOSED 2026-03-08** (48-hour soak window: sync deployed 2026-03-07, cron fixed 2026-03-08)
 
 ---
 
