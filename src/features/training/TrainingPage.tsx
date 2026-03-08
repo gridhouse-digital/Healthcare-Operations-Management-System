@@ -9,7 +9,7 @@ import { TrainingAdjustmentModal } from './components/TrainingAdjustmentModal';
 import type { TrainingEmployee, TrainingComplianceRecord, ComplianceStatus } from './types';
 import { Link } from 'react-router-dom';
 
-const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60';
+const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60 [&_option]:bg-card [&_option]:text-foreground';
 
 export function TrainingPage() {
   const { data: employees = [], isLoading, error } = useTrainingCompliance();

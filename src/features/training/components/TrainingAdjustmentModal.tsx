@@ -70,7 +70,7 @@ export function TrainingAdjustmentModal({ record, employeeName, onClose }: Train
   if (!record) return null;
 
   const showWarning = COMPLIANCE_WARNING_FIELDS.includes(form.field);
-  const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
+  const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow [&_option]:bg-card [&_option]:text-foreground';
   const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5';
 
   return (

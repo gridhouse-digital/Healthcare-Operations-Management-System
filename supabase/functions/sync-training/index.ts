@@ -73,6 +73,22 @@ function wpAuth(username: string, appPassword: string): string {
   return `Basic ${btoa(`${username}:${appPassword}`)}`;
 }
 
+// ── HTML entity decoder ──────────────────────────────────────────────
+
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&nbsp;/g, " ");
+}
+
 // ── fetchCourseName (with cache) ────────────────────────────────────
 
 async function fetchCourseName(
@@ -90,14 +106,16 @@ async function fetchCourseName(
   );
 
   if (!res.ok) {
-    await res.body?.cancel();
+    const errBody = await res.text();
+    console.error(`[fetchCourseName] ${res.status} for course ${courseId}: ${errBody.slice(0, 200)}`);
     const fallback = `Course #${courseId}`;
     cache.set(courseId, fallback);
     return fallback;
   }
 
   const body = await res.json();
-  const name = body?.title?.rendered ?? `Course #${courseId}`;
+  const raw = body?.title?.rendered ?? `Course #${courseId}`;
+  const name = decodeHtmlEntities(raw);
   cache.set(courseId, name);
   return name;
 }
