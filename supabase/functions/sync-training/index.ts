@@ -85,7 +85,7 @@ async function fetchCourseName(
   if (cached) return cached;
 
   const res = await fetch(
-    `${siteUrl}/wp-json/ldlms/v2/courses/${courseId}`,
+    `${siteUrl}/wp-json/ldlms/v2/sfwd-courses/${courseId}`,
     { headers: { Authorization: auth, Accept: "application/json" } },
   );
 
