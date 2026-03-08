@@ -13,6 +13,7 @@ import { OfferPublicView } from '@/features/offers/OfferPublicView';
 
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { EmployeeList } from '@/features/employees/EmployeeList';
+import { TrainingPage } from '@/features/training/TrainingPage';
 import { AIDashboardPage } from '@/features/admin/pages/AIDashboardPage';
 
 import { ConnectorSettingsPage } from '@/features/settings/components/ConnectorSettingsPage';
@@ -42,6 +43,7 @@ function App() {
               <Route path="offers" element={<OfferList />} />
               <Route path="offers/new" element={<OfferEditor />} />
               <Route path="employees" element={<EmployeeList />} />
+              <Route path="training" element={<TrainingPage />} />
               <Route element={<ProtectedRoute allowedRoles={['platform_admin', 'tenant_admin']} />}>
                 <Route path="settings/connectors" element={<ConnectorSettingsPage />} />
                 <Route path="settings/users" element={<UserManagementPage />} />

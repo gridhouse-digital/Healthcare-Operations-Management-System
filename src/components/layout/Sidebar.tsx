@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, Users, FileText, Briefcase, Sparkles, PanelLeftClose, PanelLeftOpen, Plug, UserCog, Wrench } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Briefcase, BookOpenCheck, Sparkles, PanelLeftClose, PanelLeftOpen, Plug, UserCog, Wrench } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -24,6 +24,12 @@ const navGroups = [
         label: 'Workforce',
         items: [
             { name: 'Employees', href: '/employees', icon: Briefcase, adminOnly: false, isAI: false },
+        ],
+    },
+    {
+        label: 'Training',
+        items: [
+            { name: 'Compliance', href: '/training', icon: BookOpenCheck, adminOnly: false, isAI: false },
         ],
     },
     {

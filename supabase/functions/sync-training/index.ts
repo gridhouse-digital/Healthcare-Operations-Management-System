@@ -28,7 +28,7 @@ const LD_STATUS_MAP: Record<string, string> = {
 // ── Interfaces ──────────────────────────────────────────────────────
 
 interface LdCourseProgress {
-  course: { id: number };
+  course: number;
   progress_status: string;
   date_completed: string | null;
   steps_completed: number;
@@ -284,7 +284,7 @@ async function processTenant(
         }
 
         for (const cp of progress) {
-          const courseId = cp.course.id;
+          const courseId = cp.course;
           const rawStatus = cp.progress_status;
           const mappedStatus = LD_STATUS_MAP[rawStatus] ?? null;
 

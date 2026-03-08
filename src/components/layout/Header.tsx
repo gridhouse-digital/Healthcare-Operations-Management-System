@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Search, ChevronDown, User, LogOut, Menu } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/lib/supabase';
 import { useSidebar } from './SidebarContext';
 import { settingsService } from '@/services/settingsService';
@@ -87,8 +87,8 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                 {/* Logo — only when expanded */}
                 {expanded && (
                     <>
-                        <img src={logoLight} alt="HOMS" className="h-5 w-auto object-contain block dark:hidden min-w-0 max-w-[130px]" />
-                        <img src={logoDark}  alt="HOMS" className="h-5 w-auto object-contain hidden dark:block min-w-0 max-w-[130px]" />
+                        <img src={logoLight} alt="Prolific HR" className="h-5 w-auto object-contain block dark:hidden min-w-0 max-w-[130px]" />
+                        <img src={logoDark}  alt="Prolific HR" className="h-5 w-auto object-contain hidden dark:block min-w-0 max-w-[130px]" />
                     </>
                 )}
             </div>
@@ -174,7 +174,6 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                                     style={{ background: 'hsl(196 84% 36% / 0.3)' }}
                                 >
                                     <Avatar className="h-full w-full rounded-md">
-                                        <AvatarImage src="" alt={profile?.first_name} className="object-cover" />
                                         <AvatarFallback
                                             className="text-[9px] font-bold bg-transparent rounded-md"
                                             style={{ fontFamily: 'var(--font-mono)', color: 'hsl(196 84% 62%)' }}
