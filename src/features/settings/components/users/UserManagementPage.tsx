@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 // ---------------------------------------------------------------------------
 
 const inputCls =
-  "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50";
+  "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50 [&_option]:bg-card [&_option]:text-foreground";
 const labelCls =
   "block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5";
 
@@ -120,7 +120,7 @@ function UserRow({ user }: { user: TenantUser }) {
                 value={user.role}
                 onChange={(e) => void handleRoleChange(e.target.value as TenantRole)}
                 disabled={updateRole.isPending}
-                className="appearance-none bg-transparent border border-border text-muted-foreground text-[11px] rounded-md px-3 py-1.5 pr-6 focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow cursor-pointer"
+                className="appearance-none bg-card border border-border text-muted-foreground text-[11px] rounded-md px-3 py-1.5 pr-6 focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow cursor-pointer [&_option]:bg-card [&_option]:text-foreground"
               >
                 <option value="hr_admin">HR Admin</option>
                 <option value="tenant_admin">Tenant Admin</option>
