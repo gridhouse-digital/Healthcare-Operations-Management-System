@@ -151,6 +151,7 @@ WHERE email = 'user@example.com';
 ### Edge Function CORS error in browser
 - Cause: `ALLOWED_ORIGIN_1` secret not set, or set to wrong URL.
 - Fix: Supabase Dashboard → Edge Functions → Manage Secrets → set `ALLOWED_ORIGIN_1` to exact frontend URL (no trailing slash).
+- Local dev note: loopback origins like `http://localhost:5173`, `http://localhost:5174`, and `http://127.0.0.1:*` should be allowed by the shared CORS helper after redeploying the function code.
 
 ### BambooHR/JazzHR connector test fails
 - Check: API key is correct and has read permissions.

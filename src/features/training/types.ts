@@ -78,6 +78,8 @@ export interface EmployeeTrainingDetail {
     overdue: number;
     completionPct: number;
     adjusted: number;
+    totalHours: number;
+    lastSyncAt: string | null;
   };
 }
 

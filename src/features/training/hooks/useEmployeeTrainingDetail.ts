@@ -52,6 +52,20 @@ async function fetchEmployeeTrainingDetail(employeeId: string): Promise<Employee
   const completionPct = total > 0 ? Math.round((completed / total) * 100) : 0;
   const adjusted = courses.filter((course) => course.has_overrides).length;
 
+  const totalHours = courses.reduce(
+    (sum, course) => sum + (course.effective_training_hours ?? course.raw_training_hours ?? 0),
+    0,
+  );
+
+  const lastSyncAt =
+    courses.reduce<string | null>((latest, course) => {
+      if (!course.last_synced_at) return latest;
+      if (!latest) return course.last_synced_at;
+      return new Date(course.last_synced_at) > new Date(latest)
+        ? course.last_synced_at
+        : latest;
+    }, null) ?? null;
+
   return {
     employee: {
       id: employeeResult.data.id,
@@ -72,6 +86,8 @@ async function fetchEmployeeTrainingDetail(employeeId: string): Promise<Employee
       overdue,
       completionPct,
       adjusted,
+      totalHours,
+      lastSyncAt,
     },
   };
 }

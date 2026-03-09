@@ -12,13 +12,31 @@ function getAllowedOrigins(): Set<string> {
   ].filter(Boolean));
 }
 
+function isLocalDevOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+
+  try {
+    const url = new URL(origin);
+    const isLoopbackHost =
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname === "::1";
+
+    return isLoopbackHost && /^https?:$/.test(url.protocol);
+  } catch {
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Headers
 // ---------------------------------------------------------------------------
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const allowed =
-    origin !== null && getAllowedOrigins().has(origin) ? origin : "";
+    origin !== null && (getAllowedOrigins().has(origin) || isLocalDevOrigin(origin))
+      ? origin
+      : "";
 
   return {
     "Access-Control-Allow-Origin": allowed,
@@ -26,6 +44,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
     "Access-Control-Allow-Headers":
       "Authorization, Content-Type, x-client-info, apikey",
     "Access-Control-Max-Age": "86400",
+    "Vary": "Origin",
   };
 }
 

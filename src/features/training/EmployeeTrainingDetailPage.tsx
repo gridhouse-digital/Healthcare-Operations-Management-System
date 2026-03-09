@@ -11,6 +11,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useEmployeeTrainingDetail } from './hooks/useEmployeeTrainingDetail';
 import { TrainingAdjustmentModal } from './components/TrainingAdjustmentModal';
 import type { TrainingComplianceRecord } from './types';
+import { Button } from '@/components/ui/button';
 
 const courseStatusStyles: Record<string, { text: string; bg: string; border: string; label: string }> = {
   completed: { text: 'hsl(152 54% 56%)', bg: 'hsl(152 58% 38% / 0.10)', border: 'hsl(152 58% 38% / 0.20)', label: 'Completed' },
@@ -75,6 +76,13 @@ function getComparisonLines(record: TrainingComplianceRecord) {
   return comparisons;
 }
 
+function getSummaryChipClass(label: string) {
+  if (label.includes('overdue')) return 'status-chip status-chip-amber';
+  if (label.includes('adjusted')) return 'status-chip status-chip-cyan';
+  if (label.includes('% complete')) return 'status-chip status-chip-green';
+  return 'status-chip status-chip-muted';
+}
+
 export function EmployeeTrainingDetailPage() {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
@@ -124,26 +132,28 @@ export function EmployeeTrainingDetailPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div className="space-y-5">
-        <button
+        <Button
           onClick={() => navigate('/training')}
-          className="inline-flex items-center gap-2 text-[13px] font-medium tracking-[0.01em] text-muted-foreground transition-colors hover:text-foreground"
+          variant="ghost"
+          size="sm"
+          className="px-0 text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft size={16} strokeWidth={2} />
           Back to Compliance
-        </button>
+        </Button>
 
-        <div className="saas-card space-y-5 p-6">
+        <div className="saas-card space-y-5 p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
             <div className="flex items-center gap-4">
               <div
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-semibold"
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-base font-semibold"
                 style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)', color: 'var(--primary)' }}
               >
                 {monogram}
               </div>
-              <div className="min-w-0">
-                <h1 className="page-header-title text-[1.9rem]">{fullName}</h1>
-                <p className="mt-1 text-[13px] tracking-[0.01em] text-muted-foreground">
+              <div className="min-w-0 pl-1">
+                <h1 className="page-header-title">{fullName}</h1>
+                <p className="page-header-meta">
                   {employee.job_title ?? 'No job title'} · {employee.employee_status ?? 'Active'}
                 </p>
               </div>
@@ -155,13 +165,16 @@ export function EmployeeTrainingDetailPage() {
                 `${stats.completionPct}% complete`,
                 `${stats.overdue} overdue`,
                 `${stats.adjusted} adjusted`,
+                stats.totalHours > 0 ? `${formatHours(stats.totalHours)} recorded` : null,
               ].map((label) => (
+                label && (
                 <span
                   key={label}
-                  className="inline-flex items-center rounded-full border border-border bg-secondary px-2.5 py-1 text-[11px] font-semibold tracking-[0.03em] text-muted-foreground"
+                  className={getSummaryChipClass(label)}
                 >
                   {label}
                 </span>
+                )
               ))}
             </div>
           </div>
@@ -173,7 +186,7 @@ export function EmployeeTrainingDetailPage() {
                 style={{ width: `${stats.completionPct}%` }}
               />
             </div>
-            <div className="flex items-center justify-between text-[11px] tracking-[0.03em] text-muted-foreground">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{stats.inProgress} in progress</span>
               <span>{stats.notStarted} not started</span>
             </div>
@@ -200,17 +213,17 @@ export function EmployeeTrainingDetailPage() {
               return (
                 <div
                   key={record.training_record_id}
-                  className="saas-card p-6"
+                  className="saas-card p-5"
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="space-y-2">
-                        <h2 className="text-[1.125rem] font-semibold tracking-[-0.02em] text-foreground">
+                        <h2 className="text-base font-semibold tracking-[-0.008em] text-foreground">
                           {record.course_name ?? `Course #${record.course_id}`}
                         </h2>
                         <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.04em]"
+                            className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.03em]"
                             style={{
                               color: statusStyle.text,
                               background: statusStyle.bg,
@@ -220,27 +233,22 @@ export function EmployeeTrainingDetailPage() {
                             {statusStyle.label}
                           </span>
                           {record.has_overrides && (
-                            <span
-                              className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.04em]"
-                              style={{
-                                color: 'var(--primary)',
-                                background: 'color-mix(in srgb, var(--primary) 10%, transparent)',
-                                border: '1px solid color-mix(in srgb, var(--primary) 24%, transparent)',
-                              }}
-                            >
+                            <span className="status-chip status-chip-cyan">
                               Adjusted
                             </span>
                           )}
                         </div>
                       </div>
 
-                      <button
+                      <Button
                         onClick={() => setAdjustRecord(record)}
-                        className="inline-flex items-center gap-2 self-start rounded-md border border-border bg-secondary px-3 py-2 text-[12px] font-semibold tracking-[0.01em] text-muted-foreground transition-colors hover:text-foreground"
+                        variant="outline"
+                        size="sm"
+                        className="self-start"
                       >
                         <PenLine size={13} strokeWidth={2} />
                         Adjust
-                      </button>
+                      </Button>
                     </div>
 
                     <div className="space-y-2">
@@ -250,18 +258,18 @@ export function EmployeeTrainingDetailPage() {
                           style={{ width: `${record.effective_completion_pct ?? 0}%` }}
                         />
                       </div>
-                      <p className="text-[11px] tracking-[0.03em] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {record.effective_completion_pct ?? 0}% complete
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-[12px] text-muted-foreground xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground xl:grid-cols-4">
                       <div>
                         <p className="meta-label mb-1">Completed</p>
                         <p>{formatDate(record.effective_completed_at)}</p>
                       </div>
                       <div>
-                        <p className="meta-label mb-1">Hours</p>
+                        <p className="meta-label mb-1">Time Spent</p>
                         <p>{formatHours(record.effective_training_hours)}</p>
                       </div>
                       <div>
@@ -278,7 +286,7 @@ export function EmployeeTrainingDetailPage() {
 
                     {comparisonLines.length > 0 && (
                       <div
-                        className="rounded-md border border-border bg-secondary px-3 py-2 text-[12px] text-muted-foreground"
+                        className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground"
                       >
                         {comparisonLines.map((line) => (
                           <p key={line}>{line}</p>
@@ -293,10 +301,10 @@ export function EmployeeTrainingDetailPage() {
         </div>
 
         <div className="space-y-5">
-          <section className="rounded-lg border border-border bg-muted p-5">
+          <section className="saas-card p-5">
             <div className="mb-4 flex items-center gap-2">
               <ClipboardEdit size={14} strokeWidth={2} style={{ color: 'var(--primary)' }} />
-              <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-foreground">Adjustment History</h3>
+              <h3 className="text-sm font-semibold text-foreground">Adjustment History</h3>
             </div>
 
             {adjustments.length === 0 ? (
@@ -307,28 +315,28 @@ export function EmployeeTrainingDetailPage() {
                   <div key={adjustment.id} className="rounded-md border border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium tracking-[-0.01em] text-foreground">
+                        <p className="text-sm font-medium text-foreground">
                           {courseNameById.get(adjustment.course_id) ?? `Course #${adjustment.course_id}`}
                         </p>
-                        <p className="mt-1 text-[11px] tracking-[0.03em] text-muted-foreground">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {adjustment.field.replace('_', ' ')} · {formatAdjustmentValue(adjustment.field, adjustment.value)}
                         </p>
                       </div>
-                      <span className="whitespace-nowrap text-[11px] tracking-[0.02em] text-muted-foreground">
+                      <span className="whitespace-nowrap text-xs text-muted-foreground">
                         {formatDate(adjustment.created_at)}
                       </span>
                     </div>
-                    <p className="mt-2 text-[12px] text-muted-foreground">{adjustment.reason}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">{adjustment.reason}</p>
                   </div>
                 ))}
               </div>
             )}
           </section>
 
-          <section className="rounded-lg border border-border bg-muted p-5">
+          <section className="saas-card p-5">
             <div className="mb-4 flex items-center gap-2">
               <Circle size={12} strokeWidth={2} style={{ color: 'var(--muted-foreground)' }} />
-              <h3 className="text-[14px] font-semibold tracking-[-0.01em] text-foreground">Training Events</h3>
+              <h3 className="text-sm font-semibold text-foreground">Training Events</h3>
             </div>
 
             {events.length === 0 ? (
@@ -354,10 +362,10 @@ export function EmployeeTrainingDetailPage() {
                       </div>
 
                       <div className="min-w-0 pb-2">
-                        <p className="text-[13px] font-medium tracking-[-0.01em] text-foreground">
+                        <p className="text-sm font-medium text-foreground">
                           {courseNameById.get(event.course_id) ?? `Course #${event.course_id}`}
                         </p>
-                        <p className="mt-1 text-[12px] text-muted-foreground">
+                        <p className="mt-1 text-sm text-muted-foreground">
                           {style.label} · {formatDate(event.created_at)}
                         </p>
                       </div>

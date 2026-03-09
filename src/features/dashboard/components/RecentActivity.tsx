@@ -10,17 +10,17 @@ interface RecentActivityProps {
 const typeConfig = {
     applicant: {
         icon: Users,
-        dotClass: 'bg-[hsl(196,84%,42%)]',
+        dotClass: 'bg-primary',
         label: 'Applicant',
     },
     offer: {
         icon: FileText,
-        dotClass: 'bg-[hsl(152,60%,40%)]',
+        dotClass: 'bg-[color:var(--severity-low)]',
         label: 'Offer',
     },
     employee: {
         icon: Briefcase,
-        dotClass: 'bg-[hsl(270,56%,52%)]',
+        dotClass: 'bg-[color:var(--severity-high)]',
         label: 'Employee',
     },
 };
@@ -70,7 +70,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
                                         {activity.message}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">
+                                        <span className="text-[10px] font-semibold uppercase tracking-[0.03em] text-muted-foreground/50">
                                             {cfg.label}
                                         </span>
                                         <span className="text-[10px] text-muted-foreground/40">·</span>

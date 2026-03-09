@@ -31,6 +31,7 @@ const LD_STATUS_MAP: Record<string, string> = {
 interface LdCourseProgress {
   course: number;
   progress_status: string;
+  date_started: string | null;
   date_completed: string | null;
   steps_completed: number;
   steps_total: number;
@@ -321,6 +322,16 @@ async function processTenant(
             ? Math.round((stepsCompleted / stepsTotal) * 100)
             : 0;
 
+          let trainingMinutes: number | null = null;
+          if (cp.date_started && cp.date_completed) {
+            const start = new Date(cp.date_started);
+            const end = new Date(cp.date_completed);
+            const diffMs = end.getTime() - start.getTime();
+            if (Number.isFinite(diffMs) && diffMs > 0) {
+              trainingMinutes = Math.round(diffMs / 60000);
+            }
+          }
+
           const courseName = await fetchCourseName(
             siteUrl,
             auth,
@@ -328,11 +339,6 @@ async function processTenant(
             courseNameCache,
           );
 
-          // NFR-3: training_hours and expires_at are intentionally OMITTED from
-          // this upsert. These fields belong to Layer B (HR adjustments via
-          // training_adjustments table) and Layer C (effective compliance).
-          // Sync writes ONLY Layer A (raw progress from LearnDash).
-          // Overwriting them here would violate the 3-layer immutable model.
           const { error: upsertErr } = await admin
             .from("training_records")
             .upsert(
@@ -344,6 +350,7 @@ async function processTenant(
                 status: mappedStatus,
                 completion_pct: completionPct,
                 completed_at: cp.date_completed || null,
+                training_hours: trainingMinutes,
                 last_synced_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },

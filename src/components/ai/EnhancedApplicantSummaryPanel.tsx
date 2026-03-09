@@ -66,17 +66,17 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     // Error State
     if (error) {
         return (
-            <div className="bg-white dark:bg-card rounded-[20px] border border-red-200 dark:border-red-900/30 p-6">
-                <div className="flex items-start gap-3 mb-4">
-                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="rounded-[20px] border border-destructive/15 bg-destructive/8 p-6">
+                <div className="mb-4 flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
                     <div className="flex-1">
-                        <h3 className="font-semibold text-red-700 dark:text-red-400">Analysis Failed</h3>
-                        <p className="text-sm text-red-600 dark:text-red-300 mt-1">{error.message}</p>
+                        <h3 className="font-semibold text-destructive">Analysis Failed</h3>
+                        <p className="mt-1 text-sm text-destructive">{error.message}</p>
                     </div>
                 </div>
                 <button
                     onClick={() => generate(applicant)}
-                    className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-[10px] hover:bg-red-700 transition-colors"
+                    className="w-full rounded-[10px] border border-destructive/10 bg-destructive/12 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/18"
                 >
                     Try Again
                 </button>
@@ -211,7 +211,7 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                 {/* Salary Insights */}
                 {data.salary_insights && (
                     <div className="border-t border-border/80 pt-6">
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
                             <TrendingUp className="w-4 h-4" />
                             Salary Insights
                         </h4>

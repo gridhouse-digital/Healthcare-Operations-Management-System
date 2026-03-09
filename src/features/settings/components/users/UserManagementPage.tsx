@@ -9,7 +9,6 @@ import {
   useDeactivateUser,
 } from "../../hooks/useUserManagement";
 import type { TenantUser, TenantRole } from "../../hooks/useUserManagement";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 // ---------------------------------------------------------------------------
