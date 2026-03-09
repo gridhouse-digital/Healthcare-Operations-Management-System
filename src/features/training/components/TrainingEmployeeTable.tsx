@@ -6,6 +6,7 @@ const statusStyles: Record<ComplianceStatus, { dot: string; text: string; bg: st
   overdue:     { dot: 'hsl(4 82% 56%)',   text: 'hsl(4 76% 66%)',   bg: 'hsl(4 82% 52% / 0.08)',   border: 'hsl(4 82% 52% / 0.20)',   label: 'Overdue' },
   in_progress: { dot: 'hsl(38 96% 52%)',  text: 'hsl(38 90% 60%)',  bg: 'hsl(38 96% 48% / 0.08)',  border: 'hsl(38 96% 48% / 0.20)',  label: 'In Progress' },
   not_started: { dot: 'hsl(0 0% 42%)',    text: 'hsl(0 0% 56%)',    bg: 'hsl(0 0% 100% / 0.04)',   border: 'hsl(0 0% 100% / 0.08)',   label: 'Not Started' },
+  no_courses:  { dot: 'hsl(220 10% 42%)', text: 'hsl(220 10% 56%)', bg: 'hsl(220 10% 50% / 0.06)', border: 'hsl(220 10% 50% / 0.12)', label: 'No Courses' },
 };
 
 interface TrainingEmployeeTableProps {

@@ -10,9 +10,10 @@ interface TrainingStatsCardsProps {
 }
 
 export function TrainingStatsCards({ employees, lastSyncAt, pendingAdjustments }: TrainingStatsCardsProps) {
-  const totalEnrolled = employees.length;
+  const totalEmployees = employees.length;
   const fullyCompliant = employees.filter(e => e.complianceStatus === 'compliant').length;
   const overdue = employees.filter(e => e.complianceStatus === 'overdue').length;
+  const noCourses = employees.filter(e => e.complianceStatus === 'no_courses').length;
 
   const lastSyncLabel = lastSyncAt
     ? formatDistanceToNow(new Date(lastSyncAt), { addSuffix: true })
@@ -21,10 +22,10 @@ export function TrainingStatsCards({ employees, lastSyncAt, pendingAdjustments }
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
       <StatsCard
-        title="Total Enrolled"
-        value={totalEnrolled}
+        title="Total Employees"
+        value={totalEmployees}
         icon={Users}
-        subtitle="With training records"
+        subtitle={noCourses > 0 ? `${noCourses} with no courses` : 'All have courses'}
         intent="info"
         stagger={0}
       />

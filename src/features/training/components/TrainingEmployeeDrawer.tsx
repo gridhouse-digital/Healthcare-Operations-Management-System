@@ -54,6 +54,14 @@ export function TrainingEmployeeDrawer({ employee, onClose, onAdjust }: Training
         <div>
           <p className="zone-label mb-3">Course Progress</p>
           <div className="space-y-2.5">
+            {employee.records.length === 0 && (
+              <div className="py-8 text-center rounded-md border border-border" style={{ background: 'var(--muted)' }}>
+                <p className="text-[13px] text-muted-foreground">No courses assigned</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-1">
+                  This employee has no training records in LearnDash yet.
+                </p>
+              </div>
+            )}
             {employee.records.map((record) => {
               const status = record.effective_status ?? 'not_started';
               const s = courseStatusStyles[status] ?? courseStatusStyles.not_started;

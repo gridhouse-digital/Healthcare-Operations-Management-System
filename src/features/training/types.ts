@@ -38,7 +38,7 @@ export interface TrainingEmployee {
   lastActivity: string | null;
 }
 
-export type ComplianceStatus = 'compliant' | 'overdue' | 'in_progress' | 'not_started';
+export type ComplianceStatus = 'compliant' | 'overdue' | 'in_progress' | 'not_started' | 'no_courses';
 
 /** For the adjustment modal form */
 export interface AdjustmentFormData {

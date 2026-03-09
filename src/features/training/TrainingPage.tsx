@@ -110,7 +110,7 @@ export function TrainingPage() {
           Training Compliance
         </h1>
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6875rem', letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--muted-foreground)', opacity: 0.5, marginTop: '4px' }}>
-          {employees.length} employees enrolled · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          {employees.length} employees · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
       </div>
 
@@ -147,6 +147,7 @@ export function TrainingPage() {
             <option value="overdue">Overdue</option>
             <option value="in_progress">In Progress</option>
             <option value="not_started">Not Started</option>
+            <option value="no_courses">No Courses</option>
           </select>
           <select
             value={filterCourse}
