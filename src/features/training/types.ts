@@ -20,6 +20,7 @@ export interface TrainingComplianceRecord {
   last_synced_at: string | null;
   last_adjusted_at: string | null;
   has_overrides: boolean;
+  enrolled_at: string | null;
 }
 
 /** Employee with joined people fields + aggregated compliance */

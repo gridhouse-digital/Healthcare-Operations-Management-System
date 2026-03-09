@@ -29,7 +29,7 @@ const eventStyles = {
 
 function formatDate(value: string | null) {
   if (!value) return '—';
-  return format(new Date(value), 'MMM d, yyyy');
+  return format(new Date(value), 'MMM d, yyyy h:mm a');
 }
 
 function formatHours(minutes: number | null) {
@@ -39,6 +39,12 @@ function formatHours(minutes: number | null) {
   if (hours === 0) return `${remaining}m`;
   if (remaining === 0) return `${hours}h`;
   return `${hours}h ${remaining}m`;
+}
+
+function normalizeCourseTitle(raw: string): string {
+  if (!raw) return raw;
+  const lower = raw.toLowerCase();
+  return lower.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatAdjustmentValue(field: string, value: string) {
@@ -96,6 +102,12 @@ export function EmployeeTrainingDetailPage() {
         course.course_id,
         course.course_name ?? `Course #${course.course_id}`,
       ]),
+    );
+  }, [data?.courses]);
+
+  const courseEnrolledAtById = useMemo(() => {
+    return new Map(
+      (data?.courses ?? []).map((course) => [course.course_id, course.enrolled_at ?? null]),
     );
   }, [data?.courses]);
 
@@ -217,9 +229,9 @@ export function EmployeeTrainingDetailPage() {
                 >
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-2">
-                        <h2 className="text-base font-semibold tracking-[-0.008em] text-foreground">
-                          {record.course_name ?? `Course #${record.course_id}`}
+                      <div className="space-y-1.5">
+                        <h2 className="text-[13px] font-semibold tracking-[-0.01em] text-foreground">
+                          {normalizeCourseTitle(record.course_name ?? `Course #${record.course_id}`)}
                         </h2>
                         <div className="flex flex-wrap items-center gap-2">
                           <span
@@ -346,6 +358,22 @@ export function EmployeeTrainingDetailPage() {
                 {events.map((event, index) => {
                   const style = eventStyles[event.event_type] ?? eventStyles.enrolled;
                   const Icon = style.icon;
+                  const payloadCourseName =
+                    (event.payload as any)?.course_name &&
+                    typeof (event.payload as any).course_name === 'string'
+                      ? String((event.payload as any).course_name)
+                      : null;
+                  const rawCourseLabel =
+                    courseNameById.get(event.course_id) ??
+                    payloadCourseName ??
+                    `Course #${event.course_id}`;
+                  const courseLabel = normalizeCourseTitle(rawCourseLabel);
+                  const enrolledAt =
+                    event.event_type === 'enrolled'
+                      ? courseEnrolledAtById.get(event.course_id) ??
+                        ((event.payload as any)?.enrolled_at as string | null) ??
+                        event.created_at
+                      : event.created_at;
 
                   return (
                     <div key={event.id} className="flex gap-3">
@@ -362,11 +390,11 @@ export function EmployeeTrainingDetailPage() {
                       </div>
 
                       <div className="min-w-0 pb-2">
-                        <p className="text-sm font-medium text-foreground">
-                          {courseNameById.get(event.course_id) ?? `Course #${event.course_id}`}
+                        <p className="text-[13px] font-medium tracking-[-0.01em] text-foreground">
+                          {courseLabel}
                         </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {style.label} · {formatDate(event.created_at)}
+                        <p className="mt-1 text-[12px] tracking-[0.005em] text-muted-foreground">
+                          {style.label} · {formatDate(enrolledAt)}
                         </p>
                       </div>
                     </div>

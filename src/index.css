@@ -68,8 +68,8 @@
         --chart-4:  oklch(0.78 0.16 92);
         --chart-5:  oklch(0.508 0.118 165.612);
 
-        /* ── Sidebar — deepest surface ── */
-        --sidebar:              oklch(0.17 0.004 230);
+        /* ── Sidebar — deepest surface (match page background in dark mode) ── */
+        --sidebar:              var(--background);
         --sidebar-foreground:   oklch(0.82 0.003 230);
         --sidebar-primary:      var(--primary);
         --sidebar-primary-foreground: var(--primary-foreground);
