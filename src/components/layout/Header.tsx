@@ -23,8 +23,8 @@ interface HeaderProps {
 
 export function Header({ onOpenMobileNav }: HeaderProps) {
     const navigate = useNavigate();
-    const { pinned, expanded } = useSidebar();
-    const [profile, setProfile] = useState<any>(null);
+    const { expanded } = useSidebar();
+    const [userMeta, setUserMeta] = useState<{ fullName: string; role: string }>({ fullName: '', role: '' });
     const [logoLight, setLogoLight] = useState(defaultLogoDark);
     const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
 
@@ -33,8 +33,9 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
     const loadUser = async () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-            setProfile(data);
+            const fullName = user.user_metadata?.full_name || user.email || 'User';
+            const role = user.app_metadata?.role || 'hr_admin';
+            setUserMeta({ fullName, role });
         }
     };
 
@@ -178,19 +179,24 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                                             className="text-[9px] font-bold bg-transparent rounded-md"
                                             style={{ fontFamily: 'var(--font-mono)', color: 'hsl(196 84% 62%)' }}
                                         >
-                                            {profile?.first_name?.[0]}{profile?.last_name?.[0]}
+                                            {userMeta.fullName
+                                                .split(' ')
+                                                .filter(Boolean)
+                                                .slice(0, 2)
+                                                .map(part => part[0]?.toUpperCase())
+                                                .join('')}
                                         </AvatarFallback>
                                     </Avatar>
                                 </div>
                                 <div className="hidden lg:block text-left min-w-0">
                                     <p className="text-[12px] font-medium leading-none truncate max-w-[110px]" style={{ color: 'var(--foreground)' }}>
-                                        {profile?.first_name} {profile?.last_name}
+                                        {userMeta.fullName}
                                     </p>
                                     <p
                                         className="text-[10px] capitalize mt-0.5 leading-none"
                                         style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}
                                     >
-                                        {profile?.role || 'Staff'}
+                                        {(userMeta.role || 'Staff').replace('_', ' ')}
                                     </p>
                                 </div>
                                 <ChevronDown size={10} strokeWidth={2.5} className="ml-0.5 flex-shrink-0" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />

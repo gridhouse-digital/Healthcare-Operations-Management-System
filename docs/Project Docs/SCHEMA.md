@@ -1,6 +1,6 @@
 # SCHEMA — HOMS
 
-> Canonical table reference. Updated: 2026-03-07.
+> Canonical table reference. Updated: 2026-03-09.
 > All tables have RLS enabled. All MVP tables have audit triggers.
 
 ---
@@ -39,9 +39,17 @@ wp_app_password_encrypted    TEXT       -- pgp_sym_encrypt
 bamboohr_subdomain           TEXT
 bamboohr_api_key_encrypted   TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
 jazzhr_api_key_encrypted     TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
+brevo_api_key_encrypted      TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
 active_connectors            TEXT[]     -- e.g. ARRAY['bamboohr']
 ld_group_mappings            JSONB      -- [{job_title, group_id}]
-profile_source               TEXT       -- 'bamboohr' | 'jazzhr'. Set once at connector setup.
+profile_source               TEXT       -- 'bamboohr' | 'jazzhr' | 'wordpress'. Set once at connector setup.
+jotform_form_id_application  TEXT       -- JotForm form IDs per compliance form type
+jotform_form_id_emergency    TEXT
+jotform_form_id_i9           TEXT
+jotform_form_id_vaccination  TEXT
+jotform_form_id_licenses     TEXT
+jotform_form_id_background   TEXT
+logo_light                   TEXT       -- URL to tenant logo (used in emails)
 created_at                   TIMESTAMPTZ
 updated_at                   TIMESTAMPTZ
 ```
@@ -55,18 +63,23 @@ updated_at                   TIMESTAMPTZ
 ## people
 
 ```
-id              UUID PK
-tenant_id       UUID NOT NULL FK tenants(id)
-email           TEXT NOT NULL
-first_name      TEXT
-last_name       TEXT
-job_title       TEXT
-type            TEXT NOT NULL DEFAULT 'candidate'   -- 'candidate' | 'employee'
-profile_source  TEXT                                -- 'bamboohr' | 'jazzhr'
-wp_user_id      INTEGER                             -- set after process-hire
-hired_at        TIMESTAMPTZ                         -- NFR-3: set once, NEVER overwritten by sync
-created_at      TIMESTAMPTZ
-updated_at      TIMESTAMPTZ
+id               UUID PK
+tenant_id        UUID NOT NULL FK tenants(id)
+email            TEXT NOT NULL
+first_name       TEXT
+last_name        TEXT
+job_title        TEXT
+phone            TEXT                                -- Epic 5: added for employee records
+department       TEXT                                -- Epic 5: added for employee records
+employee_id      TEXT                                -- Epic 5: external employee ID (BambooHR/JazzHR)
+employee_status  TEXT                                -- Epic 5: 'active' | 'inactive' | 'terminated'
+applicant_id     UUID FK applicants(id)              -- Epic 5: link back to applicant record
+type             TEXT NOT NULL DEFAULT 'candidate'   -- 'candidate' | 'employee'
+profile_source   TEXT                                -- 'bamboohr' | 'jazzhr' | 'wordpress'
+wp_user_id       INTEGER                             -- set after process-hire
+hired_at         TIMESTAMPTZ                         -- NFR-3: set once, NEVER overwritten by sync
+created_at       TIMESTAMPTZ
+updated_at       TIMESTAMPTZ
 ```
 
 **Unique:** `(tenant_id, email)` — universal deduplication key.
@@ -215,14 +228,35 @@ Joins `training_records` with latest `training_adjustments` per (person_id, cour
 
 ---
 
+## applicants (Epic 5: now multi-tenant)
+
+```
+id              UUID PK
+tenant_id       UUID NOT NULL FK tenants(id)       -- Epic 5: added
+source          TEXT                                -- 'jotform' | 'bamboohr' | 'jazzhr' (CHECK)
+email           TEXT
+full_name       TEXT
+phone           TEXT
+status          TEXT                                -- 'New' | 'Screening' | 'Hired' | 'Rejected' etc
+position_applied TEXT
+submission_date  TIMESTAMPTZ
+... (additional JotForm-specific columns)
+created_at      TIMESTAMPTZ
+updated_at      TIMESTAMPTZ
+UNIQUE (tenant_id, email)
+```
+
+**RLS:** SELECT, INSERT, UPDATE for own tenant. No DELETE.
+**Note:** Migrated from legacy (no tenant_id) in Epic 5 Story 5.2. Backfilled with source='jotform'.
+
+---
+
 ## Legacy tables (pre-multitenant, Epic 0)
 
-> These exist in the DB but are NOT tenant_id-scoped in RLS. Used by Prolific Homecare only until Epic 5 refactor.
+> **Dropped in Epic 5 (migration 20260309000001):** `employees`, `applicants_archive`, `offers_archive`, `profile_change_requests`, `settings`
 
-- `applicants` — JotForm applicant records
-- `applicants_archive` — archived applicants
-- `offers` — job offers
-- `offers_archive` — archived offers
-- `profiles` — user profiles (role: admin/hr/staff)
+**Still pending migration (Stories 5.7, 5.8):**
+- `offers` — job offers (**Epic 5.7: adding tenant_id**)
+- `ai_cache` — AI response cache (**Epic 5.7: adding tenant_id**)
+- `profiles` — user profiles (**Epic 5.8: deprecating → tenant_users + auth**)
 - `ai_logs` — AI + JotForm API call logs
-- `settings` — legacy single-tenant settings

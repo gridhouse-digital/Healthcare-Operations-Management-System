@@ -9,6 +9,8 @@ export interface Applicant {
     position_applied?: string;
     status: ApplicantStatus;
     resume_url?: string;
+    tenant_id?: string;
+    source?: string;
     created_at: string;
     updated_at?: string;
 }
@@ -31,19 +33,23 @@ export interface Offer {
     applicant?: Applicant; // For joined queries
 }
 
+/** Employee is now a person record with type='employee' in the `people` table. */
 export interface Employee {
     id: string;
-    applicant_id: string;
+    tenant_id: string;
     first_name: string;
     last_name: string;
     email: string;
-    phone?: string;
-    position?: string;
-    department?: string;
-    start_date?: string;
-    status: 'Active' | 'Onboarding' | 'Terminated';
-    employee_id?: string;
-    wp_user_id?: number;
+    phone?: string | null;
+    job_title?: string | null;
+    department?: string | null;
+    employee_id?: string | null;
+    employee_status?: string | null;
+    type: string;
+    profile_source?: string | null;
+    wp_user_id?: number | null;
+    hired_at?: string | null;
+    applicant_id?: string | null;
     created_at: string;
     updated_at: string;
 }

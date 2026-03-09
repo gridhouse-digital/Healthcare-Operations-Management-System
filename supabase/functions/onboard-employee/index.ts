@@ -43,19 +43,47 @@ serve(async (req) => {
             throw new Error(`Applicant not found: ${applicantError?.message}`)
         }
 
-        // 3. Fetch Settings (WP Credentials & Group Map)
-        const { data: settings, error: settingsError } = await supabaseClient
-            .from('settings')
-            .select('key, value')
-            .in('key', ['wp_api_url', 'wp_username', 'wp_app_password', 'learndash_group_map', 'brevo_api_key', 'logo_light'])
+        // 3. Fetch tenant settings (WP credentials & group map)
+        // Determine tenant from applicant (or fallback to known tenant)
+        const tenantId = applicant.tenant_id || '11111111-1111-1111-1111-111111111111';
+        const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY") ?? "";
 
-        if (settingsError) throw new Error(`Settings fetch error: ${settingsError.message}`)
+        const { data: tenantSettings, error: settingsError } = await supabaseClient
+            .from('tenant_settings')
+            .select('wp_site_url, wp_username_encrypted, wp_app_password_encrypted, ld_group_mappings, brevo_api_key_encrypted, logo_light')
+            .eq('tenant_id', tenantId)
+            .single()
 
-        const config: any = {}
-        settings.forEach((s: any) => config[s.key] = s.value)
+        if (settingsError || !tenantSettings) throw new Error(`Settings fetch error: ${settingsError?.message || 'not found'}`)
 
-        if (!config.wp_api_url || !config.wp_username || !config.wp_app_password) {
-            throw new Error('Missing WordPress configuration in settings')
+        if (!tenantSettings.wp_site_url || !tenantSettings.wp_username_encrypted || !tenantSettings.wp_app_password_encrypted) {
+            throw new Error('Missing WordPress configuration in tenant_settings')
+        }
+
+        // Decrypt WP credentials
+        const { data: wpUsername } = await supabaseClient.rpc("pgp_sym_decrypt_text", {
+            ciphertext: tenantSettings.wp_username_encrypted, passphrase: PGCRYPTO_KEY
+        });
+        const { data: wpAppPassword } = await supabaseClient.rpc("pgp_sym_decrypt_text", {
+            ciphertext: tenantSettings.wp_app_password_encrypted, passphrase: PGCRYPTO_KEY
+        });
+
+        const config: any = {
+            wp_api_url: tenantSettings.wp_site_url.endsWith('/wp-json') ? tenantSettings.wp_site_url : `${tenantSettings.wp_site_url}/wp-json`,
+            wp_username: wpUsername,
+            wp_app_password: wpAppPassword,
+            learndash_group_map: JSON.stringify(tenantSettings.ld_group_mappings || {}),
+            brevo_api_key: tenantSettings.brevo_api_key_encrypted ? await (async () => {
+                const { data } = await supabaseClient.rpc("pgp_sym_decrypt_text", {
+                    ciphertext: tenantSettings.brevo_api_key_encrypted, passphrase: PGCRYPTO_KEY
+                });
+                return data;
+            })() : null,
+            logo_light: tenantSettings.logo_light,
+        }
+
+        if (!config.wp_username || !config.wp_app_password) {
+            throw new Error('Failed to decrypt WordPress credentials')
         }
 
         // 4. Create WordPress User
@@ -154,22 +182,21 @@ serve(async (req) => {
         // For now, let's assume we update the 'applicants' or 'employees' table.
         // The prompt mentioned "Update the employees table in Supabase with the new wp_user_id".
 
-        // Let's try to find the employee record linked to this applicant
-        const { data: employee, error: empError } = await supabaseClient
-            .from('employees')
+        // Update the people record linked to this applicant
+        const { data: person } = await supabaseClient
+            .from('people')
             .select('id')
             .eq('applicant_id', applicantId)
+            .eq('type', 'employee')
             .single()
 
-        if (employee) {
+        if (person) {
             await supabaseClient
-                .from('employees')
+                .from('people')
                 .update({ wp_user_id: wpUser.id })
-                .eq('id', employee.id)
+                .eq('id', person.id)
         } else {
-            // If no employee record yet, maybe create one? 
-            // Or just log it. For safety, let's just log it for now as the main goal is WP creation.
-            console.log(`No employee record found for applicant ${applicantId} to update wp_user_id`)
+            console.log(`No people record found for applicant ${applicantId} to update wp_user_id`)
         }
 
         // 7. Send Welcome Email via Brevo

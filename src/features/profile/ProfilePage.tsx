@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { userService } from '@/services/userService';
-import { Shield, User, Mail, Briefcase } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Shield, User, Mail, Briefcase, Building2 } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/hooks/useToast';
 
 const inputCls = 'w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -11,16 +10,12 @@ const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-m
 export function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [user, setUser] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
-
-    const [pendingRequest, setPendingRequest] = useState<any>(null);
+    const [tenantUser, setTenantUser] = useState<any>(null);
     const [formData, setFormData] = useState({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone_number: ''
+        full_name: '',
+        email: ''
     });
-    const [requestLoading, setRequestLoading] = useState(false);
+    const [savingProfile, setSavingProfile] = useState(false);
 
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,30 +23,23 @@ export function ProfilePage() {
 
     useEffect(() => {
         loadProfile();
-        loadPendingRequest();
     }, []);
-
-    const loadPendingRequest = async () => {
-        try {
-            const request = await userService.getPendingRequest();
-            setPendingRequest(request);
-        } catch (error) {
-            console.error('Error loading pending request:', error);
-        }
-    };
 
     const loadProfile = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             setUser(user);
             if (user) {
-                const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-                setProfile(data);
+                const { data: tu } = await supabase
+                    .from('tenant_users')
+                    .select('role, tenant:tenants(id, name, slug)')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+
+                setTenantUser(tu);
                 setFormData({
-                    first_name: data.first_name || '',
-                    last_name: data.last_name || '',
-                    email: user.email || '',
-                    phone_number: data.phone_number || ''
+                    full_name: user.user_metadata?.full_name || '',
+                    email: user.email || ''
                 });
             }
         } catch (error) {
@@ -63,24 +51,25 @@ export function ProfilePage() {
 
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        setRequestLoading(true);
+        setSavingProfile(true);
         try {
-            const hasChanges =
-                formData.first_name !== (profile?.first_name || '') ||
-                formData.last_name !== (profile?.last_name || '') ||
-                formData.email !== (user?.email || '') ||
-                formData.phone_number !== (profile?.phone_number || '');
+            const hasChanges = formData.full_name !== (user?.user_metadata?.full_name || '');
 
             if (!hasChanges) { toast.info('No changes detected'); return; }
 
-            await userService.createProfileChangeRequest(formData);
-            toast.success('Profile update request submitted for approval');
-            loadPendingRequest();
+            const { data, error } = await supabase.auth.updateUser({
+                data: { full_name: formData.full_name.trim() }
+            });
+
+            if (error) throw error;
+
+            setUser(data.user);
+            toast.success('Profile updated successfully');
         } catch (error: any) {
-            console.error('Failed to submit request', error);
-            toast.error(error.message || 'Failed to submit request');
+            console.error('Failed to update profile', error);
+            toast.error(error.message || 'Failed to update profile');
         } finally {
-            setRequestLoading(false);
+            setSavingProfile(false);
         }
     };
 
@@ -109,7 +98,14 @@ export function ProfilePage() {
         </div>
     );
 
-    const initials = `${profile?.first_name?.[0] || ''}${profile?.last_name?.[0] || ''}`;
+    const fullName = formData.full_name || user?.email || 'User';
+    const initials = fullName
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part: string) => part[0]?.toUpperCase())
+        .join('');
+    const role = user?.app_metadata?.role || tenantUser?.role || 'hr_admin';
 
     return (
         <div className="space-y-5">
@@ -136,7 +132,6 @@ export function ProfilePage() {
                                 style={{ background: 'hsl(196 84% 42% / 0.12)' }}
                             >
                                 <Avatar className="h-full w-full">
-                                    <AvatarImage src="" alt={profile?.first_name} />
                                     <AvatarFallback
                                         className="text-lg font-mono"
                                         style={{ background: 'transparent', color: 'hsl(196 84% 60%)' }}
@@ -146,21 +141,25 @@ export function ProfilePage() {
                                 </Avatar>
                             </div>
                             <h2 className="text-[15px] font-semibold text-foreground">
-                                {profile?.first_name} {profile?.last_name}
+                                {fullName}
                             </h2>
                             <p className="text-[13px] text-muted-foreground mt-0.5">
-                                {profile?.role === 'admin' ? 'Administrator' : 'Staff Member'}
+                                {String(role).replace('_', ' ')}
                             </p>
                         </div>
 
                         <div className="space-y-3 pt-4 border-t border-border">
                             <div className="flex items-center gap-2.5">
                                 <Mail size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                <span className="text-[13px] text-foreground truncate">{user?.email}</span>
+                                <span className="text-[13px] text-foreground truncate">{formData.email}</span>
                             </div>
                             <div className="flex items-center gap-2.5">
                                 <Briefcase size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                <span className="text-[13px] text-foreground capitalize">{profile?.role}</span>
+                                <span className="text-[13px] text-foreground capitalize">{String(role).replace('_', ' ')}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5">
+                                <Building2 size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                <span className="text-[13px] text-foreground capitalize">{tenantUser?.tenant?.name || 'Tenant'}</span>
                             </div>
                             <div className="flex items-center gap-2.5">
                                 <User size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
@@ -179,56 +178,32 @@ export function ProfilePage() {
                                 <User size={14} className="text-primary flex-shrink-0" strokeWidth={2} />
                                 <div>
                                     <p className="text-[13px] font-semibold text-foreground">Personal Information</p>
-                                    <p className="text-[11px] text-muted-foreground">Update your personal details</p>
+                                    <p className="text-[11px] text-muted-foreground">Update your auth profile metadata</p>
                                 </div>
                             </div>
-                            {pendingRequest && (
-                                <span
-                                    className="inline-flex items-center h-6 px-2.5 rounded text-[10px] font-mono font-semibold uppercase tracking-[0.04em]"
-                                    style={{
-                                        color: 'hsl(38 90% 60%)',
-                                        background: 'hsl(38 96% 48% / 0.08)',
-                                        border: '1px solid hsl(38 96% 48% / 0.22)',
-                                    }}
-                                >
-                                    Pending Approval
-                                </span>
-                            )}
                         </div>
 
                         <form onSubmit={handleProfileUpdate} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className={labelCls}>First Name</label>
-                                    <input type="text" required value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} disabled={!!pendingRequest} className={inputCls} />
+                                    <label className={labelCls}>Full Name</label>
+                                    <input type="text" required value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} className={inputCls} />
                                 </div>
-                                <div>
-                                    <label className={labelCls}>Last Name</label>
-                                    <input type="text" required value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} disabled={!!pendingRequest} className={inputCls} />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className={labelCls}>Email Address</label>
-                                    <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} disabled={!!pendingRequest} className={inputCls} />
-                                </div>
-                                <div>
-                                    <label className={labelCls}>Phone Number</label>
-                                    <input type="tel" value={formData.phone_number} onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })} disabled={!!pendingRequest} placeholder="+1 (555) 000-0000" className={inputCls} />
+                                    <input type="email" value={formData.email} disabled className={inputCls} />
                                 </div>
                             </div>
 
-                            {!pendingRequest && (
-                                <div className="pt-2 flex justify-end">
-                                    <button
-                                        type="submit"
-                                        disabled={requestLoading}
-                                        className="inline-flex items-center h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
-                                    >
-                                        {requestLoading ? 'Submitting…' : 'Request Changes'}
-                                    </button>
-                                </div>
-                            )}
+                            <div className="pt-2 flex justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={savingProfile}
+                                    className="inline-flex items-center h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                >
+                                    {savingProfile ? 'Saving…' : 'Save Changes'}
+                                </button>
+                            </div>
                         </form>
                     </div>
 

@@ -6,7 +6,7 @@ This file provides detailed guidance for the **HOMS** (Healthcare Operations Man
 
 HOMS is a **multi-tenant SaaS** platform for healthcare staffing agencies. It manages the full lifecycle: external ATS/HRIS connectors → hire detection → employee onboarding → training compliance tracking → reporting.
 
-**Current status:** Epic 1 (Foundation) complete. Epic 2 (Hire Detection) next.
+**Current status:** Epics 1-4.5 complete. Epic 5 (Legacy Data Model Cleanup) in progress.
 
 **Tech Stack:**
 - Frontend: React 19 + TypeScript + Vite + TailwindCSS v4 + shadcn/ui
@@ -139,6 +139,11 @@ src/
 - `update-tenant-user-role` — changes role within tenant
 - `deactivate-tenant-user` — sets status = 'deactivated'
 
+**Epic 4/4.5 Edge Functions (deployed):**
+- `sync-training` — daily LearnDash course progress sync (7:00 AM UTC cron)
+- `sync-wp-users` — daily WP user import into `people` table (6:30 AM UTC cron)
+- Both use `cron-or-tenant-guard.ts` — dual-path auth (service_role = cron, user JWT = manual)
+
 **Import pattern — NEW Edge Functions use `jsr:` imports:**
 ```typescript
 import { createClient } from "jsr:@supabase/supabase-js@2"
@@ -155,9 +160,10 @@ Legacy EFs use `https://esm.sh/` — both coexist, don't mix within the same fil
 | `people` | All persons (candidates + employees). Dedup key: `(tenant_id, email)`. |
 | `integration_log` | Idempotency log. UNIQUE on `(tenant_id, source, idempotency_key)`. |
 | `audit_log` | Append-only audit trail. INSERT RLS only — no UPDATE or DELETE for anyone. |
-| `applicants` | Legacy JotForm applicant records (Epic 5 migration target). |
-| `offers` | Job offers linked to applicants. |
-| `profiles` | Legacy user profiles (pre-multitenant). |
+| `applicants` | Legacy JotForm applicant records. **Epic 5: adding tenant_id + source.** |
+| `offers` | Job offers linked to applicants. **Epic 5: adding tenant_id.** |
+| `profiles` | Legacy user profiles. **Epic 5: deprecating → tenant_users + auth.** |
+| `employees` | **LEGACY — being DROPPED in Epic 5.** Replaced by `people` table. |
 | Storage: `resumes` | Private, RLS-protected. Never store signed URLs — regenerate on demand. |
 
 **Epic 4 (pending) tables:**

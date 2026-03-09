@@ -260,6 +260,8 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
 
   const [syncing, setSyncing] = useState(false);
   const [syncCooldown, setSyncCooldown] = useState(0);
+  const [syncingTraining, setSyncingTraining] = useState(false);
+  const [trainingCooldown, setTrainingCooldown] = useState(0);
 
   async function onSyncUsers() {
     setSyncing(true);
@@ -285,6 +287,32 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
       toast.error(err instanceof Error ? err.message : "Sync failed");
     } finally {
       setSyncing(false);
+    }
+  }
+
+  async function onSyncTraining() {
+    setSyncingTraining(true);
+    try {
+      const { data, error } = await (await import("@/lib/supabase")).supabase.functions.invoke("sync-training", { body: { force: true } });
+      if (error) throw error;
+      const result = data as { ok: boolean; summary?: { synced: number; skipped: number; errors: number }[] };
+      if (result.ok && result.summary?.[0]) {
+        const s = result.summary[0];
+        toast.success(`Synced ${s.synced} training records, ${s.skipped} skipped, ${s.errors} errors`);
+      } else {
+        toast.success("LearnDash training sync completed");
+      }
+      setTrainingCooldown(60);
+      const interval = setInterval(() => {
+        setTrainingCooldown(prev => {
+          if (prev <= 1) { clearInterval(interval); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Training sync failed");
+    } finally {
+      setSyncingTraining(false);
     }
   }
 
@@ -362,9 +390,9 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
         </div>
       </form>
 
-      {/* Sync WordPress Users — tenant_admin+ only, after WP configured */}
+      {/* Sync buttons — tenant_admin+ only, after WP configured */}
       {configured && isTenantAdmin && (
-        <div className="pt-3 border-t border-border">
+        <div className="pt-3 border-t border-border space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[12px] font-medium text-foreground">Sync WordPress Users</p>
@@ -383,6 +411,26 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
                 : syncCooldown > 0
                   ? `Available in ${syncCooldown}s`
                   : "Sync Users"}
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[12px] font-medium text-foreground">Sync LearnDash Training</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Pull course progress for all employees from LearnDash
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={syncingTraining || trainingCooldown > 0}
+              onClick={onSyncTraining}
+              className="inline-flex items-center h-8 px-3 rounded-md border border-border text-foreground text-[13px] font-medium hover:bg-muted/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {syncingTraining
+                ? "Syncing\u2026"
+                : trainingCooldown > 0
+                  ? `Available in ${trainingCooldown}s`
+                  : "Sync Training"}
             </button>
           </div>
         </div>

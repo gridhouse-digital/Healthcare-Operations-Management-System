@@ -7,6 +7,39 @@ import { Search, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+    jotform:  { bg: 'hsl(38,96%,48%)/8',   text: 'hsl(38,90%,56%)',   border: 'hsl(38,96%,48%)/20' },
+    bamboohr: { bg: 'hsl(152,58%,38%)/8',  text: 'hsl(152,54%,52%)',  border: 'hsl(152,58%,38%)/20' },
+    jazzhr:   { bg: 'hsl(220,80%,56%)/8',  text: 'hsl(220,76%,62%)',  border: 'hsl(220,80%,56%)/20' },
+};
+
+function SourceBadge({ source }: { source?: string }) {
+    const s = source?.toLowerCase() || 'unknown';
+    const label = s === 'bamboohr' ? 'BambooHR' : s === 'jazzhr' ? 'JazzHR' : s === 'jotform' ? 'JotForm' : s;
+    const colors = SOURCE_COLORS[s];
+
+    if (!colors) {
+        return (
+            <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.04em] text-muted-foreground/40">
+                {label}
+            </span>
+        );
+    }
+
+    return (
+        <span
+            className="inline-flex items-center text-[10px] font-mono font-semibold uppercase tracking-[0.04em] px-2 py-0.5 rounded border"
+            style={{
+                background: colors.bg,
+                color: colors.text,
+                borderColor: colors.border,
+            }}
+        >
+            {label}
+        </span>
+    );
+}
+
 export function ApplicantList() {
     const { data: applicants = [], isLoading: loading, error } = useApplicants();
     const syncMutation = useSyncApplicants();
@@ -57,7 +90,7 @@ export function ApplicantList() {
             {/* ── Page header ── */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-foreground" style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.875rem', fontWeight: 400, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
+                    <h1 className="text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
                         Applicants
                     </h1>
                     <p className="mt-1 text-muted-foreground/55" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6875rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
@@ -176,7 +209,7 @@ export function ApplicantList() {
                                             {/* Monogram */}
                                             <div
                                                 className="w-7 h-7 rounded-md text-[10px] font-bold flex items-center justify-center flex-shrink-0 select-none"
-                                                style={{ fontFamily: 'var(--font-mono)', background: 'hsl(196 84% 52% / 0.12)', color: 'hsl(196 84% 62%)' }}
+                                                style={{ fontFamily: 'var(--font-mono)', background: 'hsl(172 100% 40% / 0.15)', color: 'hsl(172 100% 40%)' }}
                                             >
                                                 {applicant.first_name?.[0]}{applicant.last_name?.[0]}
                                             </div>
@@ -210,9 +243,7 @@ export function ApplicantList() {
 
                                     {/* Source */}
                                     <td className="px-4 py-3 hidden lg:table-cell">
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">
-                                            JotForm
-                                        </span>
+                                        <SourceBadge source={applicant.source} />
                                     </td>
 
                                     {/* Action */}

@@ -8,9 +8,6 @@ export interface DashboardStats {
     totalEmployees: number;
     activeEmployees: number;
 }
-// ... (rest of imports/interfaces remain same until getOnboardingSnapshot)
-
-
 
 export interface ActivityItem {
     id: string;
@@ -23,13 +20,12 @@ export interface OnboardingEmployee {
     id: string;
     name: string;
     role: string;
-    progress: number; // Mocked for now as we don't have granular progress tracking yet
+    progress: number;
     status: string;
 }
 
 export const dashboardService = {
     async getStats(): Promise<DashboardStats> {
-        // Run queries in parallel for performance
         const [
             applicantsResponse,
             { count: offersSent },
@@ -41,9 +37,9 @@ export const dashboardService = {
             supabase.functions.invoke('listApplicants'),
             supabase.from('offers').select('*', { count: 'exact', head: true }).eq('status', 'Sent'),
             supabase.from('offers').select('*', { count: 'exact', head: true }).eq('status', 'Accepted'),
-            supabase.from('employees').select('*', { count: 'exact', head: true }).eq('status', 'Onboarding'),
-            supabase.from('employees').select('*', { count: 'exact', head: true }),
-            supabase.from('employees').select('*', { count: 'exact', head: true }).eq('status', 'Active')
+            supabase.from('people').select('*', { count: 'exact', head: true }).eq('type', 'employee').eq('employee_status', 'Onboarding'),
+            supabase.from('people').select('*', { count: 'exact', head: true }).eq('type', 'employee'),
+            supabase.from('people').select('*', { count: 'exact', head: true }).eq('type', 'employee').eq('employee_status', 'Active')
         ]);
 
         const totalApplicants = applicantsResponse.data ? applicantsResponse.data.length : 0;
@@ -59,10 +55,8 @@ export const dashboardService = {
     },
 
     async getRecentActivity(): Promise<ActivityItem[]> {
-        // Fetch recent applicants from JotForm via Edge Function
         const { data: applicants } = await supabase.functions.invoke('listApplicants');
 
-        // Fetch recent offers
         const { data: offers } = await supabase
             .from('offers')
             .select('id, position_title, status, created_at, applicants(first_name, last_name)')
@@ -96,18 +90,17 @@ export const dashboardService = {
             });
         });
 
-        // Sort by timestamp descending and take top 5
         return activities
             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
             .slice(0, 5);
     },
 
     async getOnboardingSnapshot(): Promise<OnboardingEmployee[]> {
-        // Fetch onboarding employees from legacy employees table
         const { data } = await supabase
-            .from('employees')
-            .select('id, first_name, last_name, position, status, created_at')
-            .eq('status', 'Onboarding')
+            .from('people')
+            .select('id, first_name, last_name, job_title, employee_status, created_at')
+            .eq('type', 'employee')
+            .eq('employee_status', 'Onboarding')
             .order('created_at', { ascending: false })
             .limit(5);
 
@@ -116,9 +109,9 @@ export const dashboardService = {
         return data.map((emp) => ({
             id: emp.id,
             name: `${emp.first_name} ${emp.last_name}`,
-            role: emp.position || 'Unknown',
+            role: emp.job_title || 'Unknown',
             progress: 0,
-            status: emp.status
+            status: emp.employee_status || 'Onboarding'
         }));
     }
 };

@@ -1,6 +1,6 @@
 # SPRINT PLAN — HOMS MVP
 
-> Updated: 2026-03-08
+> Updated: 2026-03-09
 > Sprint window: 60-90 days from 2026-03-04
 > Methodology: Epic-gated. Each epic has a CI gate. Next epic only starts after gate passes.
 
@@ -172,54 +172,133 @@
 
 ---
 
-## EPIC 4.5 — WordPress User Sync + Compliance Visibility [IN PROGRESS]
+## EPIC 4.5 — WordPress User Sync + Compliance Fixes [COMPLETE - 2026-03-09]
 
-**Goal:** Import existing WordPress/LearnDash users into the people table. Show all employees in compliance view, even those with no training records. Addresses the reality that WP may be the only system with an employee roster (no ATS connected yet).
+**Goal:** Import existing WP/LearnDash users, fix compliance to show all employees, add manual sync controls.
 
-### Story 4.5.1 — sync-wp-users EF
+### Story 4.5.1 — sync-wp-users Edge Function
 **AC:**
-- New EF fetches all WP users (role=subscriber) via `GET /wp-json/wp/v2/users`
-- Paginated (per_page=100, x-wp-totalpages header)
-- Upserts into `people`: sets wp_user_id, first_name, last_name, email
-- profile_source='wordpress' only on first insert (first connector wins)
-- Never overwrites hired_at, job_title, or profile_source if already set
-- Uses cronOrTenantGuard (cron mode = all tenants, user mode = own tenant)
-- Run dedup: skip if running <1hr, mark stale if >1hr
-- Logs run to integration_log (source='wordpress')
-- pg_cron daily at 6:30 AM UTC (30 min before sync-training at 7:00 AM)
-- Manual trigger via "Sync Users" button on Connectors page
-- Status: [~] In progress
+- Fetches all WP users (filters out administrator/editor roles)
+- Insert-ignore into `people` with `profile_source: 'wordpress'`
+- Update non-protected fields (never overwrites profile_source, hired_at, job_title)
+- Run dedup, integration_log tracking, audit logging
+- pg_cron daily at 6:30 AM UTC (30 min before sync-training)
+- Status: [x] Complete — DEPLOYED 2026-03-09
 
-### Story 4.5.2 — Compliance shows all employees
+### Story 4.5.2 — Compliance LEFT JOIN (show all employees)
 **AC:**
-- Training compliance page shows ALL employees (type='employee'), not just those with training records
-- LEFT JOIN from people onto v_training_compliance (instead of inner join)
-- New compliance status: "No Courses Assigned" for employees with zero training records
-- Distinct visual badge (neutral/grey) for "No Courses Assigned"
-- Stats cards updated to reflect total employee count
-- Status: [ ] Not started
+- Training compliance queries `people` first, LEFT JOINs `v_training_compliance`
+- Employees with 0 training records get `complianceStatus: 'no_courses'`
+- New status style in TrainingEmployeeTable + filter option
+- Stats card shows "Total Employees" with no-courses count
+- Status: [x] Complete — DEPLOYED 2026-03-09
 
-### Story 4.5.3 — Sync Users button on Connectors page
+### Story 4.5.3 — Manual sync buttons on Connectors page
 **AC:**
-- "Sync WordPress Users" button appears after WP credentials saved and tested
-- Gated by tenant_admin+ role (hidden for hr_admin)
-- Invokes sync-wp-users EF with user JWT
-- Shows toast with results (synced, skipped, errors)
-- 60-second cooldown after trigger (button disabled with timer)
-- Status: [ ] Not started
+- "Sync WordPress Users" button (tenant_admin+, 60s cooldown)
+- "Sync LearnDash Training" button (tenant_admin+, 60s cooldown)
+- Both show toast with synced/skipped/errors counts
+- Status: [x] Complete — DEPLOYED 2026-03-09
 
-**Epic 4.5 Gate:** sync-wp-users pulls all WP subscribers into people table. Compliance page shows all employees including those with no courses.
+### Hotfixes applied during 4.5:
+- `people.profile_source` CHECK constraint: added `'wordpress'` (was only bamboohr/jazzhr)
+- `sync-wp-users`: removed `roles=subscriber` filter (LearnDash sites use varying roles)
+- `cron-or-tenant-guard.ts`: new shared utility for dual-path auth (cron vs user invocation)
+
+**Epic 4.5 Gate — CLOSED 2026-03-09** (WP users synced, compliance shows all employees)
 
 ---
 
-## EPIC 5 — JotForm Ingestion (Credentials/Policies) [NOT STARTED]
+## EPIC 5 — Legacy Data Model Cleanup [IN PROGRESS]
 
-### Story 5.1 — JotForm intake EF (multi-tenant aware)
+**Goal:** Unify data model. Drop legacy tables without `tenant_id`. Make all pages multi-tenant aware with source-agnostic data.
+
+### Audit Results (2026-03-09)
+**Tables WITHOUT `tenant_id` (legacy):**
+
+| Table | Rows | Verdict |
+|-------|------|---------|
+| `employees` | 4 | **DROP** — replaced by `people` |
+| `applicants` | 46 | **ADD tenant_id + source** |
+| `applicants_archive` | 0 | **DROP** — empty |
+| `offers` | 0 | **ADD tenant_id** |
+| `offers_archive` | 0 | **DROP** — empty |
+| `ai_cache` | 27 | **ADD tenant_id** |
+| `profiles` | 2 | **DEPRECATE** — replaced by tenant_users + auth metadata |
+| `profile_change_requests` | 0 | **DROP** — empty |
+| `settings` | 16 | **DROP** — replaced by tenant_settings |
+
+### Story 5.1 — Drop legacy tables + dead code
 **AC:**
-- Existing jotform-webhook refactored to use tenant_guard
-- tenant_id injected via webhook secret (one webhook URL per tenant)
-- Documents linked to people record by email
-- Status: [ ] Not started
+- Drop tables: `employees`, `applicants_archive`, `offers_archive`, `profile_change_requests`, `settings`
+- Delete dead code: `cleanup-old-submissions/` EF, `approve-profile-request/` EF
+- Delete `src/lib/wordpress.ts`, `src/services/wordpressService.ts` (direct WP API calls from frontend)
+- Status: [x] Complete — APPLIED 2026-03-09 (migration 20260309000001)
+
+### Story 5.2 — Add tenant_id + source to applicants
+**AC:**
+- Migration: ADD `tenant_id UUID REFERENCES tenants(id)`, `source TEXT` to `applicants`
+- Backfill: SET tenant_id = (current tenant) for existing 46 rows, source = 'jotform'
+- Add RLS policies scoped by tenant_id (SELECT, INSERT, UPDATE — no DELETE)
+- Add CHECK constraint: source IN ('jotform', 'bamboohr', 'jazzhr')
+- Unique index on `(tenant_id, email)`
+- Status: [x] Complete — APPLIED 2026-03-09 (migration 20260309000002)
+
+### Story 5.3 — Rewrite Employee page → `people` table
+**AC:**
+- Migration: ADD `phone`, `department`, `employee_id`, `employee_status`, `applicant_id` to `people`
+- `employeeService.ts` rewritten → queries `people WHERE type='employee'`
+- `EmployeeList.tsx` rewritten: training from `training_records` table (not WP API), removed `wordpressService`
+- `dashboardService.ts` employee counts → `people WHERE type='employee'`
+- `ApplicantDetailsPage.tsx`: employee existence check → `people` table
+- `types/index.ts`: `Employee` interface maps to `people` table columns
+- Status: [x] Complete — 2026-03-09 (migration 20260309000003)
+
+### Story 5.4 — Rewrite applicant EFs for multi-tenant + multi-source
+**AC:**
+- Migration: ADD `jotform_form_id_*` (6 columns), `brevo_api_key_encrypted`, `logo_light` to `tenant_settings`
+- `listApplicants/` EF: full rewrite — tenantGuard, encrypted key decrypt, tenant-scoped queries, JSR imports
+- `getApplicantDetails/` EF: full rewrite — same pattern, compliance form IDs from tenant_settings
+- `jotform-webhook/` EF: full rewrite — `findTenantByFormId()` for multi-tenant webhook routing, `people` not `employees`
+- `sendRequirementRequest/` EF: full rewrite — tenantGuard, Brevo key from tenant_settings
+- `onboard-employee/` EF: targeted fix — `tenant_settings` + decrypt, `people` not `employees`
+- `sendOffer/` EF: targeted fix — `tenant_settings` + decrypt
+- Zero remaining references to dropped `settings` or `employees` tables across all EFs
+- `settingsService.ts`: rewritten as stub (settings table dropped)
+- Status: [x] Complete — 2026-03-09 (migration 20260309000004)
+
+### Story 5.5 — Applicants page multi-source with source badge
+**AC:**
+- `ApplicantList.tsx`: new `SourceBadge` component (amber=JotForm, green=BambooHR, blue=JazzHR)
+- Source column now reads `applicant.source` from DB (not hardcoded)
+- Page header font updated to Plus Jakarta Sans 800 (design system)
+- Monogram colors updated to teal (`#00C9B1`)
+- `useApplicants.ts`: already reads from `applicants` table with RLS (tenant-scoped)
+- Status: [x] Complete — 2026-03-09
+
+### Story 5.6 — Extend hire detectors to write applicants
+**AC:**
+- `detect-hires-bamboohr`: also insert into `applicants` with source='bamboohr'
+- `detect-hires-jazzhr`: also insert into `applicants` with source='jazzhr'
+- Dedup by (tenant_id, email) — skip if applicant already exists
+- Status: [x] Complete — 2026-03-09 (both detectors now upsert applicants with ignoreDuplicates)
+
+### Story 5.7 — Add tenant_id to offers + ai_cache
+**AC:**
+- Migration: ADD tenant_id to `offers`, `ai_cache`
+- Backfill existing rows
+- Add RLS policies
+- Rewrite `offerService.ts`, `sendOffer/` EF with tenant_guard
+- Status: [x] Complete — 2026-03-09 (migrations 20260310000001 + sendOffer/offerService updates)
+
+### Story 5.8 — Deprecate profiles → tenant_users + auth
+**AC:**
+- `ProfilePage.tsx`: read/write via tenant_users + auth.users metadata
+- `Header.tsx`: user name from session, not profiles table
+- Drop `profiles` table after migration
+- Status: [x] Complete — 2026-03-09 (migration 20260310000002 + frontend profile/header rewrites)
+
+**Epic 5 Gate:** All legacy tables dropped. All pages multi-tenant. Zero references to dropped tables.
 
 ---
 
@@ -239,3 +318,4 @@
 - EVV / HHAX / Nursys / E-Verify / Databricks
 - WordPress multisite provisioning
 - BambooHR webhooks (polling only in MVP)
+- BambooHR/JazzHR applicant API sync (Epic 5 preps the schema; actual API polling is post-MVP)

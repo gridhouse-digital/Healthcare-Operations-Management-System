@@ -1,6 +1,118 @@
-﻿# PROJECT LOG — HOMS (Healthcare Operations Management System)
+# PROJECT LOG — HOMS (Healthcare Operations Management System)
 
 > Living document. Updated every session. Most recent entry at top.
+
+---
+
+## 2026-03-09 — Epic 5 Stories 5.6–5.8: Applicant Hire Writes + Offers/AI Tenanting + Profiles Deprecation
+
+### What shipped
+
+**Story 5.6 — Extend hire detectors to write applicants**
+- `detect-hires-bamboohr`: after `people` insert, now `upsert`s into `applicants` with `source='bamboohr'`, `status='Hired'`, and `onConflict: (tenant_id,email)` with `ignoreDuplicates: true`
+- `detect-hires-jazzhr`: same pattern with `source='jazzhr'`
+- This preserves existing JotForm applicant rows and avoids cross-source overwrite
+
+**Story 5.7 — Add tenant_id to offers + ai_cache**
+- Migration `20260310000001_epic5_offers_aicache_tenant.sql` created:
+  - Adds `tenant_id` to `offers` and `ai_cache`
+  - Backfills rows from first tenant row and enforces `NOT NULL`
+  - Enables RLS and adds tenant-scoped policies
+  - Adds audit triggers/functions for both tables
+- `sendOffer` EF rewritten to modern shared patterns (`tenantGuard`, shared CORS/error utilities, JSR import) and now writes/filters by `tenant_id` for `offers` and `applicants`
+- `offerService.ts` updated to include tenant scoping on all `offers` queries
+
+**Story 5.8 — Deprecate profiles → tenant_users + auth**
+- `ProfilePage.tsx` rewritten to:
+  - read name/email/role from auth session metadata
+  - read tenant context from `tenant_users` joined to `tenants`
+  - update profile name via `supabase.auth.updateUser({ data: { full_name } })`
+- `Header.tsx` now displays user name/role from auth metadata (no `profiles` query)
+- Migration `20260310000002_epic5_drop_profiles.sql` added to drop `profiles`
+
+### Files changed
+
+- `supabase/functions/detect-hires-bamboohr/index.ts`
+- `supabase/functions/detect-hires-jazzhr/index.ts`
+- `supabase/functions/sendOffer/index.ts`
+- `src/services/offerService.ts`
+- `src/features/profile/ProfilePage.tsx`
+- `src/components/layout/Header.tsx`
+- `supabase/migrations/20260310000001_epic5_offers_aicache_tenant.sql` (new)
+- `supabase/migrations/20260310000002_epic5_drop_profiles.sql` (new)
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verification checklist
+
+- [ ] Run `npx supabase db push` (apply both Story 5.7/5.8 migrations)
+- [ ] Deploy EFs: `npx supabase functions deploy detect-hires-bamboohr`, `detect-hires-jazzhr`, `sendOffer`
+- [ ] Confirm zero `profiles` table queries remain in active frontend paths
+- [ ] Confirm offer creation still succeeds and writes `tenant_id`
+- [ ] Confirm hire detectors create applicant rows with source badges in Applicants page
+
+---
+
+## 2026-03-09 — Epic 5 Stories 5.1–5.5: Legacy Data Model Cleanup
+
+### What shipped
+
+**Story 5.1 — Drop legacy tables + dead code**
+- Migration `20260309000001_epic5_drop_legacy_tables.sql`: dropped `employees`, `applicants_archive`, `offers_archive`, `profile_change_requests`, `settings`
+- Deleted dead EFs: `cleanup-old-submissions/`, `approve-profile-request/`
+- Deleted dead frontend files: `src/lib/wordpress.ts`, `src/services/wordpressService.ts`
+
+**Story 5.2 — Add tenant_id + source to applicants**
+- Migration `20260309000002_epic5_applicants_tenant_source.sql`: added `tenant_id`, `source` columns to `applicants`
+- Backfilled 46 existing rows with current tenant + source='jotform'
+- RLS policies (SELECT, INSERT, UPDATE — no DELETE), CHECK constraint on source, UNIQUE on `(tenant_id, email)`
+
+**Story 5.3 — Rewrite Employee page → people table**
+- Migration `20260309000003_epic5_people_employee_columns.sql`: added `phone`, `department`, `employee_id`, `employee_status`, `applicant_id` to `people`
+- `employeeService.ts`: full rewrite → queries `people WHERE type='employee'`
+- `EmployeeList.tsx`: full rewrite → training from `training_records` (not WP API), removed `wordpressService`
+- `dashboardService.ts`: all employee counts → `people WHERE type='employee'`
+- `ApplicantDetailsPage.tsx`: employee existence check → `people` table
+
+**Story 5.4 — Rewrite applicant EFs for multi-tenant + multi-source**
+- Migration `20260309000004_epic5_jotform_brevo_columns.sql`: added 6 JotForm form ID columns, `brevo_api_key_encrypted`, `logo_light` to `tenant_settings`; updated `profile_source` CHECK to include 'wordpress'
+- Full rewrites: `listApplicants/`, `getApplicantDetails/`, `jotform-webhook/`, `sendRequirementRequest/`
+- Targeted fixes: `onboard-employee/`, `sendOffer/`
+- All now use tenantGuard, encrypted key decrypt from tenant_settings, JSR imports, shared cors/error utilities
+- `jotform-webhook/`: new `findTenantByFormId()` for multi-tenant webhook routing
+- `settingsService.ts`: rewritten as stub (settings table dropped)
+
+**Story 5.5 — Applicants page multi-source with source badge**
+- `ApplicantList.tsx`: new `SourceBadge` component (amber=JotForm, green=BambooHR, blue=JazzHR)
+- Source column reads `applicant.source` from DB (not hardcoded)
+- Page header font updated to Plus Jakarta Sans 800, monogram colors to teal
+
+### Design decisions
+
+- `findTenantByFormId()` scans all `tenant_settings` rows to route unauthenticated JotForm webhooks — trade-off: extra query per webhook, but avoids passing tenant_id in webhook URL
+- `settingsService.ts` kept as stub with hardcoded defaults rather than deleted — multiple UI components import it, full removal deferred to Story 5.8
+- Profile source protection: `jotform-webhook/` sets `profile_source: 'jotform'` only on new applicant inserts, never overwrites existing
+
+### Files changed
+
+- 4 new migrations (20260309000001–20260309000004)
+- 6 Edge Functions rewritten/fixed (listApplicants, getApplicantDetails, jotform-webhook, sendRequirementRequest, onboard-employee, sendOffer)
+- 2 dead EFs deleted (cleanup-old-submissions, approve-profile-request)
+- 2 dead frontend files deleted (wordpress.ts, wordpressService.ts)
+- 6 frontend files rewritten/edited (employeeService, EmployeeList, dashboardService, ApplicantDetailsPage, ApplicantList, settingsService)
+- 1 types file updated (types/index.ts — Employee + Applicant interfaces)
+- Sprint plan + schema docs updated
+
+### Verified
+
+- Zero remaining references to dropped `employees`, `settings` tables across `src/` and `supabase/functions/`
+- Zero remaining `wordpressService` imports
+- Build succeeds (pre-existing lint warnings only, none introduced)
+
+### Next
+
+- Stories 5.6, 5.7, 5.8 handed off to Codex
+- Epic 6 — Compliance Exports (after Epic 5 gate)
 
 ---
 

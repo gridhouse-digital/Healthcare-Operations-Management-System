@@ -141,6 +141,18 @@ async function processTenant(config: TenantConfig): Promise<{
         { onConflict: "tenant_id,email", ignoreDuplicates: true },
       );
 
+      await admin.from("applicants").upsert(
+        {
+          tenant_id: config.tenantId,
+          email,
+          full_name: `${applicant.first_name} ${applicant.last_name}`.trim(),
+          source: "jazzhr",
+          status: "Hired",
+          position_applied: applicant.desired_job || null,
+        },
+        { onConflict: "tenant_id,email", ignoreDuplicates: true },
+      );
+
       // Update non-protected fields (profile_source excluded — first connector wins)
       const { error: peopleErr } = await admin.from("people").update(
         {

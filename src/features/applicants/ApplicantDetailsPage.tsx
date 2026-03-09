@@ -45,9 +45,10 @@ export function ApplicantDetailsPage() {
             if (!applicant?.id) return;
 
             const { data } = await supabase
-                .from('employees')
+                .from('people')
                 .select('id')
                 .eq('applicant_id', applicant.id)
+                .eq('type', 'employee')
                 .maybeSingle();
 
             setHasEmployeeRecord(!!data);

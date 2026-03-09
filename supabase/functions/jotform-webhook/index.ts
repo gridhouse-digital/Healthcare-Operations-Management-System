@@ -1,21 +1,24 @@
 /**
- * JotForm Webhook Handler
+ * JotForm Webhook Handler — Multi-tenant
  *
  * Receives real-time submission notifications from JotForm and:
- * 1. Validates webhook signature for security
- * 2. Creates/updates applicant records
+ * 1. Determines form type from tenant_settings
+ * 2. Creates/updates applicant records (with tenant_id + source)
  * 3. Handles compliance document submissions
  * 4. Broadcasts updates via Supabase Realtime
+ *
+ * NOTE: Webhooks are unauthenticated — we look up the tenant by form ID.
  */
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { mapSubmissionToApplicant } from '../_shared/jotform-client.ts';
-import { migrateFileToStorage, isJotFormFileUrl } from '../_shared/file-manager.ts';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+import { mapSubmissionToApplicant } from "../_shared/jotform-client.ts";
+import { migrateFileToStorage, isJotFormFileUrl } from "../_shared/file-manager.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 interface WebhookPayload {
@@ -27,23 +30,22 @@ interface WebhookPayload {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse webhook payload
-    const contentType = req.headers.get('content-type') || '';
+    const contentType = req.headers.get("content-type") || "";
     let payload: WebhookPayload;
 
-    if (contentType.includes('application/json')) {
+    if (contentType.includes("application/json")) {
       payload = await req.json();
-    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+    } else if (contentType.includes("application/x-www-form-urlencoded")) {
       const formData = await req.formData();
       const rawRequest: Record<string, any> = {};
 
@@ -52,108 +54,108 @@ serve(async (req) => {
       }
 
       payload = {
-        submissionID: formData.get('submissionID') as string,
-        formID: formData.get('formID') as string,
+        submissionID: formData.get("submissionID") as string,
+        formID: formData.get("formID") as string,
         rawRequest,
       };
     } else {
-      throw new Error('Unsupported content type');
+      throw new Error("Unsupported content type");
     }
 
-    console.log('Webhook received:', {
+    console.log("Webhook received:", {
       submissionID: payload.submissionID,
       formID: payload.formID,
     });
 
-    // Fetch settings to determine form type
-    const { data: settings, error: settingsError } = await supabase
-      .from('settings')
-      .select('key, value')
-      .or('key.like.%jotform%');
+    // Look up which tenant owns this form ID
+    const tenantLookup = await findTenantByFormId(supabase, payload.formID);
 
-    if (settingsError) {
-      throw new Error(`Failed to fetch settings: ${settingsError.message}`);
+    if (!tenantLookup) {
+      console.log("No tenant found for form ID:", payload.formID);
+      return new Response(
+        JSON.stringify({ success: false, error: "Unknown form ID" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 },
+      );
     }
 
-    const settingsMap = new Map(settings.map(s => [s.key, s.value]));
+    const { tenantId, formType } = tenantLookup;
+    console.log("Form type detected:", formType, "for tenant:", tenantId);
 
-    // Determine which form this submission is for
-    const formType = determineFormType(payload.formID, settingsMap);
-
-    console.log('Form type detected:', formType);
-
-    // Handle based on form type
-    if (formType === 'application') {
-      await handleApplicationSubmission(payload, supabase);
-    } else if (formType === 'compliance') {
-      await handleComplianceSubmission(payload, formType, supabase);
+    if (formType === "application") {
+      await handleApplicationSubmission(payload, supabase, tenantId);
+    } else if (formType === "compliance") {
+      await handleComplianceSubmission(payload, formType, supabase, tenantId);
     } else {
-      console.log('Unknown form type, skipping processing');
+      console.log("Unknown form type, skipping processing");
     }
 
     // Broadcast update via Realtime
     await supabase
-      .channel('applicants')
+      .channel("applicants")
       .send({
-        type: 'broadcast',
-        event: 'submission_received',
+        type: "broadcast",
+        event: "submission_received",
         payload: {
           submissionId: payload.submissionID,
           formId: payload.formID,
           formType,
+          tenantId,
         },
       });
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Webhook processed successfully',
-        formType,
-      }),
+      JSON.stringify({ success: true, message: "Webhook processed", formType }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
-      }
+      },
     );
   } catch (error) {
-    console.error('Webhook error:', error);
+    console.error("Webhook error:", error);
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
-      }
+      },
     );
   }
 });
 
 /**
- * Determine form type from form ID
+ * Find which tenant owns a given JotForm form ID.
+ * Scans tenant_settings for matching jotform_form_id_* columns.
  */
-function determineFormType(
+async function findTenantByFormId(
+  supabase: ReturnType<typeof createClient>,
   formId: string,
-  settings: Map<string, string>
-): string | null {
-  const formTypes = [
-    'application',
-    'emergency',
-    'i9',
-    'vaccination',
-    'licenses',
-    'background',
+): Promise<{ tenantId: string; formType: string } | null> {
+  const formColumns = [
+    { col: "jotform_form_id_application", type: "application" },
+    { col: "jotform_form_id_emergency", type: "compliance" },
+    { col: "jotform_form_id_i9", type: "compliance" },
+    { col: "jotform_form_id_vaccination", type: "compliance" },
+    { col: "jotform_form_id_licenses", type: "compliance" },
+    { col: "jotform_form_id_background", type: "compliance" },
   ];
 
-  for (const type of formTypes) {
-    const settingKey = `jotform_form_id_${type}`;
-    const storedFormId = settings.get(settingKey);
+  const { data: allSettings } = await supabase
+    .from("tenant_settings")
+    .select(
+      "tenant_id, jotform_form_id_application, jotform_form_id_emergency, jotform_form_id_i9, jotform_form_id_vaccination, jotform_form_id_licenses, jotform_form_id_background",
+    );
 
-    if (storedFormId === formId) {
-      // Application is main form, others are compliance
-      return type === 'application' ? 'application' : 'compliance';
+  if (!allSettings) return null;
+
+  for (const row of allSettings) {
+    for (const { col, type } of formColumns) {
+      if ((row as any)[col] === formId) {
+        return { tenantId: row.tenant_id, formType: type };
+      }
     }
   }
 
@@ -165,22 +167,21 @@ function determineFormType(
  */
 async function handleApplicationSubmission(
   payload: WebhookPayload,
-  supabase: ReturnType<typeof createClient>
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
 ): Promise<void> {
-  // Convert rawRequest to JotForm submission format
   const answers: Record<string, any> = {};
 
   for (const [key, value] of Object.entries(payload.rawRequest)) {
-    // JotForm question keys are like "q1_fullName", "q2_email"
-    if (key.startsWith('q')) {
-      const questionId = key.split('_')[0]; // Extract "q1", "q2", etc.
-      const fieldName = key.substring(key.indexOf('_') + 1); // Extract field name
+    if (key.startsWith("q")) {
+      const fieldName = key.substring(key.indexOf("_") + 1);
+      const questionId = key.split("_")[0];
 
       answers[questionId] = {
         name: fieldName,
         answer: value,
-        text: fieldName, // Use field name as label
-        type: typeof value === 'object' ? 'complex' : 'text',
+        text: fieldName,
+        type: typeof value === "object" ? "complex" : "text",
       };
     }
   }
@@ -190,86 +191,66 @@ async function handleApplicationSubmission(
     form_id: payload.formID,
     created_at: payload.created_at || new Date().toISOString(),
     answers,
-    ip: '',
-    status: 'ACTIVE',
-    new: '1',
-    flag: '0',
-    notes: '',
+    ip: "",
+    status: "ACTIVE",
+    new: "1",
+    flag: "0",
+    notes: "",
     updated_at: null,
   };
 
-  // Map to applicant data
   const applicantData = mapSubmissionToApplicant(submission);
 
-  // Migrate file if present in submission (from JotForm CDN to Supabase Storage)
+  // Migrate file if present
   if (applicantData.resume_url && isJotFormFileUrl(applicantData.resume_url)) {
     console.log(`[Webhook] Migrating file for applicant: ${applicantData.email}`);
     const migrationResult = await migrateFileToStorage(
       applicantData.resume_url,
       applicantData.jotform_id,
-      supabase
+      supabase,
     );
-
     if (migrationResult.success && migrationResult.storageUrl) {
       applicantData.resume_url = migrationResult.storageUrl;
-      console.log(`[Webhook] File migrated: ${migrationResult.storageUrl}`);
-    } else {
-      console.warn(`[Webhook] File migration failed: ${migrationResult.error}`);
-      // Keep original JotForm URL as fallback
     }
   }
 
-  // Check if applicant already exists using multiple strategies
+  // Check if applicant exists — scoped to tenant
   let targetApplicantId: string | null = null;
   let matchReason: string | null = null;
 
-  // Strategy 1: Match by JotForm ID (deterministic)
+  // Strategy 1: Match by JotForm ID within tenant
   const { data: existingByJotForm } = await supabase
-    .from('applicants')
-    .select('id, status')
-    .eq('jotform_id', applicantData.jotform_id)
+    .from("applicants")
+    .select("id, status")
+    .eq("tenant_id", tenantId)
+    .eq("jotform_id", applicantData.jotform_id)
     .single();
 
   if (existingByJotForm) {
     targetApplicantId = existingByJotForm.id;
-    matchReason = 'jotform_id';
+    matchReason = "jotform_id";
   }
 
-  // Strategy 2: Match by Email (if no JotForm ID match)
+  // Strategy 2: Match by Email within tenant
   if (!targetApplicantId && applicantData.email) {
     const { data: existingByEmail } = await supabase
-      .from('applicants')
-      .select('id')
-      .eq('email', applicantData.email)
+      .from("applicants")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("email", applicantData.email)
       .single();
 
     if (existingByEmail) {
       targetApplicantId = existingByEmail.id;
-      matchReason = 'email';
-    }
-  }
-
-  // Strategy 3: Match by Name (Fuzzy fallback if no email match)
-  if (!targetApplicantId && applicantData.first_name && applicantData.last_name) {
-    const { data: existingByName } = await supabase
-      .from('applicants')
-      .select('id')
-      .ilike('first_name', applicantData.first_name)
-      .ilike('last_name', applicantData.last_name)
-      .single();
-
-    if (existingByName) {
-      targetApplicantId = existingByName.id;
-      matchReason = 'name_match';
+      matchReason = "email";
     }
   }
 
   if (targetApplicantId) {
-    // Update existing applicant
     console.log(`Updating existing applicant (${matchReason}):`, targetApplicantId);
 
     const { error: updateError } = await supabase
-      .from('applicants')
+      .from("applicants")
       .update({
         first_name: applicantData.first_name,
         last_name: applicantData.last_name,
@@ -277,33 +258,31 @@ async function handleApplicationSubmission(
         phone: applicantData.phone,
         position_applied: applicantData.position_applied,
         resume_url: applicantData.resume_url,
-        // Only update jotform_id if it's missing or different, but logic assumes we overwrite to link latest
         jotform_id: applicantData.jotform_id,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', targetApplicantId);
+      .eq("id", targetApplicantId);
 
     if (updateError) {
       throw new Error(`Failed to update applicant: ${updateError.message}`);
     }
   } else {
-    // Create new applicant
-    console.log('Creating new applicant (no match found)');
+    console.log("Creating new applicant (no match found)");
     const { error: insertError } = await supabase
-      .from('applicants')
+      .from("applicants")
       .insert({
         ...applicantData,
-        status: 'New',
+        tenant_id: tenantId,
+        source: "jotform",
+        status: "New",
         created_at: new Date().toISOString(),
       });
 
     if (insertError) {
-      // Final safely net: duplicate key error on email (race condition or weird case)
-      if (insertError.code === '23505' && insertError.message.includes('email')) {
-        console.warn('Hit email constraint race condition, retrying update...');
-        // Fallback to update by email
+      if (insertError.code === "23505" && insertError.message.includes("email")) {
+        console.warn("Hit email constraint race condition, retrying update...");
         const { error: fallbackError } = await supabase
-          .from('applicants')
+          .from("applicants")
           .update({
             jotform_id: applicantData.jotform_id,
             first_name: applicantData.first_name,
@@ -313,9 +292,11 @@ async function handleApplicationSubmission(
             resume_url: applicantData.resume_url,
             updated_at: new Date().toISOString(),
           })
-          .eq('email', applicantData.email);
+          .eq("tenant_id", tenantId)
+          .eq("email", applicantData.email);
 
-        if (fallbackError) throw new Error(`Fallback update failed: ${fallbackError.message}`);
+        if (fallbackError)
+          throw new Error(`Fallback update failed: ${fallbackError.message}`);
       } else {
         throw new Error(`Failed to create applicant: ${insertError.message}`);
       }
@@ -325,45 +306,44 @@ async function handleApplicationSubmission(
 
 /**
  * Handle compliance form submissions
- * (Emergency Contact, I-9, Vaccination, Licenses, Background Check)
  */
 async function handleComplianceSubmission(
   payload: WebhookPayload,
-  formType: string,
-  supabase: ReturnType<typeof createClient>
+  _formType: string,
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
 ): Promise<void> {
-  // Extract email from submission to link to employee
-  let email = '';
+  let email = "";
 
   for (const [key, value] of Object.entries(payload.rawRequest)) {
-    if (key.toLowerCase().includes('email') && typeof value === 'string') {
+    if (key.toLowerCase().includes("email") && typeof value === "string") {
       email = value;
       break;
     }
   }
 
   if (!email) {
-    console.log('No email found in compliance submission, skipping');
+    console.log("No email found in compliance submission, skipping");
     return;
   }
 
-  // Find employee by email
-  const { data: employee } = await supabase
-    .from('employees')
-    .select('id')
-    .eq('email', email)
-    .single();
+  // Find person by email within tenant (uses people table, not dropped employees)
+  const { data: person } = await supabase
+    .from("people")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("email", email)
+    .maybeSingle();
 
-  if (!employee) {
-    console.log('No employee found for email:', email);
+  if (!person) {
+    console.log("No person found for email:", email, "in tenant:", tenantId);
     return;
   }
 
   // TODO: Create compliance_documents table and insert record
-  // For now, just log
-  console.log('Compliance submission received:', {
-    employeeId: employee.id,
-    formType,
+  console.log("Compliance submission received:", {
+    personId: person.id,
+    tenantId,
     submissionId: payload.submissionID,
   });
 }

@@ -1,74 +1,28 @@
-import { supabase } from '@/lib/supabase';
+/**
+ * Settings service — Legacy `settings` table has been dropped (Epic 5).
+ * Job roles are now hardcoded defaults until migrated to tenant_settings.
+ */
 
-export interface Setting {
-    id: string;
-    key: string;
-    value: string;
-    description?: string;
-    is_encrypted: boolean;
-    updated_at: string;
-}
+const DEFAULT_JOB_ROLES = [
+    "Licensed Practical Nurse (LPN)",
+    "Direct Care Worker",
+    "Registered Nurse (RN)",
+    "Home Health Aide (HHA)",
+    "Certified Nursing Assistant (CNA)",
+];
 
 export const settingsService = {
+    /** Stub — returns empty. Logo/settings will move to tenant_settings. */
     async getSettings(): Promise<Record<string, string>> {
-        const { data, error } = await supabase
-            .from('settings')
-            .select('key, value');
-
-        if (error) {
-            console.error('Error fetching settings:', error);
-            throw error;
-        }
-
-        // Convert array to object for easier access
-        return data.reduce((acc, setting) => {
-            acc[setting.key] = setting.value;
-            return acc;
-        }, {} as Record<string, string>);
-    },
-
-    async updateSetting(key: string, value: string): Promise<void> {
-        const { error } = await supabase
-            .from('settings')
-            .upsert({ key, value }, { onConflict: 'key' });
-
-        if (error) {
-            console.error(`Error updating setting ${key}:`, error);
-            throw error;
-        }
-    },
-
-    async updateSettings(settings: Record<string, string>): Promise<void> {
-        // Update multiple settings in parallel
-        const updates = Object.entries(settings).map(([key, value]) =>
-            this.updateSetting(key, value)
-        );
-
-        await Promise.all(updates);
+        return {};
     },
 
     async getJobRoles(): Promise<string[]> {
-        const settings = await this.getSettings();
-        const rolesJson = settings['job_roles'];
-
-        if (!rolesJson) {
-            // Default roles if none exist in settings
-            return [
-                "Licensed Practical Nurse (LPN)",
-                "Direct Care Worker",
-                "Registered Nurse (RN)"
-            ];
-        }
-
-        try {
-            return JSON.parse(rolesJson);
-        } catch (e) {
-            console.error('Failed to parse job roles from settings:', e);
-            return [];
-        }
+        return DEFAULT_JOB_ROLES;
     },
 
-    async updateJobRoles(roles: string[]): Promise<void> {
-        await this.updateSetting('job_roles', JSON.stringify(roles));
-    }
+    /** No-ops for write methods — settings table is dropped. */
+    async updateSetting(_key: string, _value: string): Promise<void> {},
+    async updateSettings(_settings: Record<string, string>): Promise<void> {},
+    async updateJobRoles(_roles: string[]): Promise<void> {},
 };
