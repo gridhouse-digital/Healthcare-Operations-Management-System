@@ -14,6 +14,7 @@ import { useLdGroupMappings, useSaveLdMappings } from "../hooks/useLdGroupMappin
 import { ConnectorStatusBadge } from "./ConnectorStatusBadge";
 import type { ConnectorStatus, LdGroupMapping } from "../types/tenant-settings";
 import { cn } from "@/lib/utils";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // ---------------------------------------------------------------------------
 // Shared styles (matches SystemSettingsPage)
@@ -247,7 +248,7 @@ interface WordPressFormValues {
   wpAppPassword: string;
 }
 
-function WordPressConnector({ configured, savedSiteUrl }: { configured: boolean; savedSiteUrl: string | null }) {
+function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { configured: boolean; savedSiteUrl: string | null; isTenantAdmin: boolean }) {
   const { register, handleSubmit, formState: { isSubmitting } } =
     useForm<WordPressFormValues>({ defaultValues: { wpSiteUrl: savedSiteUrl ?? "" } });
 
@@ -256,6 +257,36 @@ function WordPressConnector({ configured, savedSiteUrl }: { configured: boolean;
   const [status, setStatus] = useState<ConnectorStatus>(
     configured ? "active" : "not_configured",
   );
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncCooldown, setSyncCooldown] = useState(0);
+
+  async function onSyncUsers() {
+    setSyncing(true);
+    try {
+      const { data, error } = await (await import("@/lib/supabase")).supabase.functions.invoke("sync-wp-users");
+      if (error) throw error;
+      const result = data as { ok: boolean; summary?: { synced: number; skipped: number; errors: number }[] };
+      if (result.ok && result.summary?.[0]) {
+        const s = result.summary[0];
+        toast.success(`Synced ${s.synced} users, ${s.skipped} skipped, ${s.errors} errors`);
+      } else {
+        toast.success("WordPress user sync completed");
+      }
+      // Start 60s cooldown
+      setSyncCooldown(60);
+      const interval = setInterval(() => {
+        setSyncCooldown(prev => {
+          if (prev <= 1) { clearInterval(interval); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   async function onSave(values: WordPressFormValues) {
     try {
@@ -330,6 +361,32 @@ function WordPressConnector({ configured, savedSiteUrl }: { configured: boolean;
           </button>
         </div>
       </form>
+
+      {/* Sync WordPress Users — tenant_admin+ only, after WP configured */}
+      {configured && isTenantAdmin && (
+        <div className="pt-3 border-t border-border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[12px] font-medium text-foreground">Sync WordPress Users</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Import existing WordPress/LearnDash subscribers as employees
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={syncing || syncCooldown > 0}
+              onClick={onSyncUsers}
+              className="inline-flex items-center h-8 px-3 rounded-md border border-border text-foreground text-[13px] font-medium hover:bg-muted/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {syncing
+                ? "Syncing\u2026"
+                : syncCooldown > 0
+                  ? `Available in ${syncCooldown}s`
+                  : "Sync Users"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -665,6 +722,7 @@ function LdGroupMappingsSection() {
 
 export function ConnectorSettingsPage() {
   const { data: settings, isLoading, error } = useTenantSettings();
+  const { isAdmin } = useUserRole();
 
   if (isLoading) {
     return (
@@ -698,7 +756,7 @@ export function ConnectorSettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <BambooHRConnector configured={settings.bamboohr_key_configured} savedSubdomain={settings.bamboohr_subdomain} />
         <JazzHRConnector configured={settings.jazzhr_key_configured} />
-        <WordPressConnector configured={settings.wp_key_configured} savedSiteUrl={settings.wp_site_url} />
+        <WordPressConnector configured={settings.wp_key_configured} savedSiteUrl={settings.wp_site_url} isTenantAdmin={isAdmin} />
         <JotFormConnector configured={settings.jotform_key_configured} />
       </div>
 

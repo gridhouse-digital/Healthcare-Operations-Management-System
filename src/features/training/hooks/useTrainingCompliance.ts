@@ -3,13 +3,14 @@ import { supabase } from '@/lib/supabase';
 import type { TrainingComplianceRecord, TrainingEmployee, ComplianceStatus } from '../types';
 
 // Compliance status priority (intentional ordering):
-// 1. overdue — any expired certification (expires_at < now) takes priority,
+// 1. no_courses — employee exists but has zero training records.
+// 2. overdue — any expired certification (expires_at < now) takes priority,
 //    even if courses are completed, because expired certs need renewal.
-// 2. compliant — all courses completed and none expired.
-// 3. in_progress — at least one course started but not all complete.
-// 4. not_started — fallback for records with no progress.
+// 3. compliant — all courses completed and none expired.
+// 4. in_progress — at least one course started but not all complete.
+// 5. not_started — fallback for records with no progress.
 function computeComplianceStatus(records: TrainingComplianceRecord[]): ComplianceStatus {
-  if (records.length === 0) return 'not_started';
+  if (records.length === 0) return 'no_courses';
 
   const hasOverdue = records.some(r => r.expires_at && new Date(r.expires_at) < new Date());
   if (hasOverdue) return 'overdue';
@@ -26,50 +27,46 @@ function computeComplianceStatus(records: TrainingComplianceRecord[]): Complianc
 }
 
 async function fetchTrainingCompliance(): Promise<TrainingEmployee[]> {
-  // Fetch compliance records joined with people
-  const { data: records, error } = await supabase
+  // Fetch ALL employees (type='employee') — this is the primary query
+  const { data: employees, error: empErr } = await supabase
+    .from('people')
+    .select('id, first_name, last_name, email, job_title')
+    .eq('type', 'employee')
+    .order('last_name');
+
+  if (empErr) throw empErr;
+  if (!employees || employees.length === 0) return [];
+
+  // Fetch all compliance records for these employees
+  const { data: records, error: recErr } = await supabase
     .from('v_training_compliance')
-    .select(`
-      *,
-      people!inner (
-        id,
-        first_name,
-        last_name,
-        email,
-        job_title
-      )
-    `)
+    .select('*')
     .order('person_id');
 
-  if (error) throw error;
-  if (!records || records.length === 0) return [];
+  if (recErr) throw recErr;
 
-  // Group by person_id
-  const grouped = new Map<string, {
-    person: { id: string; first_name: string; last_name: string; email: string; job_title: string | null };
-    records: TrainingComplianceRecord[];
-  }>();
-
-  for (const row of records) {
-    const person = (row as any).people;
-    const personId = person.id as string;
-
-    if (!grouped.has(personId)) {
-      grouped.set(personId, { person, records: [] });
+  // Index compliance records by person_id
+  const recordsByPerson = new Map<string, TrainingComplianceRecord[]>();
+  for (const row of (records ?? [])) {
+    const rec = row as unknown as TrainingComplianceRecord;
+    const pid = rec.person_id;
+    if (!recordsByPerson.has(pid)) {
+      recordsByPerson.set(pid, []);
     }
-    grouped.get(personId)!.records.push(row as unknown as TrainingComplianceRecord);
+    recordsByPerson.get(pid)!.push(rec);
   }
 
-  // Build TrainingEmployee array
-  return Array.from(grouped.values()).map(({ person, records }) => {
-    const coursesAssigned = records.length;
-    const coursesCompleted = records.filter(r => r.effective_status === 'completed').length;
+  // Build TrainingEmployee array — every employee appears, even with 0 records
+  return employees.map((person) => {
+    const personRecords = recordsByPerson.get(person.id) ?? [];
+    const coursesAssigned = personRecords.length;
+    const coursesCompleted = personRecords.filter(r => r.effective_status === 'completed').length;
     const completionPct = coursesAssigned > 0
       ? Math.round((coursesCompleted / coursesAssigned) * 100)
       : 0;
-    const complianceStatus = computeComplianceStatus(records);
+    const complianceStatus = computeComplianceStatus(personRecords);
 
-    const dates = records
+    const dates = personRecords
       .flatMap(r => [r.effective_completed_at, r.last_synced_at, r.last_adjusted_at])
       .filter(Boolean)
       .sort()
@@ -81,7 +78,7 @@ async function fetchTrainingCompliance(): Promise<TrainingEmployee[]> {
       last_name: person.last_name,
       email: person.email,
       job_title: person.job_title,
-      records,
+      records: personRecords,
       coursesAssigned,
       coursesCompleted,
       completionPct,
