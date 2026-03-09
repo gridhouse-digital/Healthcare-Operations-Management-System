@@ -81,17 +81,18 @@ export function Sidebar() {
                                 />
                             )}
 
-                            {/* Group label — only in expanded mode (muted/greyed out) */}
+                            {/* Group label — only in expanded mode (thin + greyed out) */}
                             {expanded && (
                                 <p
                                     className="px-2.5 pt-2 pb-1 select-none"
                                     style={{
                                         fontFamily: 'var(--font-sans)',
-                                        fontSize: '0.75rem',
-                                        fontWeight: 600,
-                                        letterSpacing: '-0.01em',
+                                        fontSize: '0.7rem',
+                                        fontWeight: 500,
+                                        letterSpacing: '0.08em',
+                                        textTransform: 'uppercase',
                                         color: 'var(--muted-foreground)',
-                                        opacity: 0.8,
+                                        opacity: 0.58,
                                     }}
                                 >
                                     {group.label}
