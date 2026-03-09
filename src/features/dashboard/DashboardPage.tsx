@@ -161,13 +161,9 @@ export function DashboardPage() {
 
             {/* ── Page header ── */}
             <div className="flex items-end justify-between">
-                <div>
-                    <h1
-                        style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05, color: 'var(--foreground)' }}
-                    >
-                        Operations Overview
-                    </h1>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em', color: 'var(--muted-foreground)', opacity: 0.8, marginTop: '4px' }}>
+                <div className="pl-1">
+                    <h1 className="page-header-title">Operations Overview</h1>
+                    <p className="page-header-meta">
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
                 </div>

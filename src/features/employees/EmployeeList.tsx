@@ -8,6 +8,7 @@ import { SlideOver } from '@/components/ui/SlideOver';
 import { OnboardingSummaryPanel } from '@/components/ai/OnboardingSummaryPanel';
 import { toast } from '@/hooks/useToast';
 import { supabase } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
 
 const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
 const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
@@ -135,12 +136,12 @@ export function EmployeeList() {
 
     if (loading) return (
         <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-muted-foreground font-mono uppercase tracking-[0.06em]">Loading employees…</span>
+            <span className="text-[13px] text-muted-foreground">Loading employees…</span>
         </div>
     );
     if (error) return (
         <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-[hsl(4,82%,52%)]">{error}</span>
+            <span className="text-[13px] text-destructive">{error}</span>
         </div>
     );
 
@@ -149,19 +150,13 @@ export function EmployeeList() {
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pl-1">
                 <div>
-                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.15 }}
-                        className="text-foreground">
-                        Employees
-                    </h1>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}
-                        className="text-muted-foreground mt-1">
-                        {employees.length} team members
-                    </p>
+                    <h1 className="page-header-title">Employees</h1>
+                    <p className="page-header-meta">{employees.length} team members</p>
                 </div>
-                <button className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors whitespace-nowrap">
+                <Button size="sm" className="whitespace-nowrap">
                     <Plus size={14} strokeWidth={2.5} />
                     Add Employee
-                </button>
+                </Button>
             </div>
 
             {/* Filters & Search */}

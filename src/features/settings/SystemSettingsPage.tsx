@@ -4,6 +4,7 @@ import { settingsService } from "@/services/settingsService";
 import { toast } from "@/hooks/useToast";
 import { useConfirm } from "@/hooks/useConfirm";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Button } from "@/components/ui/button";
 
 const inputCls =
   "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50";
@@ -100,12 +101,12 @@ export function SystemSettingsPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h2 className="!font-sans !text-xl !font-semibold !normal-case !tracking-[-0.02em] !text-foreground flex items-center gap-2">
-          <SettingsIcon size={20} className="text-primary" />
-          System Settings
-        </h2>
-        <p className="text-muted-foreground text-[13px] mt-1">
+      <div className="pl-1">
+        <div className="flex items-center gap-2">
+          <SettingsIcon size={18} className="text-primary" />
+          <h1 className="page-header-title">System Settings</h1>
+        </div>
+        <p className="page-header-meta">
           Configure company branding and system defaults
         </p>
       </div>
@@ -197,14 +198,14 @@ export function SystemSettingsPage() {
             placeholder="Enter new job role..."
             className={inputCls + " flex-1"}
           />
-          <button
+          <Button
             onClick={() => void handleAddRole()}
             disabled={!newRole.trim()}
-            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="whitespace-nowrap"
           >
             <Plus size={13} />
             Add
-          </button>
+          </Button>
         </div>
         <div className="space-y-1.5">
           {jobRoles.map((role, index) => (
@@ -231,13 +232,13 @@ export function SystemSettingsPage() {
       </div>
 
       <div className="flex justify-end">
-        <button
+        <Button
           onClick={() => void handleSave()}
-          className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors"
+          size="sm"
         >
           <Save size={13} />
           Save Changes
-        </button>
+        </Button>
       </div>
 
       <ConfirmDialog

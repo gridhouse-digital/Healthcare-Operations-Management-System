@@ -10,6 +10,7 @@ import { SlideOver } from '@/components/ui/SlideOver';
 import { toast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { Button } from '@/components/ui/button';
 
 type OfferTab = 'Draft' | 'Pending Approval' | 'Sent' | 'Accepted' | 'Declined';
 
@@ -124,12 +125,12 @@ export function OfferList() {
 
     if (loading) return (
         <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-muted-foreground font-mono uppercase tracking-[0.06em]">Loading offers…</span>
+            <span className="text-[13px] text-muted-foreground">Loading offers…</span>
         </div>
     );
     if (error) return (
         <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-[hsl(4,82%,52%)]">{error}</span>
+            <span className="text-[13px] text-destructive">{error}</span>
         </div>
     );
 
@@ -138,28 +139,23 @@ export function OfferList() {
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pl-1">
                 <div>
-                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.15 }}
-                        className="text-foreground">
-                        Offers
-                    </h1>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}
-                        className="text-muted-foreground mt-1">
-                        {offers.length} offer letters
-                    </p>
+                    <h1 className="page-header-title">Offers</h1>
+                    <p className="page-header-meta">{offers.length} offer letters</p>
                 </div>
-                <button
+                <Button
                     onClick={() => navigate('/offers/new')}
-                    className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors whitespace-nowrap"
+                    size="sm"
+                    className="whitespace-nowrap"
                 >
                     <Plus size={14} strokeWidth={2.5} />
                     Create Offer
-                </button>
+                </Button>
             </div>
 
             {/* Tab nav + content card */}
             <div className="bg-card border border-border rounded-lg overflow-hidden">
                 {/* Tabs */}
-                <div className="flex overflow-x-auto border-b border-border">
+                <div className="tab-bar">
                     {tabs.map((tab) => {
                         const count = tabCount(tab);
                         const isActive = activeTab === tab;
@@ -167,26 +163,13 @@ export function OfferList() {
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={[
-                                    'relative flex items-center gap-2 px-5 py-3.5 text-[13px] font-medium whitespace-nowrap transition-colors',
-                                    isActive
-                                        ? 'text-primary'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                ].join(' ')}
+                                className={`tab-item ${isActive ? 'active' : ''}`}
                             >
                                 {tab}
                                 {count > 0 && (
-                                    <span className={[
-                                        'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
-                                        isActive
-                                            ? 'bg-primary/10 text-primary'
-                                            : 'bg-muted text-muted-foreground'
-                                    ].join(' ')}>
+                                    <span className={`tab-count ${isActive ? 'tab-count-active' : 'tab-count-inactive'}`}>
                                         {count}
                                     </span>
-                                )}
-                                {isActive && (
-                                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-t-full" />
                                 )}
                             </button>
                         );

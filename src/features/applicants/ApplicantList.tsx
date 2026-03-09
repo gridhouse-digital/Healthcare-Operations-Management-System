@@ -6,11 +6,12 @@ import { format } from 'date-fns';
 import { Search, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-    jotform:  { bg: 'hsl(38,96%,48%)/8',   text: 'hsl(38,90%,56%)',   border: 'hsl(38,96%,48%)/20' },
-    bamboohr: { bg: 'hsl(152,58%,38%)/8',  text: 'hsl(152,54%,52%)',  border: 'hsl(152,58%,38%)/20' },
-    jazzhr:   { bg: 'hsl(220,80%,56%)/8',  text: 'hsl(220,76%,62%)',  border: 'hsl(220,80%,56%)/20' },
+    jotform:  { bg: 'color-mix(in srgb, var(--severity-medium) 12%, transparent)', text: 'var(--severity-high)', border: 'color-mix(in srgb, var(--severity-medium) 22%, transparent)' },
+    bamboohr: { bg: 'color-mix(in srgb, var(--severity-low) 12%, transparent)', text: 'var(--severity-low)', border: 'color-mix(in srgb, var(--severity-low) 22%, transparent)' },
+    jazzhr:   { bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', text: 'var(--primary)', border: 'color-mix(in srgb, var(--primary) 22%, transparent)' },
 };
 
 function SourceBadge({ source }: { source?: string }) {
@@ -20,7 +21,7 @@ function SourceBadge({ source }: { source?: string }) {
 
     if (!colors) {
         return (
-            <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.04em] text-muted-foreground/40">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.03em] text-muted-foreground/50">
                 {label}
             </span>
         );
@@ -28,7 +29,7 @@ function SourceBadge({ source }: { source?: string }) {
 
     return (
         <span
-            className="inline-flex items-center text-[10px] font-mono font-semibold uppercase tracking-[0.04em] px-2 py-0.5 rounded border"
+            className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.03em]"
             style={{
                 background: colors.bg,
                 color: colors.text,
@@ -78,8 +79,8 @@ export function ApplicantList() {
         </div>
     );
     if (error) return (
-        <div className="severity-critical rounded-md bg-[hsl(4,82%,54%)]/6 border border-[hsl(4,82%,54%)]/20 p-4">
-            <p className="text-[13px] font-semibold text-[hsl(4,64%,44%)] dark:text-[hsl(4,72%,62%)]">
+        <div className="severity-critical rounded-md border border-destructive/15 bg-destructive/8 p-4">
+            <p className="text-[13px] font-semibold text-destructive">
                 Failed to load applicants: {error.message}
             </p>
         </div>
@@ -88,18 +89,16 @@ export function ApplicantList() {
     return (
         <div className="space-y-4 animate-fade-in">
             {/* ── Page header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div>
-                    <h1 className="text-foreground" style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
-                        Applicants
-                    </h1>
-                    <p className="mt-1 text-muted-foreground/55" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6875rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                <div className="pl-1">
+                    <h1 className="page-header-title">Applicants</h1>
+                    <p className="page-header-meta">
                         {filteredApplicants.length} records
                         {filterStatus !== 'all' && ` · ${filterStatus}`}
                         {searchTerm && ` · "${searchTerm}"`}
                     </p>
                 </div>
-                <button
+                <Button
                     onClick={() => {
                         syncMutation.mutate(undefined, {
                             onSuccess: () => toast.success('Synced with JotForm'),
@@ -107,21 +106,12 @@ export function ApplicantList() {
                         });
                     }}
                     disabled={syncMutation.isPending}
-                    className="
-                        flex items-center justify-center gap-2
-                        h-8 px-3.5
-                        bg-primary text-primary-foreground
-                        rounded-md text-[13px] font-semibold
-                        hover:bg-primary/90 active:scale-[0.98]
-                        transition-all duration-100
-                        whitespace-nowrap w-full sm:w-auto
-                        disabled:opacity-40 disabled:cursor-not-allowed
-                        shadow-sm
-                    "
+                    size="sm"
+                    className="w-full sm:w-auto"
                 >
                     <RefreshCw size={13} strokeWidth={2.25} className={syncMutation.isPending ? 'animate-spin' : ''} />
                     {syncMutation.isPending ? 'Syncing…' : 'Sync JotForm'}
-                </button>
+                </Button>
             </div>
 
             {/* ── Filter toolbar ── */}
@@ -209,7 +199,7 @@ export function ApplicantList() {
                                             {/* Monogram */}
                                             <div
                                                 className="w-7 h-7 rounded-md text-[10px] font-bold flex items-center justify-center flex-shrink-0 select-none"
-                                                style={{ fontFamily: 'var(--font-mono)', background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
+                                                style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
                                             >
                                                 {applicant.first_name?.[0]}{applicant.last_name?.[0]}
                                             </div>

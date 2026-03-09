@@ -10,6 +10,7 @@ import {
 } from "../../hooks/useUserManagement";
 import type { TenantUser, TenantRole } from "../../hooks/useUserManagement";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 // ---------------------------------------------------------------------------
 // Shared styles (matches SystemSettingsPage)
@@ -17,8 +18,7 @@ import { cn } from "@/lib/utils";
 
 const inputCls =
   "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50 [&_option]:bg-card [&_option]:text-foreground";
-const labelCls =
-  "block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5";
+const labelCls = "form-label";
 
 // ---------------------------------------------------------------------------
 // Role badge
@@ -32,12 +32,12 @@ const ROLE_LABELS: Record<TenantRole, string> = {
 
 function RoleBadge({ role }: { role: TenantRole }) {
   const styles: Record<TenantRole, string> = {
-    platform_admin: "bg-purple-500/15 text-purple-300 border border-purple-500/30",
-    tenant_admin: "bg-primary/15 text-primary border border-primary/30",
-    hr_admin: "bg-blue-500/15 text-blue-300 border border-blue-500/30",
+    platform_admin: "status-chip status-chip-cyan",
+    tenant_admin: "status-chip status-chip-green",
+    hr_admin: "status-chip status-chip-muted",
   };
   return (
-    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium font-mono", styles[role])}>
+    <span className={styles[role]}>
       {ROLE_LABELS[role]}
     </span>
   );
@@ -49,12 +49,12 @@ function RoleBadge({ role }: { role: TenantRole }) {
 
 function StatusBadge({ status }: { status: TenantUser["status"] }) {
   const styles = {
-    active: "text-primary",
-    pending: "text-amber-400",
-    deactivated: "text-muted-foreground",
+    active: "status-chip status-chip-green",
+    pending: "status-chip status-chip-amber",
+    deactivated: "status-chip status-chip-muted",
   };
   return (
-    <span className={cn("text-[11px] font-mono", styles[status])}>
+    <span className={styles[status]}>
       {status.charAt(0).toUpperCase() + status.slice(1)}
     </span>
   );
@@ -94,7 +94,7 @@ function UserRow({ user }: { user: TenantUser }) {
       <td className="px-4 py-3">
         <div>
           <p className="text-foreground text-[13px]">{user.email ?? "—"}</p>
-          <p className="text-muted-foreground text-[11px] font-mono mt-0.5">
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
             {user.last_sign_in_at
               ? `Last seen ${new Date(user.last_sign_in_at).toLocaleDateString()}`
               : "Never signed in"}
@@ -185,7 +185,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="border border-border rounded-lg p-5 w-full max-w-md" style={{ background: "var(--background)" }}>
+      <div className="saas-card w-full max-w-md p-5">
         <h3 className="text-foreground font-semibold text-[13px] mb-4">Invite Team Member</h3>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -212,20 +212,22 @@ function InviteModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="flex gap-3 pt-1">
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting || invite.isPending}
-              className="flex-1 inline-flex items-center justify-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 transition-colors"
+              size="sm"
+              className="flex-1"
             >
               {invite.isPending ? "Sending\u2026" : "Send Invitation"}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center h-8 px-3 rounded-md border border-border text-muted-foreground text-[13px] hover:bg-muted/20 transition-colors"
+              variant="outline"
+              size="sm"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -243,38 +245,38 @@ export function UserManagementPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="!font-sans !text-xl !font-semibold !normal-case !tracking-normal !text-foreground flex items-center gap-2">
-            <UserCog size={20} className="text-primary" />
-            Team Members
-          </h2>
-          <p className="text-muted-foreground text-[13px] mt-1">
+      <div className="flex items-end justify-between gap-4">
+        <div className="pl-1">
+          <div className="flex items-center gap-2">
+            <UserCog size={18} className="text-primary" />
+            <h1 className="page-header-title">Team Members</h1>
+          </div>
+          <p className="page-header-meta">
             Manage who has access to your tenant's compliance data.
           </p>
         </div>
-        <button
+        <Button
           onClick={() => setShowInvite(true)}
-          className="inline-flex items-center gap-2 h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors"
+          size="sm"
         >
           <UserPlus size={13} />
           Invite User
-        </button>
+        </Button>
       </div>
 
-      <div className="border border-border rounded-lg overflow-hidden">
+      <div className="saas-card overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center h-40">
-            <span className="text-muted-foreground font-mono text-[13px]">Loading users&hellip;</span>
+            <span className="text-[13px] text-muted-foreground">Loading users&hellip;</span>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">User</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">Role</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">Status</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">Added</th>
+                <th className="px-4 py-2.5 text-left"><span className="zone-label">User</span></th>
+                <th className="px-4 py-2.5 text-left"><span className="zone-label">Role</span></th>
+                <th className="px-4 py-2.5 text-left"><span className="zone-label">Status</span></th>
+                <th className="px-4 py-2.5 text-left"><span className="zone-label">Added</span></th>
                 <th className="px-4 py-2.5 w-48" />
               </tr>
             </thead>

@@ -30,8 +30,11 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
 
     if (loading || roleLoading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-slate-50">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
+            <div className="flex h-screen items-center justify-center bg-background">
+                <div
+                    className="h-8 w-8 animate-spin rounded-full border-2 border-border"
+                    style={{ borderTopColor: 'var(--primary)' }}
+                />
             </div>
         );
     }
@@ -42,10 +45,12 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
 
     if (allowedRoles && role && !allowedRoles.includes(role)) {
         return (
-            <div className="flex h-screen items-center justify-center bg-slate-50">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-                    <p className="mt-2 text-gray-600">You do not have permission to view this page.</p>
+            <div className="flex h-screen items-center justify-center bg-background px-6">
+                <div className="saas-card max-w-md p-8 text-center">
+                    <h1 className="page-header-title text-destructive">Access Denied</h1>
+                    <p className="page-header-meta">
+                        You do not have permission to view this page.
+                    </p>
                 </div>
             </div>
         );

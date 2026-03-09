@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAIRanking } from '@/hooks/useAI';
 import { Trophy, AlertTriangle, ArrowRight, Target } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ApplicantRankingPanelProps {
     candidates: any[];
@@ -17,48 +18,49 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
 
     if (!data && !loading && !error) {
         return (
-            <div className="p-6 border rounded-lg bg-white dark:bg-gray-800 text-center">
-                <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
+            <div className="saas-card p-6 text-center">
+                <Trophy className="mx-auto mb-3 h-12 w-12" style={{ color: 'var(--severity-medium)' }} />
                 <h3 className="text-lg font-semibold mb-2">AI Candidate Ranking</h3>
-                <p className="text-gray-500 mb-4 max-w-md mx-auto">
+                <p className="mx-auto mb-4 max-w-md text-muted-foreground">
                     Rank {candidates.length} candidates against the job description to identify the top performers.
                 </p>
-                <button
+                <Button
                     onClick={handleRank}
-                    className="px-6 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 transition-colors"
                 >
                     Rank Candidates
-                </button>
+                </Button>
             </div>
         );
     }
 
     if (loading) {
         return (
-            <div className="p-12 border rounded-lg bg-gray-50 dark:bg-gray-800/50 flex flex-col items-center justify-center space-y-4">
+            <div className="ai-surface flex flex-col items-center justify-center space-y-4 p-12">
                 <div className="relative">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                    <Trophy className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-blue-600" />
+                    <div className="h-12 w-12 animate-spin rounded-full border-2 border-border" style={{ borderTopColor: 'var(--primary)' }} />
+                    <Trophy className="absolute top-1/2 left-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform text-primary" />
                 </div>
-                <p className="text-gray-500 animate-pulse">Comparing candidates against requirements...</p>
+                <p className="animate-pulse text-muted-foreground">Comparing candidates against requirements...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="p-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/10">
-                <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+            <div className="rounded-lg border border-destructive/15 bg-destructive/8 p-4">
+                <div className="flex items-center gap-2 text-destructive">
                     <AlertTriangle className="w-5 h-5" />
                     <h3 className="font-medium">Ranking Failed</h3>
                 </div>
-                <p className="mt-1 text-sm text-red-600 dark:text-red-300">{error.message}</p>
-                <button
+                <p className="mt-1 text-sm text-destructive">{error.message}</p>
+                <Button
                     onClick={handleRank}
-                    className="mt-3 text-sm font-medium text-red-700 underline hover:text-red-800"
+                    variant="destructive"
+                    size="sm"
+                    className="mt-3"
                 >
                     Try Again
-                </button>
+                </Button>
             </div>
         );
     }
@@ -67,11 +69,11 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Target className="w-5 h-5 text-blue-500" />
+                    <Target className="h-5 w-5 text-primary" />
                     Ranking Results
                 </h3>
-                <span className="text-sm text-gray-500">
-                    Best Match: <span className="font-medium text-gray-900 dark:text-white">{data?.rankings.find(r => r.applicant_id === data.best_candidate_id)?.name}</span>
+                <span className="text-sm text-muted-foreground">
+                    Best Match: <span className="font-medium text-foreground">{data?.rankings.find(r => r.applicant_id === data.best_candidate_id)?.name}</span>
                 </span>
             </div>
 
@@ -80,8 +82,8 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
                     <div
                         key={ranking.applicant_id}
                         className={`border rounded-lg transition-all ${showDetails === ranking.applicant_id
-                                ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
-                                : 'bg-white border-gray-200 hover:border-blue-300 dark:bg-gray-800 dark:border-gray-700'
+                                ? 'bg-primary/8 border-primary/20'
+                                : 'bg-card border-border hover:border-primary/25'
                             }`}
                     >
                         <div
@@ -91,18 +93,18 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
                             <div className="flex items-center gap-4">
                                 <div className={`
                   flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm
-                  ${index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                                        index === 1 ? 'bg-gray-100 text-gray-700' :
-                                            index === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}
+                  ${index === 0 ? 'bg-[color:var(--severity-medium)]/12 text-[color:var(--severity-medium)]' :
+                                        index === 1 ? 'bg-muted text-muted-foreground' :
+                                            index === 2 ? 'bg-[color:var(--severity-high)]/12 text-[color:var(--severity-high)]' : 'bg-secondary text-muted-foreground'}
                 `}>
                                     #{index + 1}
                                 </div>
                                 <div>
-                                    <h4 className="font-medium text-gray-900 dark:text-white">{ranking.name}</h4>
+                                    <h4 className="font-medium text-foreground">{ranking.name}</h4>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ranking.match_level === 'High' ? 'bg-green-100 text-green-700' :
-                                                ranking.match_level === 'Medium' ? 'bg-blue-100 text-blue-700' :
-                                                    'bg-gray-100 text-gray-600'
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ranking.match_level === 'High' ? 'bg-[color:var(--severity-low)]/12 text-[color:var(--severity-low)]' :
+                                                ranking.match_level === 'Medium' ? 'bg-primary/10 text-primary' :
+                                                    'bg-muted text-muted-foreground'
                                             }`}>
                                             {ranking.match_level} Match
                                         </span>
@@ -112,15 +114,15 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
 
                             <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{ranking.score}</div>
-                                    <div className="text-xs text-gray-500">Score</div>
+                                    <div className="text-2xl font-bold text-primary">{ranking.score}</div>
+                                    <div className="text-xs text-muted-foreground">Score</div>
                                 </div>
-                                <ArrowRight className={`w-5 h-5 text-gray-400 transition-transform ${showDetails === ranking.applicant_id ? 'rotate-90' : ''}`} />
+                                <ArrowRight className={`h-5 w-5 text-muted-foreground transition-transform ${showDetails === ranking.applicant_id ? 'rotate-90' : ''}`} />
                             </div>
                         </div>
 
                         {showDetails === ranking.applicant_id && (
-                            <div className="px-4 pb-4 pt-0 text-sm text-gray-600 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700 mt-2 pt-3">
+                            <div className="mt-2 border-t border-border px-4 pb-4 pt-3 text-sm text-muted-foreground">
                                 <p className="leading-relaxed">{ranking.reason}</p>
                             </div>
                         )}

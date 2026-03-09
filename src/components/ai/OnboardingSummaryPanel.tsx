@@ -1,5 +1,6 @@
 import { useAIOnboarding } from '@/hooks/useAI';
 import { ClipboardList, CheckSquare, Clock, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface OnboardingSummaryPanelProps {
     employee: any;
@@ -15,20 +16,20 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
 
     if (!data && !loading && !error) {
         return (
-            <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800/50">
+            <div className="ai-surface p-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <ClipboardList className="w-5 h-5 text-indigo-500" />
-                        <h3 className="font-medium">Onboarding Assistant</h3>
+                        <ClipboardList className="h-5 w-5" style={{ color: 'var(--ai-text)' }} />
+                        <h3 className="text-[15px] font-semibold tracking-[-0.015em] text-foreground">Onboarding Assistant</h3>
                     </div>
-                    <button
+                    <Button
                         onClick={handleAnalyze}
-                        className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 transition-colors"
+                        size="sm"
                     >
                         Analyze Status
-                    </button>
+                    </Button>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Identify missing documents and next steps for {employee.name}.
                 </p>
             </div>
@@ -37,48 +38,48 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
 
     if (loading) {
         return (
-            <div className="p-8 border rounded-lg bg-gray-50 dark:bg-gray-800/50 flex flex-col items-center justify-center space-y-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <p className="text-sm text-gray-500 animate-pulse">Checking requirements...</p>
+            <div className="ai-surface flex flex-col items-center justify-center space-y-3 p-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-border" style={{ borderTopColor: 'var(--primary)' }} />
+                <p className="animate-pulse text-sm text-muted-foreground">Checking requirements...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="p-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/10">
-                <p className="text-sm text-red-600 dark:text-red-300">{error.message}</p>
-                <button onClick={handleAnalyze} className="mt-2 text-sm font-medium text-red-700 underline">Try Again</button>
+            <div className="rounded-lg border border-destructive/15 bg-destructive/8 p-4">
+                <p className="text-sm text-destructive">{error.message}</p>
+                <Button onClick={handleAnalyze} variant="destructive" size="sm" className="mt-2">Try Again</Button>
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
-            <div className="p-6 border rounded-lg bg-white dark:bg-gray-800 shadow-sm">
+            <div className="saas-card p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <ClipboardList className="w-5 h-5 text-indigo-500" />
+                    <ClipboardList className="h-5 w-5" style={{ color: 'var(--ai-text)' }} />
                     <h3 className="text-lg font-semibold">Onboarding Status</h3>
                 </div>
 
-                <p className="text-gray-700 dark:text-gray-300 mb-6 font-medium">
+                <p className="mb-6 font-medium text-foreground/80">
                     {data?.status_summary}
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Missing Documents */}
                     <div>
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-400 mb-3">
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive">
                             <AlertCircle className="w-4 h-4" />
                             Missing Documents
                         </h4>
                         <ul className="space-y-2">
                             {data?.missing_documents.length === 0 ? (
-                                <li className="text-sm text-gray-500 italic">All documents submitted.</li>
+                                <li className="text-sm italic text-muted-foreground">All documents submitted.</li>
                             ) : (
                                 data?.missing_documents.map((doc, i) => (
-                                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
+                                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                        <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-destructive" />
                                         {doc}
                                     </li>
                                 ))
@@ -88,14 +89,14 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
 
                     {/* Next Steps */}
                     <div>
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-indigo-700 dark:text-indigo-400 mb-3">
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
                             <CheckSquare className="w-4 h-4" />
                             Recommended Actions
                         </h4>
                         <ul className="space-y-2">
                             {data?.next_steps.map((step, i) => (
-                                <li key={i} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                                <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                                     {step}
                                 </li>
                             ))}
@@ -104,9 +105,9 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
                 </div>
 
                 {data?.estimated_completion && (
-                    <div className="mt-6 pt-4 border-t dark:border-gray-700 flex items-center gap-2 text-sm text-gray-500">
+                    <div className="mt-6 flex items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
                         <Clock className="w-4 h-4" />
-                        Estimated Completion: <span className="font-medium text-gray-900 dark:text-white">{data.estimated_completion}</span>
+                        Estimated Completion: <span className="font-medium text-foreground">{data.estimated_completion}</span>
                     </div>
                 )}
             </div>

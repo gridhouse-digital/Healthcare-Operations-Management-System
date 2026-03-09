@@ -15,6 +15,7 @@ import { ConnectorStatusBadge } from "./ConnectorStatusBadge";
 import type { ConnectorStatus, LdGroupMapping } from "../types/tenant-settings";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/hooks/useUserRole";
+import { Button } from "@/components/ui/button";
 
 // ---------------------------------------------------------------------------
 // Shared styles (matches SystemSettingsPage)
@@ -22,9 +23,9 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 const inputCls =
   "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50";
-const labelCls =
-  "block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5";
-const sectionCls = "p-5 border border-border rounded-lg space-y-4";
+const labelCls = "form-label";
+const helperCls = "mt-1 text-[12px] tracking-[0.01em] text-muted-foreground";
+const sectionCls = "saas-card p-5 space-y-4";
 
 // ---------------------------------------------------------------------------
 // BambooHR form
@@ -97,7 +98,7 @@ function BambooHRConnector({ configured, savedSubdomain }: { configured: boolean
             placeholder="yourcompany"
             className={inputCls}
           />
-          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+          <p className={helperCls}>
             yourcompany.bamboohr.com &rarr; enter <span className="text-foreground/70">yourcompany</span>
           </p>
         </div>
@@ -112,29 +113,30 @@ function BambooHRConnector({ configured, savedSubdomain }: { configured: boolean
             className={inputCls}
           />
           {configured && (
-            <p className="text-[11px] text-muted-foreground font-mono mt-1">
+            <p className={helperCls}>
               A key is already configured. Enter a new key to replace it.
             </p>
           )}
         </div>
 
         <div className="flex gap-3 pt-1">
-          <button
+          <Button
             type="button"
             disabled={!subdomain || !apiKey || testConnector.isPending}
             onClick={onTest}
-            className="inline-flex items-center h-8 px-3 rounded-md border border-primary text-primary text-[13px] font-medium hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            variant="outline"
+            size="sm"
           >
             {testConnector.isPending ? "Testing\u2026" : "Test Connection"}
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="submit"
             disabled={!testPassed || isSubmitting || saveBambooHR.isPending}
-            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            size="sm"
           >
             {saveBambooHR.isPending ? "Saving\u2026" : "Save"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -209,29 +211,30 @@ function JazzHRConnector({ configured }: { configured: boolean }) {
             className={inputCls}
           />
           {configured && (
-            <p className="text-[11px] text-muted-foreground font-mono mt-1">
+            <p className={helperCls}>
               A key is already configured. Enter a new key to replace it.
             </p>
           )}
         </div>
 
         <div className="flex gap-3 pt-1">
-          <button
+          <Button
             type="button"
             disabled={!apiKey || testConnector.isPending}
             onClick={onTest}
-            className="inline-flex items-center h-8 px-3 rounded-md border border-primary text-primary text-[13px] font-medium hover:bg-primary/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            variant="outline"
+            size="sm"
           >
             {testConnector.isPending ? "Testing\u2026" : "Test Connection"}
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="submit"
             disabled={!testPassed || isSubmitting || saveJazzHR.isPending}
-            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            size="sm"
           >
             {saveJazzHR.isPending ? "Saving\u2026" : "Save"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -359,7 +362,7 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
             className={inputCls}
           />
           {configured && (
-            <p className="text-[11px] text-muted-foreground font-mono mt-1">
+            <p className={helperCls}>
               Already configured. Enter a new value to replace it.
             </p>
           )}
@@ -374,19 +377,19 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
             autoComplete="off"
             className={inputCls}
           />
-          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+          <p className={helperCls}>
             Generate in WP Admin &rarr; Users &rarr; Profile &rarr; Application Passwords
           </p>
         </div>
 
         <div className="flex gap-3 pt-1">
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting || saveWordPress.isPending}
-            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            size="sm"
           >
             {saveWordPress.isPending ? "Saving\u2026" : "Save"}
-          </button>
+          </Button>
         </div>
       </form>
 
@@ -400,18 +403,19 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
                 Import existing WordPress/LearnDash subscribers as employees
               </p>
             </div>
-            <button
+          <Button
               type="button"
               disabled={syncing || syncCooldown > 0}
               onClick={onSyncUsers}
-              className="inline-flex items-center h-8 px-3 rounded-md border border-border text-foreground text-[13px] font-medium hover:bg-muted/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            variant="outline"
+            size="sm"
             >
               {syncing
                 ? "Syncing\u2026"
                 : syncCooldown > 0
                   ? `Available in ${syncCooldown}s`
                   : "Sync Users"}
-            </button>
+          </Button>
           </div>
           <div className="flex items-center justify-between">
             <div>
@@ -420,18 +424,19 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
                 Pull course progress for all employees from LearnDash
               </p>
             </div>
-            <button
+          <Button
               type="button"
               disabled={syncingTraining || trainingCooldown > 0}
               onClick={onSyncTraining}
-              className="inline-flex items-center h-8 px-3 rounded-md border border-border text-foreground text-[13px] font-medium hover:bg-muted/30 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            variant="outline"
+            size="sm"
             >
               {syncingTraining
                 ? "Syncing\u2026"
                 : trainingCooldown > 0
                   ? `Available in ${trainingCooldown}s`
                   : "Sync Training"}
-            </button>
+          </Button>
           </div>
         </div>
       )}
@@ -491,23 +496,23 @@ function JotFormConnector({ configured }: { configured: boolean }) {
             className={inputCls}
           />
           {configured && (
-            <p className="text-[11px] text-muted-foreground font-mono mt-1">
+            <p className={helperCls}>
               A key is already configured. Enter a new key to replace it.
             </p>
           )}
-          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+          <p className={helperCls}>
             Find your API key at JotForm &rarr; Settings &rarr; API
           </p>
         </div>
 
         <div className="flex gap-3 pt-1">
-          <button
+          <Button
             type="submit"
             disabled={isSubmitting || saveJotForm.isPending}
-            className="inline-flex items-center h-8 px-3 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            size="sm"
           >
             {saveJotForm.isPending ? "Saving\u2026" : "Save"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>
@@ -696,14 +701,14 @@ function LdGroupMappingsSection() {
       <div className={sectionCls}>
         <p className="text-[13px] font-semibold text-foreground">LearnDash Group Mappings</p>
         <div className="flex items-center justify-center h-20">
-          <span className="text-muted-foreground font-mono text-[13px]">Loading mappings&hellip;</span>
+          <span className="text-[13px] text-muted-foreground">Loading mappings&hellip;</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="saas-card overflow-hidden">
       <div className="p-5 pb-0">
         <p className="text-[13px] font-semibold text-foreground">LearnDash Group Mappings</p>
         <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -716,11 +721,11 @@ function LdGroupMappingsSection() {
         <table className="w-full">
           <thead>
             <tr className="border-y border-border">
-              <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">
-                Job Title
+              <th className="px-4 py-2.5 text-left">
+                <span className="zone-label">Job Title</span>
               </th>
-              <th className="px-4 py-2.5 text-left text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground">
-                LearnDash Group ID
+              <th className="px-4 py-2.5 text-left">
+                <span className="zone-label">LearnDash Group ID</span>
               </th>
               <th className="px-4 py-2.5 w-24" />
             </tr>
@@ -751,13 +756,15 @@ function LdGroupMappingsSection() {
         </table>
 
         <div className={cn("px-4 py-3 border-t border-border", adding && "hidden")}>
-          <button
+          <Button
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 text-primary text-[13px] font-medium hover:text-primary/80 transition-colors"
+            variant="ghost"
+            size="sm"
+            className="px-0"
           >
             <Plus size={14} />
             Add Mapping
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -775,27 +782,27 @@ export function ConnectorSettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="text-muted-foreground font-mono text-[13px]">Loading settings&hellip;</span>
+        <span className="text-[13px] text-muted-foreground">Loading settings&hellip;</span>
       </div>
     );
   }
 
   if (error || !settings) {
     return (
-      <div className="p-5 border border-red-500/20 rounded-lg bg-red-500/5">
-        <p className="text-red-400 text-[13px]">Failed to load connector settings.</p>
+      <div className="rounded-lg border border-destructive/15 bg-destructive/8 p-5">
+        <p className="text-[13px] text-destructive">Failed to load connector settings.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h2 className="!font-sans !text-xl !font-semibold !normal-case !tracking-normal !text-foreground flex items-center gap-2">
-          <Plug size={20} className="text-primary" />
-          Connector Settings
-        </h2>
-        <p className="text-muted-foreground text-[13px] mt-1">
+      <div className="pl-1">
+        <div className="flex items-center gap-2">
+          <Plug size={18} className="text-primary" />
+          <h1 className="page-header-title">Connector Settings</h1>
+        </div>
+        <p className="page-header-meta">
           Configure your ATS integrations. API keys are encrypted at rest and
           never returned to the browser after saving.
         </p>
