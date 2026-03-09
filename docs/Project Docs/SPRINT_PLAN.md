@@ -172,6 +172,46 @@
 
 ---
 
+## EPIC 4.5 — WordPress User Sync + Compliance Visibility [IN PROGRESS]
+
+**Goal:** Import existing WordPress/LearnDash users into the people table. Show all employees in compliance view, even those with no training records. Addresses the reality that WP may be the only system with an employee roster (no ATS connected yet).
+
+### Story 4.5.1 — sync-wp-users EF
+**AC:**
+- New EF fetches all WP users (role=subscriber) via `GET /wp-json/wp/v2/users`
+- Paginated (per_page=100, x-wp-totalpages header)
+- Upserts into `people`: sets wp_user_id, first_name, last_name, email
+- profile_source='wordpress' only on first insert (first connector wins)
+- Never overwrites hired_at, job_title, or profile_source if already set
+- Uses cronOrTenantGuard (cron mode = all tenants, user mode = own tenant)
+- Run dedup: skip if running <1hr, mark stale if >1hr
+- Logs run to integration_log (source='wordpress')
+- pg_cron daily at 6:30 AM UTC (30 min before sync-training at 7:00 AM)
+- Manual trigger via "Sync Users" button on Connectors page
+- Status: [~] In progress
+
+### Story 4.5.2 — Compliance shows all employees
+**AC:**
+- Training compliance page shows ALL employees (type='employee'), not just those with training records
+- LEFT JOIN from people onto v_training_compliance (instead of inner join)
+- New compliance status: "No Courses Assigned" for employees with zero training records
+- Distinct visual badge (neutral/grey) for "No Courses Assigned"
+- Stats cards updated to reflect total employee count
+- Status: [ ] Not started
+
+### Story 4.5.3 — Sync Users button on Connectors page
+**AC:**
+- "Sync WordPress Users" button appears after WP credentials saved and tested
+- Gated by tenant_admin+ role (hidden for hr_admin)
+- Invokes sync-wp-users EF with user JWT
+- Shows toast with results (synced, skipped, errors)
+- 60-second cooldown after trigger (button disabled with timer)
+- Status: [ ] Not started
+
+**Epic 4.5 Gate:** sync-wp-users pulls all WP subscribers into people table. Compliance page shows all employees including those with no courses.
+
+---
+
 ## EPIC 5 — JotForm Ingestion (Credentials/Policies) [NOT STARTED]
 
 ### Story 5.1 — JotForm intake EF (multi-tenant aware)
