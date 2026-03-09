@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAISummary } from '@/hooks/useAI';
 import { Sparkles, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';
 
@@ -73,7 +72,7 @@ export function ApplicantSummaryPanel({ applicant }: ApplicantSummaryPanelProps)
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30">
                         <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                            Score: {data?.score}/100
+                            AI Summary
                         </span>
                     </div>
                 </div>

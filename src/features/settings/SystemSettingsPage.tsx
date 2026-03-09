@@ -7,9 +7,8 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const inputCls =
   "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50";
-const labelCls =
-  "block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5";
-const sectionCls = "p-5 border border-border rounded-lg space-y-4";
+const labelCls = "form-label";
+const sectionCls = "saas-card p-5 space-y-4";
 
 export function SystemSettingsPage() {
   const [settingsMap, setSettingsMap] = useState<Record<string, string>>({});
@@ -92,7 +91,7 @@ export function SystemSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="text-[#6B7280] font-mono text-sm">
+        <span className="text-sm tracking-[0.02em] text-muted-foreground">
           Loading settings...
         </span>
       </div>
@@ -102,7 +101,7 @@ export function SystemSettingsPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h2 className="!font-sans !text-xl !font-semibold !normal-case !tracking-normal !text-foreground flex items-center gap-2">
+        <h2 className="!font-sans !text-xl !font-semibold !normal-case !tracking-[-0.02em] !text-foreground flex items-center gap-2">
           <SettingsIcon size={20} className="text-primary" />
           System Settings
         </h2>
@@ -135,7 +134,7 @@ export function SystemSettingsPage() {
             placeholder="https://.../logo-light.png"
             className={inputCls}
           />
-          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+          <p className="mt-1 text-[12px] tracking-[0.01em] text-muted-foreground">
             Used in light mode and emails
           </p>
         </div>
@@ -147,7 +146,7 @@ export function SystemSettingsPage() {
             placeholder="https://.../logo-dark.png"
             className={inputCls}
           />
-          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+          <p className="mt-1 text-[12px] tracking-[0.01em] text-muted-foreground">
             Used in dark mode
           </p>
         </div>
@@ -171,7 +170,7 @@ export function SystemSettingsPage() {
             placeholder="30"
             className={inputCls}
           />
-          <p className="text-[11px] text-muted-foreground font-mono mt-1">
+          <p className="mt-1 text-[12px] tracking-[0.01em] text-muted-foreground">
             System will alert when documents are within this many days of
             expiring
           </p>
@@ -212,7 +211,7 @@ export function SystemSettingsPage() {
             <div
               key={index}
               className="flex items-center justify-between px-3 py-2 rounded-md border border-border group transition-colors"
-              style={{ background: "hsl(0 0% 100% / 0.03)" }}
+              style={{ background: "color-mix(in srgb, var(--card) 85%, var(--secondary) 15%)" }}
             >
               <span className="text-[13px] text-foreground">{role}</span>
               <button
@@ -224,7 +223,7 @@ export function SystemSettingsPage() {
             </div>
           ))}
           {jobRoles.length === 0 && (
-            <p className="text-[12px] text-muted-foreground font-mono italic">
+            <p className="text-[12px] tracking-[0.01em] text-muted-foreground">
               No active job roles configured.
             </p>
           )}

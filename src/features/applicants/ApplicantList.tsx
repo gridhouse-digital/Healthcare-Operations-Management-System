@@ -90,7 +90,7 @@ export function ApplicantList() {
             {/* ── Page header ── */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-foreground" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
+                    <h1 className="text-foreground" style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
                         Applicants
                     </h1>
                     <p className="mt-1 text-muted-foreground/55" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6875rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
@@ -209,7 +209,7 @@ export function ApplicantList() {
                                             {/* Monogram */}
                                             <div
                                                 className="w-7 h-7 rounded-md text-[10px] font-bold flex items-center justify-center flex-shrink-0 select-none"
-                                                style={{ fontFamily: 'var(--font-mono)', background: 'hsl(172 100% 40% / 0.15)', color: 'hsl(172 100% 40%)' }}
+                                                style={{ fontFamily: 'var(--font-mono)', background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
                                             >
                                                 {applicant.first_name?.[0]}{applicant.last_name?.[0]}
                                             </div>

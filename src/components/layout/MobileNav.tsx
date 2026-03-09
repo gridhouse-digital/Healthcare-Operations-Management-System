@@ -57,14 +57,14 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
                 {/* Nav */}
                 <nav className="flex-1 overflow-y-auto py-4 px-2">
                     <p
-                        className="px-3 mb-3 uppercase select-none"
+                        className="px-3 mb-3 select-none"
                         style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: '0.5625rem',
-                            fontWeight: 500,
-                            letterSpacing: '0.10em',
+                            fontFamily: 'var(--font-sans)',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            letterSpacing: '-0.01em',
                             color: 'var(--sidebar-foreground)',
-                            opacity: 0.35,
+                            opacity: 0.68,
                         }}
                     >
                         Modules
@@ -86,21 +86,22 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
                                             'group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-md transition-all duration-100',
                                         )}
                                         style={{
-                                            color: isActive ? 'hsl(196 84% 64%)' : 'hsl(0 0% 44%)',
-                                            background: isActive ? 'hsl(196 84% 42% / 0.10)' : 'transparent',
+                                            color: isActive ? 'var(--sidebar-primary)' : 'var(--sidebar-foreground)',
+                                            background: isActive ? 'color-mix(in srgb, var(--sidebar-primary) 12%, transparent)' : 'transparent',
+                                            border: isActive ? '1px solid color-mix(in srgb, var(--sidebar-primary) 20%, transparent)' : '1px solid transparent',
                                         }}
                                     >
                                         {isActive && (
                                             <div
                                                 className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[18px] rounded-r-full"
-                                                style={{ background: 'hsl(196 84% 52%)' }}
+                                                style={{ background: 'var(--sidebar-primary)' }}
                                             />
                                         )}
                                         <item.icon
                                             size={15}
                                             strokeWidth={isActive ? 2 : 1.75}
                                             className="flex-shrink-0"
-                                            style={{ color: isActive ? 'hsl(196 84% 55%)' : 'currentColor' }}
+                                            style={{ color: isActive ? 'var(--sidebar-primary)' : 'currentColor' }}
                                         />
                                         <span className={cn(
                                             "text-[13px] leading-none",

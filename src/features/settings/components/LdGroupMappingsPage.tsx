@@ -6,9 +6,8 @@ import { useLdGroupMappings, useSaveLdMappings } from "../hooks/useLdGroupMappin
 import type { LdGroupMapping } from "../types/tenant-settings";
 import { cn } from "@/lib/utils";
 
-// ---------------------------------------------------------------------------
-// Row editing
-// ---------------------------------------------------------------------------
+const inputCls = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/35";
+const idInputCls = `${inputCls} tracking-[0.01em]`;
 
 interface MappingRowProps {
   mapping: LdGroupMapping;
@@ -18,9 +17,7 @@ interface MappingRowProps {
 
 function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
   const [editing, setEditing] = useState(false);
-  const { register, handleSubmit, reset } = useForm<LdGroupMapping>({
-    defaultValues: mapping,
-  });
+  const { register, handleSubmit, reset } = useForm<LdGroupMapping>({ defaultValues: mapping });
 
   function onSave(values: LdGroupMapping) {
     onEdit(values);
@@ -34,33 +31,19 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
 
   if (editing) {
     return (
-      <tr className="border-b border-[#1F2433]">
+      <tr className="border-b border-border">
         <td className="px-4 py-3">
-          <input
-            {...register("job_title", { required: true })}
-            className="w-full rounded-[10px] bg-[#0D0F14] border border-[#00C9B1] text-white px-3 py-1.5 text-sm focus:outline-none"
-          />
+          <input {...register("job_title", { required: true })} className={inputCls} />
         </td>
         <td className="px-4 py-3">
-          <input
-            {...register("group_id", { required: true })}
-            className="w-full rounded-[10px] bg-[#0D0F14] border border-[#00C9B1] text-white px-3 py-1.5 text-sm font-mono focus:outline-none"
-          />
+          <input {...register("group_id", { required: true })} className={idInputCls} />
         </td>
         <td className="px-4 py-3">
           <div className="flex gap-2">
-            <button
-              onClick={handleSubmit(onSave)}
-              className="p-1.5 rounded-[8px] text-[#00C9B1] hover:bg-[#00C9B1]/10 transition-colors"
-              title="Save"
-            >
+            <button onClick={handleSubmit(onSave)} className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10" title="Save">
               <Check size={14} />
             </button>
-            <button
-              onClick={onCancel}
-              className="p-1.5 rounded-[8px] text-[#6B7280] hover:bg-[#1F2433] transition-colors"
-              title="Cancel"
-            >
+            <button onClick={onCancel} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary" title="Cancel">
               <X size={14} />
             </button>
           </div>
@@ -70,23 +53,15 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
   }
 
   return (
-    <tr className="border-b border-[#1F2433] hover:bg-[#1F2433]/40 transition-colors">
-      <td className="px-4 py-3 text-white text-sm">{mapping.job_title}</td>
-      <td className="px-4 py-3 text-[#9CA3AF] text-sm font-mono">{mapping.group_id}</td>
+    <tr className="border-b border-border transition-colors hover:bg-secondary/65">
+      <td className="px-4 py-3 text-sm tracking-[0.005em] text-foreground">{mapping.job_title}</td>
+      <td className="px-4 py-3 text-sm tracking-[0.01em] text-muted-foreground">{mapping.group_id}</td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
-          <button
-            onClick={() => setEditing(true)}
-            className="p-1.5 rounded-[8px] text-[#6B7280] hover:text-[#00C9B1] hover:bg-[#00C9B1]/10 transition-colors"
-            title="Edit"
-          >
+          <button onClick={() => setEditing(true)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary" title="Edit">
             <Pencil size={14} />
           </button>
-          <button
-            onClick={onDelete}
-            className="p-1.5 rounded-[8px] text-[#6B7280] hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Delete"
-          >
+          <button onClick={onDelete} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" title="Delete">
             <Trash2 size={14} />
           </button>
         </div>
@@ -94,10 +69,6 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
     </tr>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Add new mapping row
-// ---------------------------------------------------------------------------
 
 interface AddRowProps {
   onAdd: (mapping: LdGroupMapping) => void;
@@ -108,36 +79,19 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
   const { register, handleSubmit } = useForm<LdGroupMapping>();
 
   return (
-    <tr className="border-b border-[#1F2433] bg-[#00C9B1]/5">
+    <tr className="border-b border-border bg-primary/5">
       <td className="px-4 py-3">
-        <input
-          {...register("job_title", { required: true })}
-          placeholder="e.g. Registered Nurse"
-          className="w-full rounded-[10px] bg-[#0D0F14] border border-[#00C9B1] text-white px-3 py-1.5 text-sm focus:outline-none"
-          autoFocus
-        />
+        <input {...register("job_title", { required: true })} placeholder="e.g. Registered Nurse" className={inputCls} autoFocus />
       </td>
       <td className="px-4 py-3">
-        <input
-          {...register("group_id", { required: true })}
-          placeholder="e.g. 42"
-          className="w-full rounded-[10px] bg-[#0D0F14] border border-[#00C9B1] text-white px-3 py-1.5 text-sm font-mono focus:outline-none"
-        />
+        <input {...register("group_id", { required: true })} placeholder="e.g. 42" className={idInputCls} />
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
-          <button
-            onClick={handleSubmit(onAdd)}
-            className="p-1.5 rounded-[8px] text-[#00C9B1] hover:bg-[#00C9B1]/10 transition-colors"
-            title="Add"
-          >
+          <button onClick={handleSubmit(onAdd)} className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10" title="Add">
             <Check size={14} />
           </button>
-          <button
-            onClick={onCancel}
-            className="p-1.5 rounded-[8px] text-[#6B7280] hover:bg-[#1F2433] transition-colors"
-            title="Cancel"
-          >
+          <button onClick={onCancel} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-secondary" title="Cancel">
             <X size={14} />
           </button>
         </div>
@@ -145,10 +99,6 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
     </tr>
   );
 }
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 
 export function LdGroupMappingsPage() {
   const { data: mappings = [], isLoading } = useLdGroupMappings();
@@ -185,40 +135,35 @@ export function LdGroupMappingsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-40">
-        <span className="text-[#6B7280] font-mono text-sm">Loading mappings…</span>
+      <div className="flex h-40 items-center justify-center">
+        <span className="text-sm tracking-[0.02em] text-muted-foreground">Loading mappings...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl space-y-6">
       <div>
-        <h2 className="text-white text-xl font-semibold">LearnDash Group Mappings</h2>
-        <p className="text-[#6B7280] text-sm mt-1">
-          Map job titles to LearnDash group IDs. New hires are automatically enrolled
-          in the matching groups when they are onboarded.
+        <h2 className="page-header-title text-[1.7rem]">LearnDash Group Mappings</h2>
+        <p className="page-header-meta max-w-xl">
+          Map job titles to LearnDash group IDs so new hires are automatically enrolled in the right learning paths during onboarding.
         </p>
       </div>
 
-      <div className="rounded-[20px] bg-[#1A1D26] border border-[#1F2433] overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-[#1F2433]">
-              <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-[#6B7280]">
-                Job Title
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-mono uppercase tracking-widest text-[#6B7280]">
-                LearnDash Group ID
-              </th>
-              <th className="px-4 py-3 w-24" />
+            <tr className="border-b border-border">
+              <th className="px-4 py-3 text-left"><span className="zone-label">Job Title</span></th>
+              <th className="px-4 py-3 text-left"><span className="zone-label">LearnDash Group ID</span></th>
+              <th className="w-24 px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {displayed.length === 0 && !adding && (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-[#6B7280] text-sm">
-                  No mappings yet. Add your first job title → group ID mapping below.
+                <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No mappings yet. Add your first job title to group mapping below.
                 </td>
               </tr>
             )}
@@ -230,19 +175,14 @@ export function LdGroupMappingsPage() {
                 onDelete={() => handleDelete(i)}
               />
             ))}
-            {adding && (
-              <AddRow
-                onAdd={handleAdd}
-                onCancel={() => setAdding(false)}
-              />
-            )}
+            {adding && <AddRow onAdd={handleAdd} onCancel={() => setAdding(false)} />}
           </tbody>
         </table>
 
-        <div className={cn("px-4 py-3 border-t border-[#1F2433]", adding && "hidden")}>
+        <div className={cn("border-t border-border px-4 py-3", adding && "hidden")}>
           <button
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 text-[#00C9B1] text-sm font-medium hover:text-[#00C9B1]/80 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-medium tracking-[0.01em] text-primary transition-colors hover:text-primary/80"
           >
             <Plus size={14} />
             Add Mapping

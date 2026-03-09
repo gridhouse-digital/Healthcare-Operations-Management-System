@@ -29,35 +29,35 @@ export function ConfirmDialog({
     };
 
     const confirmButtonClass = variant === 'danger'
-        ? 'bg-red-600 hover:bg-red-700 text-white'
-        : 'bg-[#7152F3] hover:bg-[rgba(113,82,243,0.9)] text-white';
+        ? 'border border-destructive/15 bg-destructive/12 text-destructive hover:bg-destructive/18'
+        : 'bg-primary text-primary-foreground hover:bg-primary/90';
 
     return (
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-background/70 backdrop-blur-sm"
                 onClick={onClose}
             />
 
             {/* Dialog */}
             <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md">
-                <div className="bg-white dark:bg-[#1A1A1A] rounded-[20px] border border-[rgba(162,161,168,0.1)] shadow-xl p-6">
+                <div className="rounded-[22px] border border-border/80 bg-card/95 p-6 shadow-2xl backdrop-blur-sm">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold text-[#16151C] dark:text-white">
+                        <h2 className="text-[1.05rem] font-semibold tracking-[-0.02em] text-foreground">
                             {title}
                         </h2>
                         <button
                             onClick={onClose}
-                            className="text-[#A2A1A8] hover:text-[#16151C] dark:hover:text-white transition-colors"
+                            className="text-muted-foreground transition-colors hover:text-foreground"
                         >
                             <X size={20} />
                         </button>
                     </div>
 
                     {/* Description */}
-                    <p className="text-[#A2A1A8] mb-6 text-sm leading-relaxed">
+                    <p className="mb-6 text-sm leading-relaxed tracking-[0.005em] text-muted-foreground">
                         {description}
                     </p>
 
@@ -65,13 +65,13 @@ export function ConfirmDialog({
                     <div className="flex gap-3">
                         <button
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 border border-[rgba(162,161,168,0.2)] text-[#16151C] dark:text-white rounded-[10px] hover:bg-[rgba(162,161,168,0.05)] transition-colors font-light"
+                            className="flex-1 rounded-xl border border-border bg-background px-4 py-2 text-[13px] font-semibold tracking-[0.01em] text-foreground transition-colors hover:bg-muted/60"
                         >
                             {cancelText}
                         </button>
                         <button
                             onClick={handleConfirm}
-                            className={`flex-1 px-4 py-2 rounded-[10px] transition-colors font-light ${confirmButtonClass}`}
+                            className={`flex-1 rounded-xl px-4 py-2 text-[13px] font-semibold tracking-[0.01em] transition-colors ${confirmButtonClass}`}
                         >
                             {confirmText}
                         </button>

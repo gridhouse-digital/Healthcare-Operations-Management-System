@@ -75,11 +75,11 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                 {/* Monogram icon — always visible */}
                 <div
                     className="w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center"
-                    style={{ background: 'hsl(196 84% 52% / 0.14)' }}
+                    style={{ background: 'color-mix(in srgb, var(--sidebar-primary) 18%, transparent)' }}
                 >
                     <span
                         className="text-[11px] font-bold select-none"
-                        style={{ fontFamily: 'var(--font-mono)', color: 'hsl(196 84% 60%)' }}
+                        style={{ fontFamily: 'var(--font-mono)', color: 'var(--sidebar-primary)' }}
                     >
                         P
                     </span>
@@ -172,12 +172,12 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                             >
                                 <div
                                     className="w-6 h-6 rounded-md flex-shrink-0 overflow-hidden"
-                                    style={{ background: 'hsl(196 84% 36% / 0.3)' }}
+                                    style={{ background: 'color-mix(in srgb, var(--sidebar-primary) 24%, transparent)' }}
                                 >
                                     <Avatar className="h-full w-full rounded-md">
                                         <AvatarFallback
                                             className="text-[9px] font-bold bg-transparent rounded-md"
-                                            style={{ fontFamily: 'var(--font-mono)', color: 'hsl(196 84% 62%)' }}
+                                            style={{ fontFamily: 'var(--font-mono)', color: 'var(--sidebar-primary)' }}
                                         >
                                             {userMeta.fullName
                                                 .split(' ')
@@ -193,8 +193,8 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                                         {userMeta.fullName}
                                     </p>
                                     <p
-                                        className="text-[10px] capitalize mt-0.5 leading-none"
-                                        style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em', color: 'var(--muted-foreground)' }}
+                                        className="mt-0.5 text-[10px] capitalize leading-none tracking-[0.03em]"
+                                        style={{ color: 'var(--muted-foreground)' }}
                                     >
                                         {(userMeta.role || 'Staff').replace('_', ' ')}
                                     </p>
@@ -203,10 +203,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44 mt-1">
-                            <DropdownMenuLabel
-                                className="text-[10px] font-medium uppercase"
-                                style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.08em', color: 'var(--muted-foreground)' }}
-                            >
+                            <DropdownMenuLabel className="text-[10px] font-medium uppercase tracking-[0.06em]">
                                 Account
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />

@@ -84,15 +84,14 @@ export function Sidebar() {
                             {/* Group label — only in expanded mode */}
                             {expanded && (
                                 <p
-                                    className="px-2 pt-1.5 pb-0.5 select-none"
+                                    className="px-2.5 pt-2 pb-1 select-none"
                                     style={{
-                                        fontFamily: 'var(--font-mono)',
-                                        fontSize: '0.5625rem',
-                                        fontWeight: 500,
-                                        letterSpacing: '0.10em',
-                                        textTransform: 'uppercase',
+                                        fontFamily: 'var(--font-sans)',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 600,
+                                        letterSpacing: '-0.01em',
                                         color: 'var(--sidebar-foreground)',
-                                        opacity: 0.35,
+                                        opacity: 0.68,
                                     }}
                                 >
                                     {group.label}
@@ -116,23 +115,27 @@ export function Sidebar() {
                                                 to={item.href}
                                                 className={cn(
                                                     'group relative flex items-center gap-2.5 rounded-md transition-all duration-100',
-                                                    expanded ? 'px-2.5 py-[7px] w-full' : 'h-9 w-9 mx-auto justify-center',
+                                                    expanded ? 'px-3 py-[9px] w-full' : 'h-9 w-9 mx-auto justify-center',
                                                     isActive
-                                                        ? 'text-[hsl(0_0%_92%)] bg-[hsl(0_0%_100%_/_0.07)]'
-                                                        : 'text-[var(--sidebar-foreground)] hover:text-[hsl(0_0%_82%)] hover:bg-[hsl(0_0%_100%_/_0.04)]'
+                                                        ? 'text-sidebar-primary'
+                                                        : 'text-[var(--sidebar-foreground)] hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/70'
                                                 )}
+                                                style={{
+                                                    background: isActive ? 'color-mix(in srgb, var(--sidebar-primary) 14%, transparent)' : undefined,
+                                                    border: isActive ? '1px solid color-mix(in srgb, var(--sidebar-primary) 20%, transparent)' : '1px solid transparent',
+                                                }}
                                             >
                                                 <item.icon
                                                     size={14}
                                                     strokeWidth={isActive ? 2 : 1.75}
                                                     className="flex-shrink-0 transition-colors"
-                                                    style={{ color: isActive ? 'hsl(196 84% 55%)' : 'currentColor' }}
+                                                    style={{ color: isActive ? 'var(--sidebar-primary)' : 'currentColor' }}
                                                 />
 
                                                 {expanded && (
                                                     <span
                                                         className="text-[13px] leading-none whitespace-nowrap flex-1"
-                                                        style={{ fontWeight: isActive ? 500 : 400 }}
+                                                        style={{ fontWeight: isActive ? 600 : 500 }}
                                                     >
                                                         {item.name}
                                                     </span>
@@ -148,9 +151,9 @@ export function Sidebar() {
                                                 <div
                                                     className="absolute top-1/2 -translate-y-1/2 left-[60px] flex items-center gap-2 px-2.5 py-1.5 rounded-md whitespace-nowrap z-50 pointer-events-none"
                                                     style={{
-                                                        background: 'hsl(0 0% 13%)',
-                                                        border: '1px solid hsl(0 0% 20%)',
-                                                        color: 'hsl(0 0% 88%)',
+                                                        background: 'var(--card)',
+                                                        border: '1px solid var(--border)',
+                                                        color: 'var(--foreground)',
                                                         fontSize: '12px',
                                                         fontWeight: 500,
                                                         boxShadow: 'var(--shadow-lg)',
@@ -178,17 +181,17 @@ export function Sidebar() {
                     <div className="relative flex h-1.5 w-1.5 flex-shrink-0">
                         <span
                             className="animate-dot-ping absolute inline-flex h-full w-full rounded-full opacity-60"
-                            style={{ background: 'hsl(142 60% 48%)' }}
+                            style={{ background: 'var(--severity-low)' }}
                         />
                         <span
                             className="relative inline-flex rounded-full h-1.5 w-1.5"
-                            style={{ background: 'hsl(142 60% 48%)' }}
+                            style={{ background: 'var(--severity-low)' }}
                         />
                     </div>
                     {expanded && (
                         <span
-                            className="text-[10px] font-medium truncate"
-                            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: 'hsl(0 0% 30%)' }}
+                            className="text-[11px] font-medium truncate"
+                            style={{ fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em', color: 'var(--sidebar-foreground)', opacity: 0.85 }}
                         >
                             All systems operational
                         </span>
@@ -211,7 +214,7 @@ export function Sidebar() {
                     title={pinned ? 'Unpin sidebar' : 'Pin sidebar open'}
                     className={cn(
                         'flex items-center justify-center gap-2 rounded-md transition-all duration-100',
-                        'text-[hsl(0_0%_28%)] hover:text-[hsl(0_0%_52%)] hover:bg-[hsl(0_0%_100%_/_0.04)]',
+                        'text-[var(--sidebar-foreground)] hover:text-sidebar-accent-foreground hover:bg-sidebar-accent/70',
                         expanded ? 'w-full h-8 px-2.5' : 'w-9 h-8'
                     )}
                 >
@@ -221,8 +224,8 @@ export function Sidebar() {
                     }
                     {expanded && (
                         <span
-                            className="text-[10px]"
-                            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase' }}
+                            className="text-[11px] font-medium"
+                            style={{ fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em' }}
                         >
                             {pinned ? 'Collapse' : 'Pin open'}
                         </span>

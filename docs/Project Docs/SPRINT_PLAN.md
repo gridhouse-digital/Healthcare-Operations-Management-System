@@ -160,6 +160,14 @@
 - Includes: stats cards, employee table, detail drawer, adjustment modal, course/status filters
 - Bug fixes: dark mode dropdowns, HTML entity decoding in course names, sfwd-courses endpoint
 
+### Story 4.3.1 — Employee training detail page
+**AC:**
+- Row click from `/training` navigates to `/training/:employeeId`
+- Replaces right-side drawer with full dedicated detail page
+- Shows employee header, course cards, adjustment history, and training events
+- Adjustment modal works from detail page and refreshes both detail + list queries
+- Status: [x] Complete — 2026-03-09
+
 ### Story 4.4 — pg_cron + infrastructure fixes
 **AC:**
 - All 5 pg_cron jobs rewritten to use vault.decrypted_secrets (were silently failing via current_setting)

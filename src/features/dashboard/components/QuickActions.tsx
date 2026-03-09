@@ -44,15 +44,15 @@ export function QuickActions() {
                                 'group flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors duration-100',
                             )}
                             style={{ animationDelay: `${(i + 3) * 50}ms` }}
-                            onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = 'hsl(0 0% 100% / 0.04)'}
+                            onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.background = 'var(--secondary)'}
                             onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.background = 'transparent'}
                         >
                             <div
                                 className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center"
                                 style={
                                     action.intent === 'primary'
-                                        ? { background: 'hsl(196 84% 42% / 0.10)', color: 'hsl(196 84% 60%)' }
-                                        : { background: 'hsl(0 0% 100% / 0.05)', color: 'hsl(0 0% 46%)' }
+                                        ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', color: 'var(--primary)' }
+                                        : { background: 'var(--secondary)', color: 'var(--muted-foreground)' }
                                 }
                             >
                                 <Icon size={14} strokeWidth={1.75} />
@@ -64,8 +64,8 @@ export function QuickActions() {
                             <ArrowRight
                                 size={12}
                                 strokeWidth={2}
-                                style={{ color: 'hsl(0 0% 28%)', flexShrink: 0 }}
-                                className="group-hover:!text-[hsl(0_0%_48%)] transition-colors"
+                                style={{ color: 'var(--muted-foreground)', flexShrink: 0 }}
+                                className="transition-colors group-hover:opacity-80"
                             />
                         </Link>
                     );

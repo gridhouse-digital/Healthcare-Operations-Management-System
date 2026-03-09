@@ -23,7 +23,7 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/60 z-40 transition-opacity backdrop-blur-sm"
+                className="fixed inset-0 z-40 bg-background/72 transition-opacity backdrop-blur-sm"
                 onClick={onClose}
             />
 
@@ -34,7 +34,7 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
                     background: 'var(--card)',
                     borderLeft: side === 'right' ? '1px solid var(--border)' : 'none',
                     borderRight: side === 'left' ? '1px solid var(--border)' : 'none',
-                    boxShadow: 'var(--shadow-xl, 0 20px 60px hsl(0 0% 0% / 0.6))',
+                    boxShadow: 'var(--shadow-2xl, 0 20px 60px hsl(0 0% 0% / 0.6))',
                 }}
             >
                 {/* Header */}
@@ -46,22 +46,22 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
                     }}
                 >
                     <h2
-                        className="font-semibold"
-                        style={{ color: 'var(--foreground)', fontSize: '15px' }}
+                        className="text-[15px] font-semibold tracking-[-0.015em]"
+                        style={{ color: 'var(--foreground)' }}
                     >
                         {title}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="flex items-center justify-center w-7 h-7 rounded-md transition-colors"
-                        style={{ color: 'hsl(0 0% 40%)' }}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent transition-colors"
+                        style={{ color: 'var(--muted-foreground)' }}
                         onMouseEnter={e => {
-                            (e.currentTarget as HTMLButtonElement).style.background = 'hsl(0 0% 100% / 0.06)';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'hsl(0 0% 72%)';
+                            (e.currentTarget as HTMLButtonElement).style.background = 'var(--secondary)';
+                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--foreground)';
                         }}
                         onMouseLeave={e => {
                             (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'hsl(0 0% 40%)';
+                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted-foreground)';
                         }}
                     >
                         <X size={16} strokeWidth={1.75} />

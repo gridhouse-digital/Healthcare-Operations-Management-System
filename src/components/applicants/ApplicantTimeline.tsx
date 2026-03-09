@@ -1,4 +1,3 @@
-import React from 'react';
 import { format } from 'date-fns';
 import { CheckCircle, Clock, Calendar, FileText, UserCheck } from 'lucide-react';
 
@@ -88,15 +87,15 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
     const timeline = buildTimeline();
 
     return (
-        <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
-            <h3 className="text-lg font-semibold text-[#16151C] dark:text-white mb-6 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-[#7152F3]" />
+        <div className="rounded-[20px] border border-border/70 bg-card p-6">
+            <h3 className="mb-6 flex items-center gap-2 text-lg font-semibold text-foreground">
+                <Clock className="w-5 h-5 text-primary" />
                 Application Timeline
             </h3>
 
             <div className="relative">
                 {/* Timeline line */}
-                <div className="absolute left-[15px] top-[10px] bottom-[10px] w-0.5 bg-gradient-to-b from-[#7152F3] via-[rgba(113,82,243,0.5)] to-[rgba(162,161,168,0.2)]" />
+                <div className="absolute left-[15px] top-[10px] bottom-[10px] w-0.5 bg-gradient-to-b from-primary via-primary/40 to-border" />
 
                 {/* Timeline events */}
                 <div className="space-y-6">
@@ -104,7 +103,6 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
                         <TimelineItem
                             key={index}
                             event={event}
-                            isLast={index === timeline.length - 1}
                         />
                     ))}
                 </div>
@@ -115,35 +113,34 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
 
 interface TimelineItemProps {
     event: TimelineEvent;
-    isLast: boolean;
 }
 
-function TimelineItem({ event, isLast }: TimelineItemProps) {
+function TimelineItem({ event }: TimelineItemProps) {
     const getStatusStyles = (status: TimelineEvent['status']) => {
         switch (status) {
             case 'completed':
                 return {
-                    dot: 'bg-green-500 ring-green-100 dark:ring-green-900/30',
+                    dot: 'bg-[var(--severity-low)] ring-[color-mix(in_srgb,var(--severity-low)_18%,transparent)]',
                     icon: 'text-white',
-                    title: 'text-[#16151C] dark:text-white',
-                    date: 'text-green-600 dark:text-green-400',
-                    description: 'text-[#A2A1A8]'
+                    title: 'text-foreground',
+                    date: 'text-[var(--severity-low)]',
+                    description: 'text-muted-foreground'
                 };
             case 'pending':
                 return {
-                    dot: 'bg-[#7152F3] ring-purple-100 dark:ring-purple-900/30 animate-pulse',
+                    dot: 'bg-primary ring-primary/15 animate-pulse',
                     icon: 'text-white',
-                    title: 'text-[#16151C] dark:text-white font-semibold',
-                    date: 'text-[#7152F3]',
-                    description: 'text-[#A2A1A8]'
+                    title: 'text-foreground font-semibold',
+                    date: 'text-primary',
+                    description: 'text-muted-foreground'
                 };
             case 'upcoming':
                 return {
-                    dot: 'bg-[rgba(162,161,168,0.3)] ring-gray-100 dark:ring-gray-800',
-                    icon: 'text-[#A2A1A8]',
-                    title: 'text-[#A2A1A8]',
-                    date: 'text-[#A2A1A8]',
-                    description: 'text-[#A2A1A8]'
+                    dot: 'bg-muted ring-border',
+                    icon: 'text-muted-foreground',
+                    title: 'text-muted-foreground',
+                    date: 'text-muted-foreground',
+                    description: 'text-muted-foreground'
                 };
         }
     };

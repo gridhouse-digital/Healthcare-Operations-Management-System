@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAIRanking } from '@/hooks/useAI';
 import { Trophy, AlertTriangle, ArrowRight, Target } from 'lucide-react';
 

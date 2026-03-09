@@ -1,7 +1,5 @@
 import {
-    ApplicantSummarySchema,
     ApplicantRankingSchema,
-    OfferLetterSchema,
     OnboardingSummarySchema,
     SetupHelperSchema
 } from "./schemas.ts";
@@ -10,7 +8,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 
 // Helper to convert Zod schema to a JSON schema string for the prompt
 function getSchemaString(schema: z.ZodTypeAny): string {
-    const jsonSchema = zodToJsonSchema(schema);
+    const jsonSchema = zodToJsonSchema(schema as any);
     return JSON.stringify(jsonSchema, null, 2);
 }
 

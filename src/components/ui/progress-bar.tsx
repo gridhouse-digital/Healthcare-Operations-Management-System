@@ -18,20 +18,20 @@ export function ProgressBar({
     };
 
     const colorClasses = {
-        blue: 'bg-[#3B82F6]',
-        green: 'bg-[#22C55E]',
-        purple: 'bg-[#7152F3]',
-        teal: 'bg-[#14B8A6]',
+        blue: 'bg-[var(--chart-4)]',
+        green: 'bg-[var(--severity-low)]',
+        purple: 'bg-[var(--chart-5)]',
+        teal: 'bg-[var(--primary)]',
     };
 
     return (
         <div className="w-full">
             <div className="flex items-center justify-between mb-1">
                 {showLabel && (
-                    <span className="text-sm text-[#A2A1A8] font-light">{progress}%</span>
+                    <span className="text-sm font-light text-muted-foreground">{progress}%</span>
                 )}
             </div>
-            <div className={`w-full bg-[rgba(162,161,168,0.1)] rounded-full ${heightClasses[size]} overflow-hidden`}>
+            <div className={`w-full rounded-full bg-border/60 ${heightClasses[size]} overflow-hidden`}>
                 <div
                     className={`${heightClasses[size]} rounded-full ${colorClasses[color]} transition-all duration-300`}
                     style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}

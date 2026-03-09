@@ -13,11 +13,11 @@ interface StatsCardProps {
 }
 
 const intentMap = {
-    default: { accent: 'hsl(196 84% 52%)',  iconBg: 'hsl(196 84% 52% / 0.09)', iconColor: 'hsl(196 84% 58%)' },
-    info:    { accent: 'hsl(210 80% 58%)',   iconBg: 'hsl(210 80% 58% / 0.09)', iconColor: 'hsl(210 80% 62%)' },
-    success: { accent: 'hsl(142 60% 48%)',   iconBg: 'hsl(142 60% 48% / 0.09)', iconColor: 'hsl(142 60% 52%)' },
-    warning: { accent: 'hsl(43 94% 56%)',    iconBg: 'hsl(43 94% 56% / 0.09)',  iconColor: 'hsl(43 94% 56%)' },
-    danger:  { accent: 'hsl(0 72% 62%)',     iconBg: 'hsl(0 72% 62% / 0.09)',   iconColor: 'hsl(0 72% 62%)' },
+    default: { accent: 'var(--primary)',          iconBg: 'color-mix(in srgb, var(--primary) 12%, transparent)',          iconColor: 'var(--primary)' },
+    info:    { accent: 'var(--chart-3)',          iconBg: 'color-mix(in srgb, var(--chart-3) 12%, transparent)',          iconColor: 'var(--chart-3)' },
+    success: { accent: 'var(--severity-low)',     iconBg: 'color-mix(in srgb, var(--severity-low) 12%, transparent)',     iconColor: 'var(--severity-low)' },
+    warning: { accent: 'var(--severity-medium)',  iconBg: 'color-mix(in srgb, var(--severity-medium) 12%, transparent)',  iconColor: 'var(--severity-medium)' },
+    danger:  { accent: 'var(--severity-critical)',iconBg: 'color-mix(in srgb, var(--severity-critical) 12%, transparent)',iconColor: 'var(--severity-critical)' },
 };
 
 const staggerDelays = [0, 50, 100, 150, 200, 250, 300, 350];
@@ -45,7 +45,7 @@ export function StatsCard({ title, value, icon: Icon, trend, subtitle, intent = 
             </div>
 
             {/* Big number */}
-            <p style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '2.125rem', fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1, color: 'var(--foreground)' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--foreground)' }}>
                 {value}
             </p>
 
@@ -54,7 +54,7 @@ export function StatsCard({ title, value, icon: Icon, trend, subtitle, intent = 
                 {trend && (
                     <span
                         className="inline-flex items-center gap-0.5 text-[11px] font-semibold"
-                        style={{ color: trend.isPositive ? 'hsl(142 60% 48%)' : 'hsl(0 72% 62%)' }}
+                        style={{ color: trend.isPositive ? 'var(--severity-low)' : 'var(--severity-critical)' }}
                     >
                         {trend.isPositive ? <TrendingUp size={10} strokeWidth={2.5} /> : <TrendingDown size={10} strokeWidth={2.5} />}
                         {trend.value}%
@@ -63,7 +63,7 @@ export function StatsCard({ title, value, icon: Icon, trend, subtitle, intent = 
                 {subtitle && (
                     <span
                         className="text-[11px]"
-                        style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.02em', color: 'var(--muted-foreground)', opacity: 0.5 }}
+                        style={{ fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em', color: 'var(--muted-foreground)', opacity: 0.8 }}
                     >
                         {subtitle}
                     </span>

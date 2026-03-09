@@ -138,12 +138,12 @@ export function OfferList() {
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pl-1">
                 <div>
-                    <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.875rem', fontStyle: 'italic', letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.15 }}
                         className="text-foreground">
                         Offers
                     </h1>
-                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
-                        className="uppercase text-muted-foreground mt-1">
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}
+                        className="text-muted-foreground mt-1">
                         {offers.length} offer letters
                     </p>
                 </div>
@@ -177,7 +177,7 @@ export function OfferList() {
                                 {tab}
                                 {count > 0 && (
                                     <span className={[
-                                        'text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded',
+                                        'text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
                                         isActive
                                             ? 'bg-primary/10 text-primary'
                                             : 'bg-muted text-muted-foreground'
@@ -255,7 +255,7 @@ export function OfferList() {
                                                 <button
                                                     onClick={() => handleDelete(offer)}
                                                     disabled={processingId === offer.id}
-                                                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[12px] font-medium border border-[hsl(4,82%,52%)]/25 text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)] hover:bg-[hsl(4,82%,52%)]/6 transition-colors disabled:opacity-50"
+                                                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[12px] font-medium border border-destructive/25 text-destructive hover:bg-destructive/6 transition-colors disabled:opacity-50"
                                                 >
                                                     <Trash2 size={12} />
                                                     Delete
@@ -303,7 +303,7 @@ export function OfferList() {
                         <div className="border border-border rounded-lg p-6 bg-background min-h-[500px]">
                             <div className="max-w-xl mx-auto space-y-5">
                                 <div className="text-center mb-6">
-                                    <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.25rem', fontStyle: 'italic' }}
+                                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.03em' }}
                                         className="text-foreground mb-1">
                                         Prolific Homecare LLC
                                     </h2>
@@ -349,8 +349,8 @@ export function OfferList() {
 
                                     <div className="mt-8 pt-6 border-t border-border">
                                         <p className="text-[13px] text-muted-foreground">Sincerely,</p>
-                                        <p className="mt-3 text-[18px]" style={{ fontFamily: "'DM Serif Display', serif", fontStyle: 'italic' }}>Jane Wilson</p>
-                                        <p className="text-[12px] text-muted-foreground font-mono">HR Director — Prolific Homecare LLC</p>
+                                        <p className="mt-3 text-[18px]" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.03em' }}>Jane Wilson</p>
+                                        <p className="text-[12px] text-muted-foreground">HR Director — Prolific Homecare LLC</p>
                                     </div>
                                 </div>
                             </div>
@@ -386,7 +386,7 @@ export function OfferList() {
                                             'flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md text-[13px] font-semibold transition-colors',
                                             selectedOffer.applicant?.status === 'Hired'
                                                 ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                                                : 'bg-[hsl(152,58%,38%)] hover:bg-[hsl(152,58%,34%)] text-white'
+                                                : 'bg-[var(--severity-low)] hover:opacity-90 text-white'
                                         ].join(' ')}
                                     >
                                         <UserCheck size={13} />
@@ -403,7 +403,7 @@ export function OfferList() {
                                 <button
                                     onClick={() => handleDelete(selectedOffer)}
                                     disabled={processingId === selectedOffer.id}
-                                    className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border border-[hsl(4,82%,52%)]/25 text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)] text-[13px] font-semibold hover:bg-[hsl(4,82%,52%)]/6 transition-colors disabled:opacity-50"
+                                    className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border border-destructive/25 text-destructive text-[13px] font-semibold hover:bg-destructive/6 transition-colors disabled:opacity-50"
                                 >
                                     <Trash2 size={13} />
                                     {processingId === selectedOffer.id ? 'Deleting…' : 'Delete Offer'}

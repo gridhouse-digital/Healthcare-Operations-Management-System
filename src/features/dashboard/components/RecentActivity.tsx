@@ -50,7 +50,6 @@ export function RecentActivity({ activities }: RecentActivityProps) {
                 ) : (
                     activities.map((activity, i) => {
                         const cfg = typeConfig[activity.type] ?? typeConfig.applicant;
-                        const Icon = cfg.icon;
                         return (
                             <div
                                 key={activity.id}

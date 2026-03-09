@@ -10,7 +10,7 @@ import { toast } from '@/hooks/useToast';
 import { supabase } from '@/lib/supabase';
 
 const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
-const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5';
+const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
 
 interface TrainingRecord {
     id: string;
@@ -149,12 +149,12 @@ export function EmployeeList() {
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pl-1">
                 <div>
-                    <h1 style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 800, letterSpacing: '-0.025em', lineHeight: 1.15 }}
                         className="text-foreground">
                         Employees
                     </h1>
-                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
-                        className="uppercase text-muted-foreground mt-1">
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}
+                        className="text-muted-foreground mt-1">
                         {employees.length} team members
                     </p>
                 </div>
@@ -226,8 +226,8 @@ export function EmployeeList() {
                                     <td className="px-5 py-3.5">
                                         <div className="flex items-center gap-3">
                                             <div
-                                                className="h-8 w-8 rounded-full text-[11px] font-mono font-semibold flex items-center justify-center flex-shrink-0"
-                                                style={{ background: 'hsl(172 100% 40% / 0.15)', color: 'hsl(172 100% 40%)' }}
+                                                className="h-8 w-8 rounded-full text-[11px] font-semibold flex items-center justify-center flex-shrink-0"
+                                                style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
                                             >
                                                 {employee.first_name[0]}{employee.last_name[0]}
                                             </div>
@@ -235,7 +235,7 @@ export function EmployeeList() {
                                                 <span className="text-[13px] text-foreground font-medium truncate">
                                                     {employee.first_name} {employee.last_name}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground font-mono truncate">{employee.email}</span>
+                                                <span className="text-[11px] text-muted-foreground truncate">{employee.email}</span>
                                             </div>
                                         </div>
                                     </td>
@@ -246,7 +246,7 @@ export function EmployeeList() {
                                         <StatusBadge status={employee.employee_status || 'Active'} size="sm" />
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <span className="text-[11px] font-mono text-muted-foreground uppercase">{employee.profile_source || '—'}</span>
+                                        <span className="text-[11px] text-muted-foreground">{employee.profile_source || '—'}</span>
                                     </td>
                                     <td className="px-5 py-3.5">
                                         <span className="text-[13px] text-muted-foreground">{employee.department || '—'}</span>
@@ -286,8 +286,8 @@ export function EmployeeList() {
                         <div className="flex items-start justify-between pb-5 border-b border-border">
                             <div className="flex items-center gap-4">
                                 <div
-                                    className="h-16 w-16 rounded-full text-xl font-mono font-semibold flex items-center justify-center flex-shrink-0"
-                                    style={{ background: 'hsl(172 100% 40% / 0.15)', color: 'hsl(172 100% 40%)' }}
+                                    className="h-16 w-16 rounded-full text-xl font-semibold flex items-center justify-center flex-shrink-0"
+                                    style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
                                 >
                                     {selectedEmployee.first_name[0]}{selectedEmployee.last_name[0]}
                                 </div>
@@ -299,7 +299,7 @@ export function EmployeeList() {
                                     <div className="mt-2 flex items-center gap-2">
                                         <StatusBadge status={selectedEmployee.employee_status || 'Active'} size="sm" />
                                         {selectedEmployee.profile_source && (
-                                            <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.04em] px-2 py-0.5 rounded border bg-muted/30 text-muted-foreground border-border">
+                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-muted/30 text-muted-foreground border-border">
                                                 {selectedEmployee.profile_source}
                                             </span>
                                         )}
@@ -320,7 +320,7 @@ export function EmployeeList() {
                                 <span className="zone-label">Training Progress</span>
                             </div>
                             {loadingTraining ? (
-                                <div className="text-[12px] text-muted-foreground font-mono">Loading training data…</div>
+                                <div className="text-[12px] text-muted-foreground">Loading training data…</div>
                             ) : trainingRecords.length > 0 ? (
                                 <div className="space-y-3">
                                     {trainingRecords.map((record) => (
@@ -330,11 +330,11 @@ export function EmployeeList() {
                                                     {record.course_name}
                                                 </span>
                                                 {record.status === 'completed' ? (
-                                                    <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.04em] px-2 py-0.5 rounded border bg-[hsl(152,58%,38%)]/8 text-[hsl(152,50%,30%)] dark:text-[hsl(152,54%,52%)] border-[hsl(152,58%,38%)]/20">
+                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)] border-[color-mix(in_srgb,var(--severity-low)_20%,transparent)]">
                                                         Completed
                                                     </span>
                                                 ) : (
-                                                    <span className="text-[10px] font-mono font-semibold uppercase tracking-[0.04em] px-2 py-0.5 rounded border bg-[hsl(38,96%,48%)]/8 text-[hsl(38,74%,36%)] dark:text-[hsl(38,90%,56%)] border-[hsl(38,96%,48%)]/20">
+                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-[color-mix(in_srgb,var(--severity-medium)_10%,transparent)] text-[var(--severity-medium)] border-[color-mix(in_srgb,var(--severity-medium)_20%,transparent)]">
                                                         In Progress
                                                     </span>
                                                 )}
@@ -345,7 +345,7 @@ export function EmployeeList() {
                                                     style={{ width: `${record.progress_pct}%` }}
                                                 />
                                             </div>
-                                            <div className="flex justify-between text-[11px] text-muted-foreground font-mono">
+                                            <div className="flex justify-between text-[11px] text-muted-foreground">
                                                 <span>{record.steps_completed} / {record.steps_total} steps</span>
                                                 <span>{record.progress_pct}%</span>
                                             </div>
@@ -355,7 +355,7 @@ export function EmployeeList() {
                             ) : (
                                 <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
                                     <p className="text-[12px] text-muted-foreground">No training data available.</p>
-                                    <p className="text-[11px] text-muted-foreground/70 mt-1 font-mono">Run "Sync LearnDash Training" from Settings → Connectors.</p>
+                                    <p className="mt-1 text-[11px] text-muted-foreground/70">Run "Sync LearnDash Training" from Settings → Connectors.</p>
                                 </div>
                             )}
                         </div>

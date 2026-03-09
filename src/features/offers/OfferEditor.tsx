@@ -15,9 +15,8 @@ interface OfferFormData {
     salary: number;
 }
 
-const fieldCls = 'w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50';
 const fieldWithIconCls = 'w-full h-9 pl-8 pr-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50';
-const labelCls = 'block text-[11px] font-mono uppercase tracking-[0.06em] text-muted-foreground mb-1.5';
+const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
 
 export function OfferEditor() {
     const navigate = useNavigate();
@@ -92,12 +91,12 @@ export function OfferEditor() {
                     <ArrowLeft size={14} />
                 </button>
                 <div>
-                    <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.875rem', fontStyle: 'italic', letterSpacing: '-0.025em', lineHeight: 1.15 }}
+                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05 }}
                         className="text-foreground">
                         {id ? 'Edit Offer' : 'Create Offer'}
                     </h1>
-                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '0.6875rem', letterSpacing: '0.07em' }}
-                        className="uppercase text-muted-foreground mt-0.5">
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}
+                        className="text-muted-foreground mt-0.5">
                         {id ? 'Update offer details' : 'New offer letter'}
                     </p>
                 </div>
@@ -125,7 +124,7 @@ export function OfferEditor() {
                                 </select>
                             </div>
                             {errors.applicant_id && (
-                                <p className="mt-1.5 text-[11px] text-[hsl(4,82%,52%)] font-mono">{errors.applicant_id.message}</p>
+                                <p className="mt-1.5 text-[11px] text-destructive">{errors.applicant_id.message}</p>
                             )}
                         </div>
 
@@ -143,7 +142,7 @@ export function OfferEditor() {
                                     />
                                 </div>
                                 {errors.position_title && (
-                                    <p className="mt-1.5 text-[11px] text-[hsl(4,82%,52%)] font-mono">{errors.position_title.message}</p>
+                                    <p className="mt-1.5 text-[11px] text-destructive">{errors.position_title.message}</p>
                                 )}
                             </div>
 
@@ -173,7 +172,7 @@ export function OfferEditor() {
                                     />
                                 </div>
                                 {errors.start_date && (
-                                    <p className="mt-1.5 text-[11px] text-[hsl(4,82%,52%)] font-mono">{errors.start_date.message}</p>
+                                    <p className="mt-1.5 text-[11px] text-destructive">{errors.start_date.message}</p>
                                 )}
                             </div>
                         </div>

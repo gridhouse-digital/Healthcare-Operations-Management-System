@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-03-09 — Training detail page replaces compliance drawer
+
+### What shipped
+
+- Added dedicated employee training detail route: `/training/:employeeId`
+- New `useEmployeeTrainingDetail` hook fetches `people`, `v_training_compliance`, `training_adjustments`, and `training_events` in parallel
+- Added `EmployeeTrainingDetailPage.tsx` with:
+  - employee header + aggregate stat chips
+  - course cards with effective status/progress/expiry metadata
+  - adjustment history panel
+  - training events timeline
+- `TrainingEmployeeTable.tsx` now navigates to the detail page on row click
+- `TrainingPage.tsx` simplified: removed drawer state and inline adjustment modal
+- Deleted `TrainingEmployeeDrawer.tsx`
+- `TrainingAdjustmentModal.tsx` now invalidates the detail-page query key after save
+
+### Files changed
+
+- `src/App.tsx`
+- `src/features/training/types.ts`
+- `src/features/training/hooks/useEmployeeTrainingDetail.ts` (new)
+- `src/features/training/EmployeeTrainingDetailPage.tsx` (new)
+- `src/features/training/components/TrainingEmployeeTable.tsx`
+- `src/features/training/TrainingPage.tsx`
+- `src/features/training/components/TrainingEmployeeDrawer.tsx` (deleted)
+- `src/features/training/components/TrainingAdjustmentModal.tsx`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- No remaining `TrainingEmployeeDrawer` references
+- Edited files are lint-clean
+- Build check run after implementation
+
+---
+
 ## 2026-03-09 — Epic 5 Stories 5.6–5.8: Applicant Hire Writes + Offers/AI Tenanting + Profiles Deprecation
 
 ### What shipped

@@ -33,15 +33,15 @@ interface StatusBadgeProps {
 // dot color | text color | bg | border — all dark-first, no dark: prefixes
 const statusMap: Record<string, { dot: string; text: string; bg: string; border: string }> = {
     'New':                  { dot: 'hsl(0 0% 42%)',         text: 'hsl(0 0% 56%)',        bg: 'hsl(0 0% 100% / 0.04)',        border: 'hsl(0 0% 100% / 0.08)' },
-    'Screening':            { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
-    'Interview':            { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
-    'Offer':                { dot: 'hsl(260 54% 58%)',       text: 'hsl(260 54% 72%)',      bg: 'hsl(260 54% 52% / 0.10)',      border: 'hsl(260 54% 52% / 0.20)' },
-    'Accepted':             { dot: 'hsl(260 54% 58%)',       text: 'hsl(260 54% 72%)',      bg: 'hsl(260 54% 52% / 0.10)',      border: 'hsl(260 54% 52% / 0.20)' },
-    'Sent':                 { dot: 'hsl(260 54% 58%)',       text: 'hsl(260 54% 72%)',      bg: 'hsl(260 54% 52% / 0.10)',      border: 'hsl(260 54% 52% / 0.20)' },
+    'Screening':            { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
+    'Interview':            { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
+    'Offer':                { dot: 'var(--chart-5)',         text: 'color-mix(in srgb, var(--chart-5) 82%, white 18%)', bg: 'color-mix(in srgb, var(--chart-5) 12%, transparent)', border: 'color-mix(in srgb, var(--chart-5) 20%, transparent)' },
+    'Accepted':             { dot: 'var(--chart-5)',         text: 'color-mix(in srgb, var(--chart-5) 82%, white 18%)', bg: 'color-mix(in srgb, var(--chart-5) 12%, transparent)', border: 'color-mix(in srgb, var(--chart-5) 20%, transparent)' },
+    'Sent':                 { dot: 'var(--chart-5)',         text: 'color-mix(in srgb, var(--chart-5) 82%, white 18%)', bg: 'color-mix(in srgb, var(--chart-5) 12%, transparent)', border: 'color-mix(in srgb, var(--chart-5) 20%, transparent)' },
     'Hired':                { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
     'Pending_Approval':     { dot: 'hsl(38 96% 52%)',        text: 'hsl(38 90% 60%)',       bg: 'hsl(38 96% 48% / 0.08)',       border: 'hsl(38 96% 48% / 0.20)' },
-    'Onboarding':           { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
-    'Onboarding Started':   { dot: 'hsl(196 84% 42%)',       text: 'hsl(196 84% 62%)',      bg: 'hsl(196 84% 42% / 0.10)',      border: 'hsl(196 84% 42% / 0.20)' },
+    'Onboarding':           { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
+    'Onboarding Started':   { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
     'Onboarding Completed': { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
     'Active':               { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
     'Rejected':             { dot: 'hsl(4 82% 56%)',         text: 'hsl(4 76% 66%)',        bg: 'hsl(4 82% 52% / 0.08)',        border: 'hsl(4 82% 52% / 0.20)' },
@@ -63,7 +63,7 @@ export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
 
     return (
         <span
-            className="inline-flex items-center rounded font-semibold tracking-[0.04em]"
+            className="inline-flex items-center rounded-full font-semibold tracking-[0.03em]"
             style={{
                 padding,
                 fontSize,

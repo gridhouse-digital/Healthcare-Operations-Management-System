@@ -1,4 +1,3 @@
-import React from 'react';
 import { useAIOnboarding } from '@/hooks/useAI';
 import { ClipboardList, CheckSquare, Clock, AlertCircle } from 'lucide-react';
 

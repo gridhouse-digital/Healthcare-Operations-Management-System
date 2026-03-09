@@ -15,7 +15,7 @@ import {
     Users,
     Lightbulb
 } from 'lucide-react';
-import { format, differenceInDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 
 interface EnhancedApplicantSummaryPanelProps {
     applicant: any;
@@ -46,17 +46,17 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     // Loading State
     if (loading) {
         return (
-            <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
+            <div className="rounded-[20px] border border-border/80 bg-card p-6">
                 <div className="flex flex-col items-center justify-center space-y-4 py-8">
                     <div className="relative">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#7152F3]"></div>
-                        <Sparkles className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-[#7152F3] animate-pulse" />
+                        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+                        <Sparkles className="absolute top-1/2 left-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform animate-pulse text-primary" />
                     </div>
                     <div className="text-center">
-                        <p className="text-sm font-medium text-[#16151C] dark:text-white">
+                        <p className="text-sm font-medium text-foreground">
                             Analyzing applicant profile...
                         </p>
-                        <p className="text-xs text-[#A2A1A8] mt-1">This may take a few moments</p>
+                        <p className="mt-1 text-xs text-muted-foreground">This may take a few moments</p>
                     </div>
                 </div>
             </div>
@@ -87,17 +87,17 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     // No Data State
     if (!data) {
         return (
-            <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
+            <div className="rounded-[20px] border border-border/80 bg-card p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    <Sparkles className="w-5 h-5 text-[#7152F3]" />
-                    <h3 className="font-semibold text-[#16151C] dark:text-white">AI Analysis</h3>
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">AI Analysis</h3>
                 </div>
-                <p className="text-sm text-[#A2A1A8] mb-4">
+                <p className="mb-4 text-sm text-muted-foreground">
                     Get AI-powered insights about this applicant's strengths, potential risks, and fit for your organization.
                 </p>
                 <button
                     onClick={() => generate(applicant)}
-                    className="w-full px-4 py-2 text-sm font-medium text-white bg-[#7152F3] rounded-[10px] hover:bg-[rgba(113,82,243,0.9)] transition-colors shadow-lg shadow-[#7152F3]/20"
+                    className="w-full rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors shadow-lg shadow-primary/20 hover:bg-primary/90"
                 >
                     Generate AI Analysis
                 </button>
@@ -112,12 +112,12 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     return (
         <div className="space-y-6">
             {/* Main AI Analysis Card */}
-            <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6 shadow-sm">
+            <div className="rounded-[20px] border border-border/80 bg-card p-6 shadow-sm">
                 {/* Header with Score */}
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-[#7152F3]" />
-                        <h3 className="text-lg font-semibold text-[#16151C] dark:text-white">AI Analysis</h3>
+                        <Sparkles className="h-5 w-5 text-primary" />
+                        <h3 className="text-lg font-semibold text-foreground">AI Analysis</h3>
                     </div>
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getScoreColorUtil(score)}`}>
                         <span className="text-sm font-bold">
@@ -128,8 +128,8 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                 </div>
 
                 {/* Score Breakdown */}
-                <div className="mb-6 p-4 bg-[rgba(162,161,168,0.02)] rounded-[10px]">
-                    <h4 className="text-xs font-semibold text-[#A2A1A8] uppercase tracking-wider mb-3">
+                <div className="mb-6 rounded-[10px] bg-muted/30 p-4">
+                    <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                         Score Breakdown (Total: {score}/100)
                     </h4>
                     <div className="space-y-3">
@@ -162,7 +162,7 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                 </div>
 
                 {/* Summary */}
-                <p className="text-sm text-[#16151C] dark:text-white leading-relaxed mb-6 p-4 bg-[rgba(113,82,243,0.05)] border-l-2 border-[#7152F3] rounded-r-[10px]">
+                <p className="mb-6 rounded-r-[10px] border-l-2 border-primary bg-primary/8 p-4 text-sm leading-relaxed text-foreground">
                     {data.summary}
                 </p>
 
@@ -176,7 +176,7 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                         </h4>
                         <ul className="space-y-2.5">
                             {(data.strengths || []).map((strength, i) => (
-                                <li key={i} className="flex items-start gap-3 text-sm text-[#16151C] dark:text-white group">
+                                <li key={i} className="group flex items-start gap-3 text-sm text-foreground">
                                     <span className="mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0 group-hover:scale-125 transition-transform" />
                                     <span className="flex-1">{strength}</span>
                                 </li>
@@ -191,14 +191,14 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                             Potential Risks
                         </h4>
                         {(!data.risks || data.risks.length === 0) ? (
-                            <p className="text-sm text-[#A2A1A8] italic flex items-center gap-2">
+                            <p className="flex items-center gap-2 text-sm italic text-muted-foreground">
                                 <CheckCircle className="w-4 h-4 text-green-500" />
                                 No significant risks identified
                             </p>
                         ) : (
                             <ul className="space-y-2.5">
                                 {data.risks.map((risk, i) => (
-                                    <li key={i} className="flex items-start gap-3 text-sm text-[#16151C] dark:text-white group">
+                                    <li key={i} className="group flex items-start gap-3 text-sm text-foreground">
                                         <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 group-hover:scale-125 transition-transform" />
                                         <span className="flex-1">{risk}</span>
                                     </li>
@@ -210,12 +210,12 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
 
                 {/* Salary Insights */}
                 {data.salary_insights && (
-                    <div className="pt-6 border-t border-[rgba(162,161,168,0.1)]">
+                    <div className="border-t border-border/80 pt-6">
                         <h4 className="flex items-center gap-2 text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">
                             <TrendingUp className="w-4 h-4" />
                             Salary Insights
                         </h4>
-                        <p className="text-sm text-[#16151C] dark:text-white bg-blue-50 dark:bg-blue-900/10 p-3 rounded-[10px]">
+                        <p className="rounded-[10px] bg-primary/8 p-3 text-sm text-foreground">
                             {data.salary_insights}
                         </p>
                     </div>
@@ -223,12 +223,12 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
 
                 {/* Tags */}
                 {data.tags && data.tags.length > 0 && (
-                    <div className="mt-6 pt-6 border-t border-[rgba(162,161,168,0.1)]">
+                    <div className="mt-6 border-t border-border/80 pt-6">
                         <div className="flex flex-wrap gap-2">
                             {data.tags.map((tag, i) => (
                                 <span
                                     key={i}
-                                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-[rgba(113,82,243,0.1)] text-[#7152F3] hover:bg-[rgba(113,82,243,0.2)] transition-colors cursor-default"
+                                    className="cursor-default rounded-md bg-primary/12 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/18"
                                 >
                                     #{tag}
                                 </span>
@@ -239,9 +239,9 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
             </div>
 
             {/* Quick Actions Card */}
-            <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
-                <h4 className="flex items-center gap-2 text-sm font-semibold text-[#16151C] dark:text-white mb-4">
-                    <Lightbulb className="w-4 h-4 text-[#7152F3]" />
+            <div className="rounded-[20px] border border-border/80 bg-card p-6">
+                <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Lightbulb className="h-4 w-4 text-primary" />
                     Suggested Actions
                 </h4>
                 <div className="space-y-2">
@@ -266,9 +266,9 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
             </div>
 
             {/* Applicant Stats Card */}
-            <div className="bg-white dark:bg-card rounded-[20px] border border-[rgba(162,161,168,0.1)] p-6">
-                <h4 className="flex items-center gap-2 text-sm font-semibold text-[#16151C] dark:text-white mb-4">
-                    <Target className="w-4 h-4 text-[#7152F3]" />
+            <div className="rounded-[20px] border border-border/80 bg-card p-6">
+                <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <Target className="h-4 w-4 text-primary" />
                     Quick Stats
                 </h4>
                 <div className="space-y-3">
@@ -293,17 +293,17 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
 
             {/* Applicant Ranking (if score is high) */}
             {score >= 70 && (
-                <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 rounded-[20px] border border-purple-200 dark:border-purple-900/30 p-6">
+                <div className="rounded-[20px] border border-primary/20 bg-gradient-to-br from-primary/12 to-chart-5/10 p-6">
                     <div className="flex items-center gap-2 mb-2">
-                        <Award className="w-5 h-5 text-[#7152F3]" />
-                        <h4 className="font-semibold text-[#16151C] dark:text-white">
+                        <Award className="h-5 w-5 text-primary" />
+                        <h4 className="font-semibold text-foreground">
                             Top Candidate
                         </h4>
                     </div>
-                    <p className="text-sm text-[#A2A1A8]">
-                        This applicant ranks in the <strong className="text-[#7152F3]">top 15%</strong> of all applicants
+                    <p className="text-sm text-muted-foreground">
+                        This applicant ranks in the <strong className="text-primary">top 15%</strong> of all applicants
                     </p>
-                    <p className="text-xs text-[#A2A1A8] mt-2">
+                    <p className="mt-2 text-xs text-muted-foreground">
                         Similar candidates hired: <strong className="text-green-600 dark:text-green-400">8/10</strong>
                     </p>
                 </div>
@@ -323,12 +323,12 @@ function ScoreFactor({ label, score, points }: { label: string; score: number; p
     return (
         <div>
             <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs text-[#A2A1A8]">{label}</span>
-                <span className="text-xs font-semibold text-[#16151C] dark:text-white">
+                <span className="text-xs text-muted-foreground">{label}</span>
+                <span className="text-xs font-semibold text-foreground">
                     {points || `${Math.round(score)}%`}
                 </span>
             </div>
-            <div className="h-2 bg-[rgba(162,161,168,0.1)] rounded-full overflow-hidden">
+            <div className="h-2 overflow-hidden rounded-full bg-border/60">
                 <div
                     className={`h-full transition-all duration-500 ${getColor(score)}`}
                     style={{ width: `${Math.min(100, score)}%` }}
@@ -352,8 +352,8 @@ function ActionButton({
     return (
         <button className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-sm font-medium transition-all hover:scale-[1.02] ${
             isPriority
-                ? 'bg-[#7152F3] text-white shadow-lg shadow-[#7152F3]/20 hover:bg-[rgba(113,82,243,0.9)]'
-                : 'border border-[rgba(162,161,168,0.2)] text-[#16151C] dark:text-white hover:bg-[rgba(162,161,168,0.05)]'
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90'
+                : 'border border-border text-foreground hover:bg-muted/60'
         }`}>
             {icon}
             {label}
@@ -375,13 +375,13 @@ function StatItem({
     return (
         <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-                <span className="text-[#A2A1A8]">{icon}</span>
-                <span className="text-xs text-[#A2A1A8]">{label}</span>
+                <span className="text-muted-foreground">{icon}</span>
+                <span className="text-xs text-muted-foreground">{label}</span>
             </div>
             <span className={`text-xs font-semibold ${
                 highlight
                     ? 'text-green-600 dark:text-green-400'
-                    : 'text-[#16151C] dark:text-white'
+                    : 'text-foreground'
             }`}>
                 {value}
             </span>

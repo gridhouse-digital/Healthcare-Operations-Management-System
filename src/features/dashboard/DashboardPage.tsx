@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, Send, CheckCircle2, Briefcase, UserX, GraduationCap, Sparkles, AlertTriangle, TrendingUp, ArrowUpRight } from 'lucide-react';
+import { Users, Send, CheckCircle2, Briefcase, UserX, GraduationCap, Sparkles, AlertTriangle, TrendingUp } from 'lucide-react';
 import { StatsCard } from './components/StatsCard';
 import { RecentActivity } from './components/RecentActivity';
 import { OnboardingSnapshot } from './components/OnboardingSnapshot';
@@ -16,9 +16,9 @@ function AIInsightsPanel() {
     }, []);
 
     const insights = [
-        { text: '3 applicants are interview-ready based on screening scores', dot: 'hsl(196 84% 52%)', tag: 'hiring' },
+        { text: '3 applicants are interview-ready based on screening scores', dot: 'var(--primary)', tag: 'hiring' },
         { text: 'TB Test for J. Martinez expires in 2 days — action required', dot: 'hsl(0 72% 62%)', tag: 'urgent' },
-        { text: 'Onboarding completion rate up 12% this week', dot: 'hsl(142 60% 48%)', tag: 'trend' },
+        { text: 'Onboarding completion rate up 12% this week', dot: 'var(--severity-low)', tag: 'trend' },
     ];
 
     return (
@@ -40,7 +40,7 @@ function AIInsightsPanel() {
                     </div>
                     <div>
                         <p className="text-[13px] font-semibold leading-none" style={{ color: 'var(--foreground)' }}>Today's Intelligence</p>
-                        <p className="text-[10px] mt-0.5 font-mono" style={{ letterSpacing: '0.06em', color: 'var(--muted-foreground)', opacity: 0.6 }}>
+                        <p className="text-[11px] mt-0.5" style={{ letterSpacing: '-0.01em', color: 'var(--muted-foreground)', opacity: 0.8 }}>
                             AI · {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                         </p>
                     </div>
@@ -48,8 +48,8 @@ function AIInsightsPanel() {
                 <div className="flex items-center gap-2">
                     {!aiLoading && (
                         <div className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'hsl(142 60% 48%)' }} />
-                            <span className="text-[10px] font-mono uppercase" style={{ letterSpacing: '0.05em', color: 'hsl(142 60% 48%)' }}>Live</span>
+                            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: 'var(--severity-low)' }} />
+                            <span className="text-[10px] font-medium" style={{ letterSpacing: '-0.01em', color: 'var(--severity-low)' }}>Live</span>
                         </div>
                     )}
                     <span className="ai-tag">AI</span>
@@ -81,7 +81,7 @@ function AIInsightsPanel() {
                                 >
                                     <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-[5px]" style={{ background: insight.dot }} />
                                     <p className="text-[12.5px] leading-snug font-medium flex-1" style={{ color: 'var(--foreground)', opacity: 0.8 }}>{insight.text}</p>
-                                    <span className="text-[9px] font-mono font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
+                                    <span className="text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
                                         {insight.tag}
                                     </span>
                                 </div>
@@ -90,7 +90,7 @@ function AIInsightsPanel() {
                         <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
                             <div className="flex items-center gap-1.5 mb-1.5">
                                 <TrendingUp size={10} strokeWidth={2.5} style={{ color: 'var(--primary)' }} />
-                                <span className="text-[10px] uppercase font-mono font-medium" style={{ letterSpacing: '0.08em', color: 'var(--primary)' }}>
+                                <span className="text-[10px] font-medium" style={{ letterSpacing: '-0.01em', color: 'var(--primary)' }}>
                                     Recommendation
                                 </span>
                             </div>
@@ -163,22 +163,22 @@ export function DashboardPage() {
             <div className="flex items-end justify-between">
                 <div>
                     <h1
-                        style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.75rem', fontWeight: 400, letterSpacing: '-0.025em', lineHeight: 1.1, color: 'var(--foreground)' }}
+                        style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05, color: 'var(--foreground)' }}
                     >
                         Operations Overview
                     </h1>
-                    <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6875rem', letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--muted-foreground)', opacity: 0.5, marginTop: '4px' }}>
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em', color: 'var(--muted-foreground)', opacity: 0.8, marginTop: '4px' }}>
                         {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                     </p>
                 </div>
                 <div
                     className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-md"
-                    style={{ background: 'hsl(0 72% 58% / 0.08)', border: '1px solid hsl(0 72% 58% / 0.18)' }}
+                    style={{ background: 'color-mix(in srgb, var(--severity-critical) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--severity-critical) 18%, transparent)' }}
                 >
                     <AlertTriangle size={11} strokeWidth={2} style={{ color: 'var(--severity-critical)' }} />
                     <span
-                        className="text-[10px] font-semibold"
-                        style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', color: 'var(--severity-critical)' }}
+                        className="text-[11px] font-semibold"
+                        style={{ fontFamily: 'var(--font-sans)', letterSpacing: '-0.01em', color: 'var(--severity-critical)' }}
                     >
                         4 COMPLIANCE RISKS
                     </span>

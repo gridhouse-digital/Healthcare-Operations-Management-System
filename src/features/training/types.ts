@@ -40,6 +40,47 @@ export interface TrainingEmployee {
 
 export type ComplianceStatus = 'compliant' | 'overdue' | 'in_progress' | 'not_started' | 'no_courses';
 
+export interface TrainingAdjustment {
+  id: string;
+  course_id: string;
+  field: string;
+  value: string;
+  reason: string;
+  actor_id: string;
+  created_at: string;
+}
+
+export interface TrainingEvent {
+  id: string;
+  course_id: string;
+  event_type: 'enrolled' | 'completed' | 'expired' | 'adjusted';
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface EmployeeTrainingDetail {
+  employee: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
+    job_title: string | null;
+    employee_status: string | null;
+  };
+  courses: TrainingComplianceRecord[];
+  adjustments: TrainingAdjustment[];
+  events: TrainingEvent[];
+  stats: {
+    total: number;
+    completed: number;
+    inProgress: number;
+    notStarted: number;
+    overdue: number;
+    completionPct: number;
+    adjusted: number;
+  };
+}
+
 /** For the adjustment modal form */
 export interface AdjustmentFormData {
   field: 'status' | 'completion_pct' | 'completed_at' | 'training_hours';

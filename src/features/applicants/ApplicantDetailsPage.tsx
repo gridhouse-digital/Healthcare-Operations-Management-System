@@ -20,15 +20,6 @@ export function ApplicantDetailsPage() {
     const { data: applicant, isLoading, error } = useApplicantDetails(id);
     const { confirm, confirmState, handleClose, handleConfirm } = useConfirm();
 
-    // Offer Modal State
-    const [showOfferModal, setShowOfferModal] = useState(false);
-    const [offerLoading, setOfferLoading] = useState(false);
-    const [offerForm, setOfferForm] = useState({
-        position: '',
-        salary: '',
-        startDate: ''
-    });
-
     // Document Viewer State
     const [viewingDoc, setViewingDoc] = useState<{ url: string; title: string } | null>(null);
 
@@ -118,7 +109,7 @@ export function ApplicantDetailsPage() {
                         <ArrowLeft size={16} strokeWidth={2} />
                     </button>
                     <div>
-                        <h1 style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.875rem', fontWeight: 400, letterSpacing: '-0.025em', lineHeight: 1.1 }}>
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05 }}>
                             Add Applicant
                         </h1>
                     </div>
@@ -148,8 +139,8 @@ export function ApplicantDetailsPage() {
         </div>
     );
     if (error) return (
-        <div className="severity-critical rounded-md bg-[hsl(4,82%,52%)]/6 border border-[hsl(4,82%,52%)]/20 p-4">
-            <p className="text-[13px] font-semibold text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)]">
+            <div className="severity-critical rounded-md border border-destructive/20 bg-destructive/6 p-4">
+                <p className="text-[13px] font-semibold text-destructive">
                 Failed to load applicant: {error.message}
             </p>
         </div>
@@ -162,6 +153,9 @@ export function ApplicantDetailsPage() {
 
     // Helper to extract answer safely
     const getAnswer = (key: string) => applicant.answers?.[key] || 'N/A';
+    const fullName = applicant.answers?.fullName || applicant.answers?.['q3_fullName'] || {};
+    const applicantFirstName = fullName.first || 'Applicant';
+    const applicantLastName = fullName.last || '';
 
     const handleSendOffer = () => {
         if (!applicant) return;
@@ -252,11 +246,11 @@ export function ApplicantDetailsPage() {
                     <div>
                         <h1
                             className="text-foreground"
-                            style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: '1.875rem', fontWeight: 400, letterSpacing: '-0.025em', lineHeight: 1.1 }}
+                            style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05 }}
                         >
-                            {applicant.first_name} {applicant.last_name}
+                            {applicantFirstName} {applicantLastName}
                         </h1>
-                        <p className="mt-0.5 text-muted-foreground/55" style={{ fontFamily: 'var(--font-mono)', fontSize: '0.6875rem', letterSpacing: '0.07em', textTransform: 'uppercase' }}>
+                        <p className="mt-0.5 text-muted-foreground/80" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}>
                             Applicant Profile
                         </p>
                     </div>
@@ -268,7 +262,7 @@ export function ApplicantDetailsPage() {
             <div className="flex gap-2 flex-wrap">
                 <button
                     onClick={handleSendOffer}
-                    className="flex items-center gap-2 h-8 px-4 bg-[hsl(152,58%,38%)] text-white rounded-md text-[13px] font-semibold hover:bg-[hsl(152,58%,34%)] transition-colors"
+                    className="flex items-center gap-2 h-8 px-4 rounded-md bg-[var(--severity-low)] text-white text-[13px] font-semibold transition-colors hover:opacity-90"
                 >
                     Send Offer
                 </button>
@@ -282,13 +276,13 @@ export function ApplicantDetailsPage() {
                 </button>
                 <button
                     onClick={() => handleStatusUpdate('Interview')}
-                    className="flex items-center gap-2 h-8 px-4 bg-[hsl(38,96%,48%)] text-white rounded-md text-[13px] font-semibold hover:bg-[hsl(38,96%,44%)] transition-colors"
+                    className="flex items-center gap-2 h-8 px-4 rounded-md bg-[var(--severity-medium)] text-white text-[13px] font-semibold transition-colors hover:opacity-90"
                 >
                     Interview
                 </button>
                 <button
                     onClick={() => handleStatusUpdate('Rejected')}
-                    className="flex items-center gap-2 h-8 px-4 bg-[hsl(4,82%,52%)] text-white rounded-md text-[13px] font-semibold hover:bg-[hsl(4,82%,46%)] transition-colors"
+                    className="flex items-center gap-2 h-8 px-4 rounded-md bg-destructive text-white text-[13px] font-semibold transition-colors hover:opacity-90"
                 >
                     Reject
                 </button>
@@ -342,9 +336,9 @@ export function ApplicantDetailsPage() {
                                     <div key={req.key} className="flex items-center justify-between px-5 py-3 hover:bg-secondary/30 transition-colors">
                                         <div className="flex items-center gap-3">
                                             {isSubmitted ? (
-                                                <CheckCircle size={14} strokeWidth={2} className="text-[hsl(152,58%,38%)] dark:text-[hsl(152,54%,50%)] flex-shrink-0" />
+                                                <CheckCircle size={14} strokeWidth={2} className="flex-shrink-0 text-[var(--severity-low)]" />
                                             ) : (
-                                                <AlertCircle size={14} strokeWidth={2} className="text-[hsl(38,90%,48%)] dark:text-[hsl(38,90%,54%)] flex-shrink-0" />
+                                                <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0 text-[var(--severity-medium)]" />
                                             )}
                                             <div>
                                                 <p className="text-[13px] font-medium text-foreground">{req.label}</p>
