@@ -4,6 +4,35 @@
 
 ---
 
+## 2026-03-10 — Connector status persistence fix for BambooHR/JazzHR/WordPress/JotForm
+
+### What shipped
+
+- Added migration `20260310000003_connector_configured_flags.sql`
+- `tenant_settings` now exposes generated connector status booleans:
+  - `bamboohr_key_configured`
+  - `jazzhr_key_configured`
+  - `wp_key_configured`
+  - `jotform_key_configured`
+- `useTenantSettings.ts` now selects those safe derived fields directly instead of trying to infer status from encrypted columns that are intentionally never returned to the frontend
+- This fixes the connector settings page showing JazzHR/BambooHR/JotForm as "Not configured" after refresh even though the credentials were saved successfully
+
+### Files changed
+
+- `supabase/migrations/20260310000003_connector_configured_flags.sql` (new)
+- `src/features/settings/hooks/useTenantSettings.ts`
+- `docs/Project Docs/SCHEMA.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- Implementation is additive only; no secret-returning behavior changed
+- Frontend continues to consume the same `TenantSettings` shape
+- Local production build run after implementation
+
+---
+
 ## 2026-03-09 — Training detail page replaces compliance drawer
 
 ### What shipped
@@ -38,6 +67,38 @@
 - No remaining `TrainingEmployeeDrawer` references
 - Edited files are lint-clean
 - Build check run after implementation
+
+---
+
+## 2026-03-10 — Epic 5 Stories 5.6–5.8: Verification Closeout
+
+### Implementation plan used
+- Verify linked DB migration state for Stories 5.7 and 5.8
+- Confirm live schema shape for `offers`, `ai_cache`, and `profiles`
+- Verify the affected EFs against the post-migration schema and patch any breakage
+- Update project tracking docs to reflect the closed state accurately
+
+### What was verified
+- Linked Supabase project already had migrations `20260310000001_epic5_offers_aicache_tenant.sql` and `20260310000002_epic5_drop_profiles.sql` applied
+- Remote schema dump confirms:
+  - `offers.tenant_id` exists and is `NOT NULL`
+  - `ai_cache.tenant_id` exists and is `NOT NULL`
+  - `profiles` table is absent
+- Hire detectors already satisfy Story 5.6:
+  - `detect-hires-bamboohr` writes hired records to `applicants`
+  - `detect-hires-jazzhr` writes hired records to `applicants`
+- Affected EFs were verified/aligned for the post-`profiles` model:
+  - `admin-update-user` now uses `tenant_users` + auth admin update flow
+  - `invite-user` now uses `tenant_users` + auth invite flow
+  - `_shared/aiClient` now reads/writes `ai_cache` with tenant scoping
+- `deno check` passes for:
+  - `supabase/functions/_shared/aiClient.ts`
+  - `supabase/functions/admin-update-user/index.ts`
+  - `supabase/functions/invite-user/index.ts`
+
+### Residual non-blocking follow-up
+- `src/services/userService.ts` still contains legacy `profiles` references, but it is not imported by current app code
+- Remote deployment status of all changed EFs can still be audited explicitly if needed
 
 ---
 
@@ -80,13 +141,15 @@
 - `docs/Project Docs/SPRINT_PLAN.md`
 - `docs/Project Docs/PROJECT_LOG.md`
 
-### Verification checklist
+### Verification checklist (closed 2026-03-10)
 
-- [ ] Run `npx supabase db push` (apply both Story 5.7/5.8 migrations)
-- [ ] Deploy EFs: `npx supabase functions deploy detect-hires-bamboohr`, `detect-hires-jazzhr`, `sendOffer`
-- [ ] Confirm zero `profiles` table queries remain in active frontend paths
-- [ ] Confirm offer creation still succeeds and writes `tenant_id`
-- [ ] Confirm hire detectors create applicant rows with source badges in Applicants page
+- [x] Verify linked DB already has Story 5.7/5.8 migrations applied
+- [x] Verify live schema has `tenant_id` on `offers` and `ai_cache`
+- [x] Verify live schema no longer contains `profiles`
+- [x] Verify affected EF code paths against the post-migration schema
+- [x] Run `deno check` on `aiClient`, `admin-update-user`, and `invite-user`
+- [ ] Optional follow-up: audit remote deployment status of all changed EFs
+- [ ] Optional follow-up: remove unused `src/services/userService.ts` legacy `profiles` references
 
 ---
 

@@ -36,10 +36,14 @@ tenant_id                    UUID PK FK tenants(id)
 wp_site_url                  TEXT
 wp_username_encrypted        TEXT       -- pgp_sym_encrypt
 wp_app_password_encrypted    TEXT       -- pgp_sym_encrypt
+bamboohr_key_configured      BOOLEAN GENERATED ALWAYS AS (...) STORED
 bamboohr_subdomain           TEXT
 bamboohr_api_key_encrypted   TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
+jazzhr_key_configured        BOOLEAN GENERATED ALWAYS AS (...) STORED
 jazzhr_api_key_encrypted     TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
+wp_key_configured            BOOLEAN GENERATED ALWAYS AS (...) STORED
 brevo_api_key_encrypted      TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
+jotform_key_configured       BOOLEAN GENERATED ALWAYS AS (...) STORED
 active_connectors            TEXT[]     -- e.g. ARRAY['bamboohr']
 ld_group_mappings            JSONB      -- [{job_title, group_id}]
 profile_source               TEXT       -- 'bamboohr' | 'jazzhr' | 'wordpress'. Set once at connector setup.
@@ -56,7 +60,7 @@ updated_at                   TIMESTAMPTZ
 
 **RLS:** Own tenant only.
 **Audit trigger:** `audit_tenant_settings_trigger`
-**Critical:** encrypted columns are NEVER selected to the frontend. Read-only fields returned: tenant_id, wp_site_url, bamboohr_subdomain, active_connectors, ld_group_mappings, profile_source.
+**Critical:** encrypted columns are NEVER selected to the frontend. Connector status is exposed through the generated `*_key_configured` booleans so UI status cannot drift from the encrypted values.
 
 ---
 
@@ -253,10 +257,12 @@ UNIQUE (tenant_id, email)
 
 ## Legacy tables (pre-multitenant, Epic 0)
 
-> **Dropped in Epic 5 (migration 20260309000001):** `employees`, `applicants_archive`, `offers_archive`, `profile_change_requests`, `settings`
+> **Dropped in Epic 5:**
+> - Migration `20260309000001`: `employees`, `applicants_archive`, `offers_archive`, `profile_change_requests`, `settings`
+> - Migration `20260310000002`: `profiles`
 
-**Still pending migration (Stories 5.7, 5.8):**
-- `offers` — job offers (**Epic 5.7: adding tenant_id**)
-- `ai_cache` — AI response cache (**Epic 5.7: adding tenant_id**)
-- `profiles` — user profiles (**Epic 5.8: deprecating → tenant_users + auth**)
-- `ai_logs` — AI + JotForm API call logs
+**Completed in Epic 5 closeout (verified 2026-03-10):**
+- `offers` — now tenant-scoped with `tenant_id UUID NOT NULL`, tenant FK, and RLS (migration `20260310000001`)
+- `ai_cache` — now tenant-scoped with `tenant_id UUID NOT NULL`, tenant FK, and RLS (migration `20260310000001`)
+- `profiles` — removed; use `tenant_users` plus Supabase Auth/app_metadata instead
+- `ai_logs` — retained for AI/JotForm call logging

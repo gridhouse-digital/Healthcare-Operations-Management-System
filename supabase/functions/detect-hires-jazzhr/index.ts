@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
@@ -84,7 +84,7 @@ async function decryptKey(
 
   const { data, error } = await rpcClient.rpc("pgp_sym_decrypt_text", {
     ciphertext: encrypted,
-    passphrase: PGCRYPTO_KEY,
+    passphrase: PGCRYPTO_KEY!,
   });
 
   if (error) {
@@ -101,9 +101,8 @@ async function decryptKey(
 async function fetchJazzHiredApplicants(
   apiKey: string,
 ): Promise<JazzApplicant[]> {
-  const url = `https://api.jazz.co/v1/applicants?apikey=${
-    encodeURIComponent(apiKey)
-  }`;
+  const url =
+    `https://api.jazz.co/v1/applicants?apikey=${encodeURIComponent(apiKey)}`;
 
   const res = await fetch(url, {
     method: "GET",
@@ -135,7 +134,7 @@ async function markRunStarted(
   tenantId: string,
   runId: string,
   startedAt: string,
-) {
+): Promise<void> {
   const { error } = await admin.from("integration_log").insert({
     tenant_id: tenantId,
     source: "jazzhr",
@@ -159,7 +158,7 @@ async function markRunCompleted(
   skipped: number,
   errors: number,
   errorMessages: string[],
-) {
+): Promise<void> {
   const status = errors > 0 ? "completed_with_errors" : "completed";
 
   const { error } = await admin
@@ -191,7 +190,7 @@ async function markRunFailed(
   tenantId: string,
   runId: string,
   errorMessage: string,
-) {
+): Promise<void> {
   const { error } = await admin
     .from("integration_log")
     .update({
@@ -217,7 +216,7 @@ async function writeDetectionLog(
   tenantId: string,
   applicant: JazzApplicant,
   email: string,
-) {
+): Promise<{ error: { code?: string; message: string } | null; detectionKey: string }> {
   const detectionKey = `hire:${applicant.id}:${email}`;
 
   const { error } = await admin.from("integration_log").insert({
@@ -241,14 +240,12 @@ async function upsertPersonAndApplicant(
   tenantId: string,
   applicant: JazzApplicant,
   email: string,
-) {
+): Promise<void> {
   const firstName = applicant.first_name ?? null;
   const lastName = applicant.last_name ?? null;
   const jobTitle = applicant.desired_job ?? null;
   const fullName = buildFullName(firstName, lastName);
 
-  // Create person on first detection; ignoreDuplicates preserves existing
-  // profile_source on conflict.
   const { error: peopleUpsertErr } = await admin.from("people").upsert(
     {
       tenant_id: tenantId,
@@ -337,6 +334,7 @@ async function processTenant(config: TenantConfig): Promise<TenantResult> {
         const rawEmail = typeof applicant.email === "string"
           ? applicant.email
           : "";
+
         if (!rawEmail.trim()) {
           skipped++;
           continue;
@@ -370,6 +368,7 @@ async function processTenant(config: TenantConfig): Promise<TenantResult> {
           applicant,
           email,
         );
+
         detected++;
       } catch (err) {
         errors++;

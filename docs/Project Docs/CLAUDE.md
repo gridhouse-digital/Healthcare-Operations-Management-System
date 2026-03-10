@@ -6,7 +6,7 @@ This file provides detailed guidance for the **HOMS** (Healthcare Operations Man
 
 HOMS is a **multi-tenant SaaS** platform for healthcare staffing agencies. It manages the full lifecycle: external ATS/HRIS connectors → hire detection → employee onboarding → training compliance tracking → reporting.
 
-**Current status:** Epics 1-4.5 complete. Epic 5 (Legacy Data Model Cleanup) in progress.
+**Current status:** Epics 1-5 complete. Epic 6 (Compliance Exports) not started.
 
 **Tech Stack:**
 - Frontend: React 19 + TypeScript + Vite + TailwindCSS v4 + shadcn/ui
@@ -76,7 +76,7 @@ JWT claims are injected by `custom_access_token_hook` (Postgres function) on eve
      - Layer C: Computed view — Layer B wins over Layer A
    - **NFR-3:** Sync MUST NEVER write to Layer C fields — only Layer A
 
-4. **JotForm Pipeline (Epic 5 — legacy, being migrated)**
+4. **JotForm Pipeline (legacy-origin, now tenant-scoped after Epic 5)**
    - JotForm webhook → applicant record
    - Files migrated to Supabase Storage (`resumes` bucket)
    - Email-based deduplication
@@ -160,10 +160,10 @@ Legacy EFs use `https://esm.sh/` — both coexist, don't mix within the same fil
 | `people` | All persons (candidates + employees). Dedup key: `(tenant_id, email)`. |
 | `integration_log` | Idempotency log. UNIQUE on `(tenant_id, source, idempotency_key)`. |
 | `audit_log` | Append-only audit trail. INSERT RLS only — no UPDATE or DELETE for anyone. |
-| `applicants` | Legacy JotForm applicant records. **Epic 5: adding tenant_id + source.** |
-| `offers` | Job offers linked to applicants. **Epic 5: adding tenant_id.** |
-| `profiles` | Legacy user profiles. **Epic 5: deprecating → tenant_users + auth.** |
-| `employees` | **LEGACY — being DROPPED in Epic 5.** Replaced by `people` table. |
+| `applicants` | Tenant-scoped applicant records from JotForm, BambooHR, and JazzHR. |
+| `offers` | Tenant-scoped job offers linked to applicants. |
+| `profiles` | Dropped in Epic 5. Use `tenant_users` + Supabase Auth metadata instead. |
+| `employees` | Legacy table dropped in Epic 5. Replaced by `people`. |
 | Storage: `resumes` | Private, RLS-protected. Never store signed URLs — regenerate on demand. |
 
 **Epic 4 (pending) tables:**
@@ -210,7 +210,7 @@ Legacy EFs use `https://esm.sh/` — both coexist, don't mix within the same fil
 - Use `Deno.env.get()` for environment variables
 - If `deno.lock` causes deploy errors ("Unsupported lockfile version"), delete the file — it regenerates
 
-### When Working with JotForm Integration (Legacy — Epic 5)
+### When Working with JotForm Integration (Legacy-origin, post-Epic 5)
 
 - Never call JotForm API directly — use `JotFormClient` from `_shared/jotform-client.ts`
 - Rate limits: 1,000 calls/month (monitor `limit-left` header)

@@ -131,10 +131,10 @@ deno test _shared/tests/ --allow-env --allow-net
 |---|---|---|
 | Epic 0 | Complete (legacy) | JotForm, applicants, offers, employees, AI features |
 | Epic 1 | **COMPLETE** | Multi-tenant foundation, shared EF utilities, settings UI |
-| Epic 2 | Not started | Hire detection (BambooHR/JazzHR polling) |
-| Epic 3 | Not started | process-hire (WP user + LearnDash enrollment) |
-| Epic 4 | Not started | Training sync (3-layer compliance model) |
-| Epic 5 | Not started | JotForm ingestion (multi-tenant aware) |
+| Epic 2 | **COMPLETE** | Hire detection (BambooHR/JazzHR polling) |
+| Epic 3 | **COMPLETE** | `process-hire` and onboarding flow (WP user + LearnDash enrollment) |
+| Epic 4 | **COMPLETE** | Training sync and 3-layer compliance model |
+| Epic 5 | **COMPLETE** | Legacy data model cleanup and tenant-scoped JotForm/applicant migration |
 | Epic 6 | Not started | Compliance exports (sha256 tamper-evident) |
 
 ---

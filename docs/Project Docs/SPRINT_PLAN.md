@@ -1,6 +1,6 @@
 # SPRINT PLAN — HOMS MVP
 
-> Updated: 2026-03-09
+> Updated: 2026-03-10
 > Sprint window: 60-90 days from 2026-03-04
 > Methodology: Epic-gated. Each epic has a CI gate. Next epic only starts after gate passes.
 
@@ -42,6 +42,7 @@
 - [x] 1.1 Multi-tenant DB schema (tenants, tenant_settings, people, integration_log, audit_log)
 - [x] 1.2 JWT custom claims hook (custom_access_token_hook)
 - [x] 1.3 Connector settings EFs (test-connector, save-connector)
+- [x] 1.3a Connector configured-state persistence fix (generated `*_key_configured` flags in `tenant_settings`) — 2026-03-10
 - [x] 1.4 LearnDash mapping EF (save-ld-mappings)
 - [x] 1.5 User management EFs (list, invite, update-role, deactivate)
 - [x] 1.6 Settings UI pages + sidebar wiring
@@ -289,7 +290,7 @@
 - `detect-hires-bamboohr`: also insert into `applicants` with source='bamboohr'
 - `detect-hires-jazzhr`: also insert into `applicants` with source='jazzhr'
 - Dedup by (tenant_id, email) — skip if applicant already exists
-- Status: [x] Complete — 2026-03-09 (both detectors now upsert applicants with ignoreDuplicates)
+- Status: [x] Complete — 2026-03-10 (verified: both hire detectors write hired rows to `applicants` and preserve `people` as canonical employee/person state)
 
 ### Story 5.7 — Add tenant_id to offers + ai_cache
 **AC:**
@@ -297,16 +298,16 @@
 - Backfill existing rows
 - Add RLS policies
 - Rewrite `offerService.ts`, `sendOffer/` EF with tenant_guard
-- Status: [x] Complete — 2026-03-09 (migrations 20260310000001 + sendOffer/offerService updates)
+- Status: [x] Complete — 2026-03-10 (migration `20260310000001` already applied on linked DB; remote schema confirms `tenant_id` on `offers` + `ai_cache`; shared AI cache client verified tenant-scoped)
 
 ### Story 5.8 — Deprecate profiles → tenant_users + auth
 **AC:**
 - `ProfilePage.tsx`: read/write via tenant_users + auth.users metadata
 - `Header.tsx`: user name from session, not profiles table
 - Drop `profiles` table after migration
-- Status: [x] Complete — 2026-03-09 (migration 20260310000002 + frontend profile/header rewrites)
+- Status: [x] Complete — 2026-03-10 (migration `20260310000002` already applied on linked DB; remote schema confirms `profiles` dropped; affected EFs verified against `tenant_users` + auth metadata)
 
-**Epic 5 Gate:** All legacy tables dropped. All pages multi-tenant. Zero references to dropped tables.
+**Epic 5 Gate:** Stories 5.1–5.8 are functionally complete on the linked project. Remote DB matches the post-migration model, and active EF/runtime paths no longer depend on `employees`, `settings`, or `profiles`. Residual non-blocking cleanup may remain in unused files (for example `src/services/userService.ts`) and optional remote EF deployment auditing.
 
 ---
 

@@ -5,6 +5,8 @@
     "check": "deno check _shared/tenant-guard.ts _shared/audit-logger.ts _shared/error-response.ts _shared/cors.ts"
   },
   "imports": {
+    "@supabase/supabase-js": "jsr:@supabase/supabase-js@2",
+    "@std/assert": "jsr:@std/assert",
     "jsr:@supabase/supabase-js@2": "jsr:@supabase/supabase-js@2",
     "jsr:@std/assert": "jsr:@std/assert"
   }

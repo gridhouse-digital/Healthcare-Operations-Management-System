@@ -12,8 +12,7 @@ async function fetchSettings(): Promise<TenantSettings> {
   const { data, error } = await supabase
     .from("tenant_settings")
     .select(
-      "tenant_id, wp_site_url, bamboohr_subdomain, active_connectors, ld_group_mappings, profile_source"
-      // Encrypted key columns are NOT selected — never sent to frontend
+      "tenant_id, wp_site_url, bamboohr_subdomain, bamboohr_key_configured, jazzhr_key_configured, wp_key_configured, jotform_key_configured, active_connectors, ld_group_mappings, profile_source",
     )
     .single();
 
@@ -23,11 +22,10 @@ async function fetchSettings(): Promise<TenantSettings> {
     tenant_id: data.tenant_id as string,
     wp_site_url: (data.wp_site_url as string | null) ?? null,
     bamboohr_subdomain: (data.bamboohr_subdomain as string | null) ?? null,
-    // Indicate whether keys are configured without exposing them
-    bamboohr_key_configured: !!(data as Record<string, unknown>)["bamboohr_api_key_encrypted"],
-    jazzhr_key_configured: !!(data as Record<string, unknown>)["jazzhr_api_key_encrypted"],
-    wp_key_configured: !!(data.wp_site_url),
-    jotform_key_configured: !!(data as Record<string, unknown>)["jotform_api_key_encrypted"],
+    bamboohr_key_configured: Boolean(data.bamboohr_key_configured),
+    jazzhr_key_configured: Boolean(data.jazzhr_key_configured),
+    wp_key_configured: Boolean(data.wp_key_configured),
+    jotform_key_configured: Boolean(data.jotform_key_configured),
     active_connectors: ((data.active_connectors as string[] | null) ?? []) as TenantSettings["active_connectors"],
     ld_group_mappings: (data.ld_group_mappings as LdGroupMapping[] | null) ?? [],
     profile_source: (data.profile_source as "bamboohr" | "jazzhr" | null) ?? null,
