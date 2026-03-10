@@ -2206,6 +2206,9 @@
       "integrity": "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="
     }
   },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.48.0": "7aba8f6c9d88a2f505859f86fe8120b5d744c30624d2e1ffbc1107fad164d061"
+  },
   "workspace": {
     "packageJson": {
       "dependencies": [

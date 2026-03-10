@@ -1,87 +1,91 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { tenantGuard } from "../_shared/tenant-guard.ts";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 serve(async (req) => {
     if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders })
+        return new Response('ok', { headers: corsHeaders });
     }
 
     try {
-        const supabaseClient = createClient(
-            Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-            { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
-        )
+        const ctx = tenantGuard(req);
 
-        // Verify user is admin
-        const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
-        if (userError || !user) throw new Error('Unauthorized')
-
-        const { data: profile } = await supabaseClient
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .single()
-
-        if (profile?.role !== 'admin') {
-            throw new Error('Unauthorized: Admin access required')
+        if (ctx.role === "hr_admin") {
+            throw new Error('Unauthorized: Admin access required');
         }
 
-        const { userId, updates } = await req.json()
+        const { userId, tenantUserId, updates } = await req.json();
 
-        if (!userId || !updates) {
-            throw new Error('Missing userId or updates')
+        if (!userId || !tenantUserId || !updates) {
+            throw new Error('Missing userId, tenantUserId, or updates');
         }
 
-        // Create Admin Client for updates
         const supabaseAdmin = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
-            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-        )
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+        );
 
-        // Update Profile Data
-        const profileUpdates: any = {}
-        if (updates.first_name) profileUpdates.first_name = updates.first_name
-        if (updates.last_name) profileUpdates.last_name = updates.last_name
-        if (updates.phone_number) profileUpdates.phone_number = updates.phone_number
-        if (updates.role) profileUpdates.role = updates.role
+        const { data: tenantUser, error: tenantUserError } = await supabaseAdmin
+            .from('tenant_users')
+            .select('id, user_id, tenant_id, role, status')
+            .eq('id', tenantUserId)
+            .eq('tenant_id', ctx.tenantId)
+            .single();
 
-        if (Object.keys(profileUpdates).length > 0) {
-            const { error: profileError } = await supabaseAdmin
-                .from('profiles')
-                .update(profileUpdates)
-                .eq('id', userId)
-
-            if (profileError) throw profileError
+        if (tenantUserError || !tenantUser) {
+            throw new Error('User not found in this tenant');
         }
 
-        // Update Auth Data (Email, Password)
-        const authUpdates: any = {}
-        if (updates.email) authUpdates.email = updates.email
-        if (updates.password) authUpdates.password = updates.password
+        if (tenantUser.user_id !== userId) {
+            throw new Error('userId does not match tenant user');
+        }
+
+        const tenantUserUpdates: Record<string, unknown> = {};
+        if (updates.role) tenantUserUpdates.role = updates.role;
+        if (updates.status) tenantUserUpdates.status = updates.status;
+        if (Object.keys(tenantUserUpdates).length > 0) {
+            tenantUserUpdates.updated_at = new Date().toISOString();
+            const { error: tuUpdateError } = await supabaseAdmin
+                .from('tenant_users')
+                .update(tenantUserUpdates)
+                .eq('id', tenantUserId)
+                .eq('tenant_id', ctx.tenantId);
+
+            if (tuUpdateError) throw tuUpdateError;
+        }
+
+        const authUpdates: Record<string, unknown> = {};
+        if (updates.email) authUpdates.email = updates.email;
+        if (updates.password) authUpdates.password = updates.password;
+
+        const nextRole = updates.role ?? tenantUser.role;
+        if (nextRole) {
+            authUpdates.app_metadata = { tenant_id: ctx.tenantId, role: nextRole };
+        }
 
         if (Object.keys(authUpdates).length > 0) {
             const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(
                 userId,
-                authUpdates
-            )
-            if (authError) throw authError
+                authUpdates,
+            );
+            if (authError) throw authError;
         }
 
         return new Response(
             JSON.stringify({ message: 'User updated successfully' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
 
     } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
         return new Response(
-            JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        )
+            JSON.stringify({ error: message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 },
+        );
     }
-})
+});

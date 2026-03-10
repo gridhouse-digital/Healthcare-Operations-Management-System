@@ -47,6 +47,7 @@ export async function aiRequest(options: AIRequestOptions) {
     const { data: cacheRow, error: cacheError } = await supabase
         .from("ai_cache")
         .select("*")
+        .eq("tenant_id", tenantKey)
         .eq("input_hash", inputHash)
         .maybeSingle();
 
@@ -197,10 +198,13 @@ export async function aiRequest(options: AIRequestOptions) {
     // 5️⃣ Write cache
     if (output) {
         await supabase.from("ai_cache").upsert({
+            tenant_id: tenantKey,
             input_hash: inputHash,
             output,
             model,
             ttl_seconds: DEFAULT_TTL_SECONDS
+        }, {
+            onConflict: "input_hash",
         });
     }
 

@@ -566,3 +566,258 @@ When building new UI:
 2. use existing utilities and semantic tokens
 3. verify visually in both themes
 4. update this document if the system evolves
+
+---
+
+## Extended Component Reference
+
+> This section provides concrete implementation patterns extracted from actual components. Use these as copy-paste starting points.
+
+### StatsCard — Intent System
+
+Reference: [`src/features/dashboard/components/StatsCard.tsx`](../../src/features/dashboard/components/StatsCard.tsx)
+
+```tsx
+<StatsCard
+  title="Total Employees"
+  value={42}
+  icon={Users}
+  intent="default"    // default | success | warning | danger | info
+  trend={{ direction: 'up', value: '12%' }}
+  subtitle="Since last month"
+  stagger={0}         // 0–7 → controls animation delay (see Stagger System below)
+/>
+```
+
+**Intent → visual mapping (2px left border + icon):**
+
+| `intent` | Left bar color | Icon bg | Token |
+|----------|---------------|---------|-------|
+| `default` | teal-green | primary/10 | `--primary` (`oklch(0.62 0.11 152)`) |
+| `success` | green | green/10 | `--severity-ok` |
+| `warning` | amber | amber/10 | `--severity-medium` |
+| `danger` | red | red/10 | `--severity-critical` |
+| `info` | chart-1 | chart-1/10 | `--chart-1` |
+
+Always add `animate-reveal-up delay-*` class via the `stagger` prop on cards in lists.
+
+---
+
+### Status Chips — Color Reference
+
+```tsx
+<span className="status-chip status-chip-green">Active</span>
+<span className="status-chip status-chip-amber">Onboarding</span>
+<span className="status-chip status-chip-red">Overdue</span>
+<span className="status-chip status-chip-cyan">Completed</span>
+<span className="status-chip status-chip-muted">Not Started</span>
+```
+
+**Dark mode colors (actual values from `index.css`):**
+
+| Variant | Background | Text |
+|---------|-----------|------|
+| `green` | `hsl(152 58% 38% / 8%)` | `hsl(152 54% 52%)` ≈ `#22C55E` |
+| `amber` | `hsl(38 96% 48% / 8%)` | `hsl(38 90% 56%)` ≈ `#F5A623` |
+| `red` | `hsl(4 82% 52% / 8%)` | `hsl(4 76% 60%)` ≈ `#E63946` |
+| `cyan` | `color-mix(in srgb, var(--primary) 12%, transparent)` | `color-mix(in srgb, var(--primary) 88%, white 12%)` ≈ `#00C9B1` |
+| `muted` | `var(--muted)` | `var(--muted-foreground)` ≈ `#9CA3AF` |
+
+Base `.status-chip`: height `22px`, pill (`border-radius: 999px`), Inter 600, `0.6875rem`, border `1px solid transparent`.
+
+---
+
+### Training Status Badges
+
+Map `effective_status` from `v_training_compliance` to a chip:
+
+| Status value | Chip variant |
+|-------------|-------------|
+| `completed` | `status-chip-cyan` |
+| `in_progress` | `status-chip-amber` |
+| `not_started` | `status-chip-muted` |
+| `overdue` | `status-chip-red` |
+
+**"Adjusted" badge** (show when `has_overrides = true`):
+```tsx
+<span
+  className="status-chip"
+  style={{
+    background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
+    color: 'var(--primary)',
+    borderColor: 'color-mix(in srgb, var(--primary) 22%, transparent)',
+  }}
+>
+  Adjusted
+</span>
+```
+
+---
+
+### Monogram Avatars
+
+Used in employee headers and table rows:
+
+```tsx
+<div
+  className="w-10 h-10 rounded-full flex items-center justify-center font-mono text-sm font-semibold shrink-0"
+  style={{
+    background: 'color-mix(in srgb, var(--primary) 15%, transparent)',
+    color: 'var(--primary)',
+  }}
+>
+  {firstName[0]}{lastName[0]}
+</div>
+```
+
+- Background: `--primary` at 15% opacity (≈ `#00C9B1` at 15%)
+- Text: `var(--primary)` teal
+- Font: `font-mono` (IBM Plex Mono)
+- Size: `w-10 h-10` (40px) standard; `w-8 h-8` for compact table rows
+
+---
+
+### Progress Bars
+
+Standard compliance/course progress:
+
+```tsx
+<div className="w-full h-1.5 rounded-full bg-secondary overflow-hidden">
+  <div
+    className="h-full rounded-full bg-primary transition-all duration-500"
+    style={{ width: `${pct}%` }}
+  />
+</div>
+```
+
+- Track: `bg-secondary` (≈ `#1F2433`)
+- Fill: `bg-primary` (teal-green)
+- Height variants: `h-1.5` (6px) default, `h-2` (8px) prominent, `h-1` (4px) compact
+
+For overall page-level progress:
+```tsx
+<div className="w-full h-2 rounded-full bg-secondary overflow-hidden">
+  <div className="h-full rounded-full bg-primary transition-all duration-700"
+       style={{ width: `${completionPct}%` }} />
+</div>
+```
+
+---
+
+### Stagger Animation System
+
+Apply `animate-reveal-up` + a delay class to create staggered card entrances:
+
+| `stagger` index | Delay class | Delay |
+|----------------|-------------|-------|
+| 0 | `delay-0` | 0ms |
+| 1 | `delay-50` | 50ms |
+| 2 | `delay-100` | 100ms |
+| 3 | `delay-150` | 150ms |
+| 4 | `delay-200` | 200ms |
+| 5 | `delay-250` | 250ms |
+| 6 | `delay-300` | 300ms |
+| 7 | `delay-350` | 350ms |
+
+```tsx
+// Usage in a list:
+{cards.map((card, i) => (
+  <div key={card.id} className={`animate-reveal-up delay-${i * 50}`}>
+    ...
+  </div>
+))}
+// Cap at delay-350 (index 7) for long lists
+```
+
+---
+
+### Color Hex Quick Reference (Dark Mode)
+
+| Purpose | Hex | CSS Token |
+|---------|-----|-----------|
+| Primary (teal) | `#00C9B1` | `--primary` |
+| Background | `#0D0F14` | `--background` |
+| Card surface | `#1A1D26` | `--card` |
+| Panel / sidebar | `#0E1118` | `--sidebar` (≈ background) |
+| Elevated surface | `#222636` | `--accent` |
+| Border | white at 8% | `--border` |
+| Muted text | `#9CA3AF` | `--muted-foreground` |
+| Critical / danger | `#E63946` | `--severity-critical` |
+| High / orange | `#F97316` | `--severity-high` |
+| Medium / amber | `#F5A623` | `--severity-medium` |
+| OK / green | `#22C55E` | `--severity-ok` |
+
+> These are approximations. The canonical values are the oklch tokens in `src/index.css`. Do not hardcode hex values in components — use CSS tokens or Tailwind semantic classes.
+
+---
+
+### AI Surface Pattern
+
+```tsx
+<div className="ai-surface p-4 rounded-lg">
+  <div className="flex items-center gap-2 mb-2">
+    <span className="ai-tag"><Sparkles size={8} /> AI</span>
+    <span className="text-sm font-medium text-foreground">AI Insight</span>
+  </div>
+  <p className="text-sm text-muted-foreground">Generated content...</p>
+</div>
+```
+
+Loading/generating shimmer state:
+```tsx
+<div className="ai-shimmer rounded-lg h-12" />
+```
+
+---
+
+### Empty State Pattern
+
+```tsx
+<div className="empty-state">
+  <div className="empty-state-icon">
+    <FileX size={32} />
+  </div>
+  <p className="empty-state-title">No records found</p>
+  <p className="empty-state-hint">hint text in mono style</p>
+</div>
+```
+
+---
+
+### Page Layout Structure
+
+```tsx
+// Standard feature page:
+<div className="space-y-6">
+  {/* Page header */}
+  <div className="pl-1">
+    <h1 className="page-header-title">Page Title</h1>
+    <p className="page-header-meta">Subtitle or last updated info</p>
+  </div>
+
+  {/* Stats row */}
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <StatsCard ... stagger={0} />
+    <StatsCard ... stagger={1} />
+    <StatsCard ... stagger={2} />
+    <StatsCard ... stagger={3} />
+  </div>
+
+  {/* Main content */}
+  <div className="saas-card">
+    <div className="panel-header">
+      <Icon size={14} />
+      <span className="text-sm font-medium">Section Title</span>
+    </div>
+    <div className="p-6">...</div>
+  </div>
+</div>
+```
+
+Two-column layout (detail pages):
+```tsx
+<div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6">
+  <div className="space-y-4">{/* Main content */}</div>
+  <div className="space-y-4">{/* Sidebar panels */}</div>
+</div>
+```
