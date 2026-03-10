@@ -4,6 +4,78 @@
 
 ---
 
+## 2026-03-10 — Applicants read path decoupled from JotForm sync
+
+### What shipped
+
+- Replaced remaining frontend read-time calls to `listApplicants` with direct `applicants` table queries
+- `dashboardService.getStats()` now counts applicants from the DB instead of invoking the JotForm sync EF
+- `dashboardService.getRecentActivity()` now reads recent applicants directly from `applicants`
+- `applicantService.getApplicants()` now reads directly from `applicants`
+- `listApplicants` remains available for explicit manual JotForm sync via `useSyncApplicants`
+
+### Why
+
+- `listApplicants` is a JotForm sync EF, not a general-purpose read endpoint
+- It returns `400` when JotForm credentials or form ID are not configured
+- Dashboard and applicant views should still work even when JotForm is not configured
+
+### Files changed
+
+- `src/services/dashboardService.ts`
+- `src/services/applicantService.ts`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- Local TypeScript build run after implementation
+
+---
+
+## 2026-03-10 — JazzHR hire detector endpoint fix
+
+### What shipped
+
+- Fixed `detect-hires-jazzhr` to call the same JazzHR applicants endpoint as `test-connector`
+- Changed the detector base URL from `api.jazz.co` to `api.resumatorapi.com`
+- This resolves the case where connector test passes but manual sync returns `JazzHR API error: 404`
+
+### Files changed
+
+- `supabase/functions/detect-hires-jazzhr/index.ts`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- Local TypeScript check run after implementation
+- Endpoint mismatch confirmed from runtime error and code comparison
+
+---
+
+## 2026-03-10 — JazzHR connector manual sync button
+
+### What shipped
+
+- Added a manual `Sync Hires` action to the JazzHR connector card in settings
+- The button invokes the existing `detect-hires-jazzhr` EF with the signed-in user JWT, so the EF runs only for the caller’s tenant
+- Added explicit UI copy clarifying that the JazzHR integration imports hired-stage applicants only, not the full applicant pipeline
+- Reused the same cooldown pattern as the WordPress sync buttons to prevent rapid repeat clicks
+
+### Files changed
+
+- `src/features/settings/components/ConnectorSettingsPage.tsx`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- The existing `detect-hires-jazzhr` EF already supports authenticated manual invocation via `cronOrTenantGuard`
+- Local TypeScript build run after implementation
+
+---
+
 ## 2026-03-10 — Connector status persistence fix for BambooHR/JazzHR/WordPress/JotForm
 
 ### What shipped

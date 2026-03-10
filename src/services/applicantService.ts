@@ -3,7 +3,10 @@ import type { Applicant } from '@/types';
 
 export const applicantService = {
     async getApplicants() {
-        const { data, error } = await supabase.functions.invoke('listApplicants');
+        const { data, error } = await supabase
+            .from('applicants')
+            .select('*')
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
         return data as Applicant[];

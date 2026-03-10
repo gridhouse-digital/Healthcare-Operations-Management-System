@@ -43,6 +43,8 @@
 - [x] 1.2 JWT custom claims hook (custom_access_token_hook)
 - [x] 1.3 Connector settings EFs (test-connector, save-connector)
 - [x] 1.3a Connector configured-state persistence fix (generated `*_key_configured` flags in `tenant_settings`) — 2026-03-10
+- [x] 2.2a JazzHR connector manual sync action in settings UI — 2026-03-10
+- [x] 2.2b JazzHR hire detector endpoint fix (`api.resumatorapi.com`) — 2026-03-10
 - [x] 1.4 LearnDash mapping EF (save-ld-mappings)
 - [x] 1.5 User management EFs (list, invite, update-role, deactivate)
 - [x] 1.6 Settings UI pages + sidebar wiring
@@ -284,6 +286,7 @@
 - Monogram colors updated to teal (`#00C9B1`)
 - `useApplicants.ts`: already reads from `applicants` table with RLS (tenant-scoped)
 - Status: [x] Complete — 2026-03-09
+- Follow-up: [x] 2026-03-10 — dashboard/applicant read paths no longer depend on `listApplicants` EF; normal reads query `applicants` directly and JotForm sync remains manual-only
 
 ### Story 5.6 — Extend hire detectors to write applicants
 **AC:**

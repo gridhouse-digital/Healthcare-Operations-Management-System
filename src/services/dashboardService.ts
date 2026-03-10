@@ -27,14 +27,14 @@ export interface OnboardingEmployee {
 export const dashboardService = {
     async getStats(): Promise<DashboardStats> {
         const [
-            applicantsResponse,
+            { count: totalApplicants },
             { count: offersSent },
             { count: offersAccepted },
             { count: onboardingInProgress },
             { count: totalEmployees },
             { count: activeEmployees }
         ] = await Promise.all([
-            supabase.functions.invoke('listApplicants'),
+            supabase.from('applicants').select('*', { count: 'exact', head: true }),
             supabase.from('offers').select('*', { count: 'exact', head: true }).eq('status', 'Sent'),
             supabase.from('offers').select('*', { count: 'exact', head: true }).eq('status', 'Accepted'),
             supabase.from('people').select('*', { count: 'exact', head: true }).eq('type', 'employee').eq('employee_status', 'Onboarding'),
@@ -42,10 +42,8 @@ export const dashboardService = {
             supabase.from('people').select('*', { count: 'exact', head: true }).eq('type', 'employee').eq('employee_status', 'Active')
         ]);
 
-        const totalApplicants = applicantsResponse.data ? applicantsResponse.data.length : 0;
-
         return {
-            totalApplicants: totalApplicants,
+            totalApplicants: totalApplicants || 0,
             offersSent: offersSent || 0,
             offersAccepted: offersAccepted || 0,
             onboardingInProgress: onboardingInProgress || 0,
@@ -55,7 +53,11 @@ export const dashboardService = {
     },
 
     async getRecentActivity(): Promise<ActivityItem[]> {
-        const { data: applicants } = await supabase.functions.invoke('listApplicants');
+        const { data: applicants } = await supabase
+            .from('applicants')
+            .select('id, first_name, last_name, full_name, position_applied, created_at')
+            .order('created_at', { ascending: false })
+            .limit(5);
 
         const { data: offers } = await supabase
             .from('offers')
@@ -67,9 +69,10 @@ export const dashboardService = {
 
         if (applicants && Array.isArray(applicants)) {
             applicants.forEach((app: any) => {
+                const name = app.full_name || `${app.first_name || ''} ${app.last_name || ''}`.trim() || 'Unknown';
                 activities.push({
                     id: `app-${app.id}`,
-                    message: `New applicant: ${app.first_name} ${app.last_name} (${app.position_applied})`,
+                    message: `New applicant: ${name} (${app.position_applied || 'Unknown role'})`,
                     timestamp: app.created_at,
                     type: 'applicant'
                 });

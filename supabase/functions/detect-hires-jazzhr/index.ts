@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
@@ -31,6 +31,12 @@ interface JazzApplicant {
 interface TenantConfig {
   tenantId: string;
   apiKeyEncrypted: string;
+}
+
+interface TenantSettingRow {
+  tenant_id: string;
+  jazzhr_api_key_encrypted: string;
+  active_connectors?: string[] | null;
 }
 
 interface TenantResult {
@@ -102,7 +108,7 @@ async function fetchJazzHiredApplicants(
   apiKey: string,
 ): Promise<JazzApplicant[]> {
   const url =
-    `https://api.jazz.co/v1/applicants?apikey=${encodeURIComponent(apiKey)}`;
+    `https://api.resumatorapi.com/v1/applicants?apikey=${encodeURIComponent(apiKey)}`;
 
   const res = await fetch(url, {
     method: "GET",
@@ -472,8 +478,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const tenantSettings = settings as TenantSettingRow[];
+
     const results = await Promise.allSettled(
-      settings.map((s) =>
+      tenantSettings.map((s: TenantSettingRow) =>
         processTenant({
           tenantId: s.tenant_id as string,
           apiKeyEncrypted: s.jazzhr_api_key_encrypted as string,
@@ -481,8 +489,11 @@ Deno.serve(async (req: Request) => {
       ),
     );
 
-    const summary: TenantResult[] = results.map((result, i) => {
-      const tenantId = settings[i].tenant_id as string;
+    const summary: TenantResult[] = results.map((
+      result: PromiseSettledResult<TenantResult>,
+      i: number,
+    ) => {
+      const tenantId = tenantSettings[i].tenant_id as string;
 
       if (result.status === "fulfilled") {
         return result.value;

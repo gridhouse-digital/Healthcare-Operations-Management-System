@@ -151,7 +151,7 @@ interface JazzHRFormValues {
   apiKey: string;
 }
 
-function JazzHRConnector({ configured }: { configured: boolean }) {
+function JazzHRConnector({ configured, isTenantAdmin }: { configured: boolean; isTenantAdmin: boolean }) {
   const { register, handleSubmit, watch, formState: { isSubmitting } } =
     useForm<JazzHRFormValues>();
 
@@ -162,6 +162,8 @@ function JazzHRConnector({ configured }: { configured: boolean }) {
   const [status, setStatus] = useState<ConnectorStatus>(
     configured ? "active" : "not_configured",
   );
+  const [syncing, setSyncing] = useState(false);
+  const [syncCooldown, setSyncCooldown] = useState(0);
 
   const apiKey = watch("apiKey");
 
@@ -188,13 +190,53 @@ function JazzHRConnector({ configured }: { configured: boolean }) {
     }
   }
 
+  async function onSyncHires() {
+    setSyncing(true);
+    try {
+      const { data, error } = await (await import("@/lib/supabase")).supabase.functions.invoke("detect-hires-jazzhr");
+      if (error) throw error;
+
+      const result = data as {
+        ok: boolean;
+        message?: string;
+        summary?: { detected: number; skipped: number; errors: number }[];
+      };
+
+      if (result.summary?.[0]) {
+        const summary = result.summary[0];
+        toast.success(
+          `JazzHR sync complete: ${summary.detected} imported, ${summary.skipped} skipped, ${summary.errors} errors`,
+        );
+      } else if (result.message) {
+        toast.success(result.message);
+      } else {
+        toast.success("JazzHR hire sync completed");
+      }
+
+      setSyncCooldown(60);
+      const interval = setInterval(() => {
+        setSyncCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "JazzHR sync failed");
+    } finally {
+      setSyncing(false);
+    }
+  }
+
   return (
     <div className={sectionCls}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-[13px] font-semibold text-foreground">JazzHR</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">
-            Polls every 15 minutes for hired applicants
+            Polls every 15 minutes for applicants whose JazzHR stage contains "hired"
           </p>
         </div>
         <ConnectorStatusBadge status={status} />
@@ -215,6 +257,9 @@ function JazzHRConnector({ configured }: { configured: boolean }) {
               A key is already configured. Enter a new key to replace it.
             </p>
           )}
+          <p className={helperCls}>
+            This integration imports hired-stage applicants only. It does not pull the full JazzHR applicant pipeline.
+          </p>
         </div>
 
         <div className="flex gap-3 pt-1">
@@ -237,6 +282,32 @@ function JazzHRConnector({ configured }: { configured: boolean }) {
           </Button>
         </div>
       </form>
+
+      {configured && isTenantAdmin && (
+        <div className="pt-3 border-t border-border space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[12px] font-medium text-foreground">Sync hired applicants now</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Manually run the JazzHR hire detector for this tenant and import hired candidates into Applicants.
+              </p>
+            </div>
+            <Button
+              type="button"
+              disabled={syncing || syncCooldown > 0}
+              onClick={onSyncHires}
+              variant="outline"
+              size="sm"
+            >
+              {syncing
+                ? "Syncing…"
+                : syncCooldown > 0
+                  ? `Available in ${syncCooldown}s`
+                  : "Sync Hires"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -810,7 +881,7 @@ export function ConnectorSettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <BambooHRConnector configured={settings.bamboohr_key_configured} savedSubdomain={settings.bamboohr_subdomain} />
-        <JazzHRConnector configured={settings.jazzhr_key_configured} />
+        <JazzHRConnector configured={settings.jazzhr_key_configured} isTenantAdmin={isAdmin} />
         <WordPressConnector configured={settings.wp_key_configured} savedSiteUrl={settings.wp_site_url} isTenantAdmin={isAdmin} />
         <JotFormConnector configured={settings.jotform_key_configured} />
       </div>
