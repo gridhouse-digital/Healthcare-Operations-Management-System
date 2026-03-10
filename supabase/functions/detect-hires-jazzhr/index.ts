@@ -1,90 +1,143 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
 
-// Story 2.2 — JazzHR Hire Detector
+// Story 2.2 — JazzHR Hire Detector (hardened)
+// - Auth: API key as query param (?apikey=)
+// - Endpoint: GET /applicants
+// - Hire signal: applicant stage name contains "hired" (case-insensitive)
+// - No stable hired_at from JazzHR — use first detection timestamp.
 //
-// Same pattern as detect-hires-bamboohr. Key differences:
-//   - Auth: API key as query param (?apikey=)
-//   - Endpoint: GET /applicants
-//   - Hire signal: applicant stage name contains "hired" (case-insensitive)
-//   - No stable hired_at from JazzHR — use first detection timestamp.
-//
-// Invariants: NFR-2 (idempotency), NFR-3 (hired_at), NFR-4 (audit).
+// Security / reliability changes:
+// - Fail hard if crypto env missing
+// - Do not include upstream response body in thrown errors
+// - Stronger idempotency keys
+// - Check all DB write errors explicitly
+// - Avoid insert count-based control flow
+// - Better summary/audit handling
 
 interface JazzApplicant {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  desired_job: string | null;
-  // stage is a nested object
-  stage?: { title?: string };
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  desired_job?: string | null;
+  stage?: { title?: string | null };
   [key: string]: unknown;
 }
 
 interface TenantConfig {
   tenantId: string;
-  apiKey: string;
+  apiKeyEncrypted: string;
 }
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY") ?? "";
+interface TenantResult {
+  tenant_id: string;
+  detected: number;
+  skipped: number;
+  errors: number;
+  error_messages?: string[];
+}
+
+type RpcErrorLike = { message: string } | null;
+
+type DecryptRpcClient = {
+  rpc: (
+    fn: string,
+    args: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: RpcErrorLike }>;
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY");
+
+if (!SUPABASE_URL) throw new Error("Missing SUPABASE_URL");
+if (!SERVICE_KEY) throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+if (!PGCRYPTO_KEY) throw new Error("Missing PGCRYPTO_ENCRYPTION_KEY");
+
+function getAdminClient(): SupabaseClient {
+  return createClient(SUPABASE_URL!, SERVICE_KEY!, {
+    auth: { persistSession: false },
+  });
+}
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function buildFullName(
+  firstName?: string | null,
+  lastName?: string | null,
+): string | null {
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  return fullName.length > 0 ? fullName : null;
+}
 
 async function decryptKey(
-  admin: ReturnType<typeof createClient>,
+  admin: SupabaseClient,
   encrypted: string,
 ): Promise<string> {
-  const { data, error } = await admin.rpc("pgp_sym_decrypt_text", {
+  const rpcClient = admin as unknown as DecryptRpcClient;
+
+  const { data, error } = await rpcClient.rpc("pgp_sym_decrypt_text", {
     ciphertext: encrypted,
     passphrase: PGCRYPTO_KEY,
   });
-  if (error) throw new Error(`Decrypt failed: ${error.message}`);
-  return data as string;
+
+  if (error) {
+    throw new Error(`Decrypt failed: ${error.message}`);
+  }
+
+  if (!data || typeof data !== "string") {
+    throw new Error("Decrypt failed: empty result");
+  }
+
+  return data;
 }
 
 async function fetchJazzHiredApplicants(
   apiKey: string,
 ): Promise<JazzApplicant[]> {
-  const url = `https://api.jazz.co/v1/applicants?apikey=${encodeURIComponent(apiKey)}`;
+  const url = `https://api.jazz.co/v1/applicants?apikey=${
+    encodeURIComponent(apiKey)
+  }`;
+
   const res = await fetch(url, {
-    headers: { Accept: "application/json" },
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+    },
   });
 
   if (!res.ok) {
-    throw new Error(`JazzHR API error: ${res.status} ${await res.text()}`);
+    throw new Error(`JazzHR API error: ${res.status}`);
   }
 
-  const body = await res.json() as JazzApplicant[];
-  // Filter to hired stage only
-  return body.filter(
-    (a) =>
-      a.email &&
-      typeof a.stage?.title === "string" &&
-      a.stage.title.toLowerCase().includes("hired"),
-  );
+  const body = await res.json();
+
+  if (!Array.isArray(body)) {
+    throw new Error("JazzHR API returned unexpected response shape");
+  }
+
+  return (body as JazzApplicant[]).filter((a) => {
+    const stageTitle = typeof a.stage?.title === "string" ? a.stage.title : "";
+    const email = typeof a.email === "string" ? a.email : "";
+    return email.trim().length > 0 &&
+      stageTitle.toLowerCase().includes("hired");
+  });
 }
 
-async function processTenant(config: TenantConfig): Promise<{
-  detected: number;
-  skipped: number;
-  errors: number;
-}> {
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { persistSession: false },
-  });
-
-  const runId = crypto.randomUUID();
-  const startedAt = new Date().toISOString();
-  let detected = 0;
-  let skipped = 0;
-  let errors = 0;
-
-  await admin.from("integration_log").insert({
-    tenant_id: config.tenantId,
+async function markRunStarted(
+  admin: SupabaseClient,
+  tenantId: string,
+  runId: string,
+  startedAt: string,
+) {
+  const { error } = await admin.from("integration_log").insert({
+    tenant_id: tenantId,
     source: "jazzhr",
     idempotency_key: `run:${runId}`,
     status: "running",
@@ -92,130 +145,290 @@ async function processTenant(config: TenantConfig): Promise<{
     payload: { run_id: runId },
   });
 
+  if (error) {
+    throw new Error(`Failed to create run log: ${error.message}`);
+  }
+}
+
+async function markRunCompleted(
+  admin: SupabaseClient,
+  tenantId: string,
+  runId: string,
+  rowsProcessed: number,
+  detected: number,
+  skipped: number,
+  errors: number,
+  errorMessages: string[],
+) {
+  const status = errors > 0 ? "completed_with_errors" : "completed";
+
+  const { error } = await admin
+    .from("integration_log")
+    .update({
+      status,
+      completed_at: new Date().toISOString(),
+      rows_processed: rowsProcessed,
+      error_count: errors,
+      payload: {
+        run_id: runId,
+        detected,
+        skipped,
+        errors,
+        error_messages: errorMessages,
+      },
+    })
+    .eq("tenant_id", tenantId)
+    .eq("source", "jazzhr")
+    .eq("idempotency_key", `run:${runId}`);
+
+  if (error) {
+    throw new Error(`Failed to complete run log: ${error.message}`);
+  }
+}
+
+async function markRunFailed(
+  admin: SupabaseClient,
+  tenantId: string,
+  runId: string,
+  errorMessage: string,
+) {
+  const { error } = await admin
+    .from("integration_log")
+    .update({
+      status: "failed",
+      completed_at: new Date().toISOString(),
+      error_count: 1,
+      payload: {
+        run_id: runId,
+        error: errorMessage,
+      },
+    })
+    .eq("tenant_id", tenantId)
+    .eq("source", "jazzhr")
+    .eq("idempotency_key", `run:${runId}`);
+
+  if (error) {
+    throw new Error(`Failed to mark run failed: ${error.message}`);
+  }
+}
+
+async function writeDetectionLog(
+  admin: SupabaseClient,
+  tenantId: string,
+  applicant: JazzApplicant,
+  email: string,
+) {
+  const detectionKey = `hire:${applicant.id}:${email}`;
+
+  const { error } = await admin.from("integration_log").insert({
+    tenant_id: tenantId,
+    source: "jazzhr",
+    idempotency_key: detectionKey,
+    status: "hire_detected",
+    payload: {
+      jazzhr_id: applicant.id,
+      email,
+      stage: applicant.stage?.title ?? null,
+      job: applicant.desired_job ?? null,
+    },
+  });
+
+  return { error, detectionKey };
+}
+
+async function upsertPersonAndApplicant(
+  admin: SupabaseClient,
+  tenantId: string,
+  applicant: JazzApplicant,
+  email: string,
+) {
+  const firstName = applicant.first_name ?? null;
+  const lastName = applicant.last_name ?? null;
+  const jobTitle = applicant.desired_job ?? null;
+  const fullName = buildFullName(firstName, lastName);
+
+  // Create person on first detection; ignoreDuplicates preserves existing
+  // profile_source on conflict.
+  const { error: peopleUpsertErr } = await admin.from("people").upsert(
+    {
+      tenant_id: tenantId,
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      job_title: jobTitle,
+      type: "employee",
+      profile_source: "jazzhr",
+    },
+    {
+      onConflict: "tenant_id,email",
+      ignoreDuplicates: true,
+    },
+  );
+
+  if (peopleUpsertErr) {
+    throw new Error(`people upsert failed: ${peopleUpsertErr.message}`);
+  }
+
+  const { error: applicantUpsertErr } = await admin.from("applicants").upsert(
+    {
+      tenant_id: tenantId,
+      email,
+      full_name: fullName,
+      source: "jazzhr",
+      status: "Hired",
+      position_applied: jobTitle,
+    },
+    {
+      onConflict: "tenant_id,email",
+      ignoreDuplicates: false,
+    },
+  );
+
+  if (applicantUpsertErr) {
+    throw new Error(`applicants upsert failed: ${applicantUpsertErr.message}`);
+  }
+
+  const { error: peopleUpdateErr } = await admin
+    .from("people")
+    .update({
+      first_name: firstName,
+      last_name: lastName,
+      job_title: jobTitle,
+      type: "employee",
+    })
+    .eq("tenant_id", tenantId)
+    .eq("email", email);
+
+  if (peopleUpdateErr) {
+    throw new Error(`people update failed: ${peopleUpdateErr.message}`);
+  }
+
+  const { error: hiredAtErr } = await admin
+    .from("people")
+    .update({ hired_at: new Date().toISOString() })
+    .eq("tenant_id", tenantId)
+    .eq("email", email)
+    .is("hired_at", null);
+
+  if (hiredAtErr) {
+    throw new Error(`people hired_at update failed: ${hiredAtErr.message}`);
+  }
+}
+
+async function processTenant(config: TenantConfig): Promise<TenantResult> {
+  const admin = getAdminClient();
+
+  const runId = crypto.randomUUID();
+  const startedAt = new Date().toISOString();
+
+  let detected = 0;
+  let skipped = 0;
+  let errors = 0;
+  const errorMessages: string[] = [];
+
+  await markRunStarted(admin, config.tenantId, runId, startedAt);
+
   try {
-    const apiKey = await decryptKey(admin, config.apiKey);
-    const hired = await fetchJazzHiredApplicants(apiKey);
+    const apiKey = await decryptKey(admin, config.apiKeyEncrypted);
+    const hiredApplicants = await fetchJazzHiredApplicants(apiKey);
 
-    for (const applicant of hired) {
-      const email = applicant.email.toLowerCase().trim();
-
-      const { error: logErr, count } = await admin
-        .from("integration_log")
-        .insert({
-          tenant_id: config.tenantId,
-          source: "jazzhr",
-          idempotency_key: email,
-          status: "hire_detected",
-          payload: {
-            jazzhr_id: applicant.id,
-            stage: applicant.stage?.title,
-            job: applicant.desired_job,
-          },
-        }, { count: "exact" });
-
-      if (logErr) {
-        if (logErr.code === "23505") {
+    for (const applicant of hiredApplicants) {
+      try {
+        const rawEmail = typeof applicant.email === "string"
+          ? applicant.email
+          : "";
+        if (!rawEmail.trim()) {
           skipped++;
           continue;
         }
-        errors++;
-        continue;
-      }
 
-      if ((count ?? 0) === 0) {
-        skipped++;
-        continue;
-      }
+        const email = normalizeEmail(rawEmail);
 
-      // Insert people record if new — profile_source set only on first insert
-      await admin.from("people").insert(
-        {
-          tenant_id: config.tenantId,
+        const { error: logErr } = await writeDetectionLog(
+          admin,
+          config.tenantId,
+          applicant,
           email,
-          first_name: applicant.first_name || null,
-          last_name: applicant.last_name || null,
-          job_title: applicant.desired_job || null,
-          type: "employee",
-          profile_source: "jazzhr",
-        },
-        { onConflict: "tenant_id,email", ignoreDuplicates: true },
-      );
+        );
 
-      await admin.from("applicants").upsert(
-        {
-          tenant_id: config.tenantId,
+        if (logErr) {
+          if (logErr.code === "23505") {
+            skipped++;
+            continue;
+          }
+
+          errors++;
+          errorMessages.push(
+            `detection log failed for ${email}: ${logErr.message}`,
+          );
+          continue;
+        }
+
+        await upsertPersonAndApplicant(
+          admin,
+          config.tenantId,
+          applicant,
           email,
-          full_name: `${applicant.first_name} ${applicant.last_name}`.trim(),
-          source: "jazzhr",
-          status: "Hired",
-          position_applied: applicant.desired_job || null,
-        },
-        { onConflict: "tenant_id,email", ignoreDuplicates: true },
-      );
-
-      // Update non-protected fields (profile_source excluded — first connector wins)
-      const { error: peopleErr } = await admin.from("people").update(
-        {
-          first_name: applicant.first_name || null,
-          last_name: applicant.last_name || null,
-          job_title: applicant.desired_job || null,
-          type: "employee",
-        },
-      )
-        .eq("tenant_id", config.tenantId)
-        .eq("email", email);
-
-      if (peopleErr) {
+        );
+        detected++;
+      } catch (err) {
         errors++;
-        continue;
+        errorMessages.push(
+          err instanceof Error ? err.message : String(err),
+        );
       }
-
-      // NFR-3: Set hired_at only if not already set
-      await admin
-        .from("people")
-        .update({ hired_at: new Date().toISOString() })
-        .eq("tenant_id", config.tenantId)
-        .eq("email", email)
-        .is("hired_at", null);
-
-      detected++;
     }
 
-    await admin
-      .from("integration_log")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        rows_processed: hired.length,
-        error_count: errors,
-      })
-      .eq("tenant_id", config.tenantId)
-      .eq("idempotency_key", `run:${runId}`);
+    await markRunCompleted(
+      admin,
+      config.tenantId,
+      runId,
+      hiredApplicants.length,
+      detected,
+      skipped,
+      errors,
+      errorMessages,
+    );
 
     void logAudit({
       tenantId: config.tenantId,
-      actorId: undefined,
+      actorId: "system",
       action: "hire_detection.completed",
       tableName: "integration_log",
-      recordId: undefined,
-      after: { source: "jazzhr", run_id: runId, detected, skipped, errors },
+      recordId: runId,
+      after: {
+        source: "jazzhr",
+        run_id: runId,
+        detected,
+        skipped,
+        errors,
+      },
     });
-  } catch (err) {
-    errors++;
-    const message = err instanceof Error ? err.message : String(err);
-    await admin
-      .from("integration_log")
-      .update({
-        status: "failed",
-        completed_at: new Date().toISOString(),
-        error_count: 1,
-        payload: { run_id: runId, error: message },
-      })
-      .eq("tenant_id", config.tenantId)
-      .eq("idempotency_key", `run:${runId}`);
-  }
 
-  return { detected, skipped, errors };
+    return {
+      tenant_id: config.tenantId,
+      detected,
+      skipped,
+      errors,
+      ...(errorMessages.length > 0 ? { error_messages: errorMessages } : {}),
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+
+    try {
+      await markRunFailed(admin, config.tenantId, runId, message);
+    } catch {
+      // Do not mask original failure
+    }
+
+    return {
+      tenant_id: config.tenantId,
+      detected,
+      skipped,
+      errors: errors + 1,
+      error_messages: [...errorMessages, message],
+    };
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -224,10 +437,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const ctx = cronOrTenantGuard(req);
-
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-      auth: { persistSession: false },
-    });
+    const admin = getAdminClient();
 
     let settingsQuery = admin
       .from("tenant_settings")
@@ -235,19 +445,29 @@ Deno.serve(async (req: Request) => {
       .contains("active_connectors", ["jazzhr"])
       .not("jazzhr_api_key_encrypted", "is", null);
 
-    // Authenticated user: restrict to own tenant only
     if (ctx.mode === "user") {
       settingsQuery = settingsQuery.eq("tenant_id", ctx.tenantId);
     }
 
     const { data: settings, error: settingsErr } = await settingsQuery;
 
-    if (settingsErr) throw settingsErr;
+    if (settingsErr) {
+      throw settingsErr;
+    }
+
     if (!settings || settings.length === 0) {
       return withCors(
         new Response(
-          JSON.stringify({ ok: true, message: "No JazzHR tenants configured", tenants: 0 }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
+          JSON.stringify({
+            ok: true,
+            message: "No JazzHR tenants configured",
+            tenants: 0,
+            summary: [],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
         ),
         req,
       );
@@ -257,22 +477,42 @@ Deno.serve(async (req: Request) => {
       settings.map((s) =>
         processTenant({
           tenantId: s.tenant_id as string,
-          apiKey: s.jazzhr_api_key_encrypted as string,
+          apiKeyEncrypted: s.jazzhr_api_key_encrypted as string,
         })
       ),
     );
 
-    const summary = results.map((r, i) => ({
-      tenant_id: settings[i].tenant_id,
-      ...(r.status === "fulfilled"
-        ? r.value
-        : { detected: 0, skipped: 0, errors: 1, error: (r.reason as Error).message }),
-    }));
+    const summary: TenantResult[] = results.map((result, i) => {
+      const tenantId = settings[i].tenant_id as string;
+
+      if (result.status === "fulfilled") {
+        return result.value;
+      }
+
+      const message = result.reason instanceof Error
+        ? result.reason.message
+        : String(result.reason);
+
+      return {
+        tenant_id: tenantId,
+        detected: 0,
+        skipped: 0,
+        errors: 1,
+        error_messages: [message],
+      };
+    });
 
     return withCors(
       new Response(
-        JSON.stringify({ ok: true, tenants: summary.length, summary }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
+        JSON.stringify({
+          ok: true,
+          tenants: summary.length,
+          summary,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
       ),
       req,
     );

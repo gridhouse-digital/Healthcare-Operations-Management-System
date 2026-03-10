@@ -24,6 +24,7 @@ dist-ssr
 *.sw?
 .env
 .mcp.json
+supabase/functions/.env
 
 # Working copy (dev server runs here, git tracks root copies)
 prolific-hr-app/
