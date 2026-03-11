@@ -96,6 +96,21 @@ export function LoginPage() {
                         >
                             {loading ? 'Signing in...' : 'Sign In'}
                         </button>
+
+                        <div className="rounded-lg border border-border bg-secondary/30 px-3 py-3">
+                            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                                New organization?
+                            </p>
+                            <p className="mt-1 text-[12px] text-muted-foreground">
+                                Request workspace onboarding instead of creating an account directly.
+                            </p>
+                            <Link
+                                to="/request-access"
+                                className="mt-2 inline-flex text-[12px] font-semibold tracking-[0.01em] text-primary transition-colors hover:text-primary/80"
+                            >
+                                Request access for your organization
+                            </Link>
+                        </div>
                     </form>
                 </div>
 

@@ -9,12 +9,14 @@ Multi-tenant, compliance-grade operations platform for healthcare agencies. Auto
 
 ## Tech stack
 
-| Layer | Stack |
-|-------|--------|
-| Frontend | React 19, TypeScript, Vite 7, TailwindCSS v4, shadcn/ui (Radix), React Query v5, react-hook-form + Zod |
-| Backend | Supabase (PostgreSQL, Deno Edge Functions) |
-| External | BambooHR, JazzHR, WordPress/LearnDash, JotForm, Anthropic Claude API |
-| Import alias | `@/` → `src/` |
+
+| Layer        | Stack                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------ |
+| Frontend     | React 19, TypeScript, Vite 7, TailwindCSS v4, shadcn/ui (Radix), React Query v5, react-hook-form + Zod |
+| Backend      | Supabase (PostgreSQL, Deno Edge Functions)                                                             |
+| External     | BambooHR, JazzHR, WordPress/LearnDash, JotForm, Cloudflare AI Worker                                   |
+| Import alias | `@/` → `src/`                                                                                          |
+
 
 ---
 
@@ -35,18 +37,20 @@ npm install
 npm run dev
 ```
 
-App: **http://localhost:5173**
+App: **[http://localhost:5173](http://localhost:5173)**
 
 ---
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server |
-| `npm run build` | Type-check + production build |
-| `npm run lint` | ESLint |
+
+| Command           | Description                    |
+| ----------------- | ------------------------------ |
+| `npm run dev`     | Start Vite dev server          |
+| `npm run build`   | Type-check + production build  |
+| `npm run lint`    | ESLint                         |
 | `npm run preview` | Serve production build locally |
+
 
 ---
 
@@ -65,7 +69,7 @@ App: **http://localhost:5173**
 - `JOTFORM_API_KEY`, `ANTHROPIC_API_KEY` — integrations
 - `ALLOWED_ORIGIN_1` — deployed frontend URL (e.g. `https://app.example.com`)
 
-Full list and troubleshooting: **`docs/Project Docs/RUNBOOK.md`**
+Full list and troubleshooting: `**docs/Project Docs/RUNBOOK.md`**
 
 ---
 
@@ -90,19 +94,21 @@ prolific-hr-app/
 
 ## Edge Functions (summary)
 
-| Function | Purpose |
-|----------|---------|
-| `test-connector` | Validate BambooHR/JazzHR credentials |
-| `save-connector` | Persist encrypted connector settings (BambooHR, JazzHR, WordPress, JotForm) |
-| `save-ld-mappings` | LearnDash group → role mappings |
-| `list-tenant-users`, `invite-tenant-user`, `update-tenant-user-role`, `deactivate-tenant-user` | Tenant user management |
-| `listApplicants` | JotForm sync → applicants (tenant-scoped) |
-| `detect-hires-bamboohr`, `detect-hires-jazzhr` | Hire detection (cron or manual trigger) |
-| `process-hire` | Create WP user + LearnDash enrollment after hire |
-| `sync-training`, `sync-wp-users` | LearnDash/WP sync (cron) |
-| `jotform-webhook` | JotForm inbound webhook |
-| `getApplicantDetails`, `sendOffer`, `sendRequirementRequest`, `onboard-employee` | Applicant/offer/onboarding flows |
-| `ai-rank-applicants`, `ai-draft-offer-letter`, `ai-onboarding-logic`, `ai-wp-validation` | AI features |
+
+| Function                                                                                       | Purpose                                                                     |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `test-connector`                                                                               | Validate BambooHR/JazzHR credentials                                        |
+| `save-connector`                                                                               | Persist encrypted connector settings (BambooHR, JazzHR, WordPress, JotForm) |
+| `save-ld-mappings`                                                                             | LearnDash group → role mappings                                             |
+| `list-tenant-users`, `invite-tenant-user`, `update-tenant-user-role`, `deactivate-tenant-user` | Tenant user management                                                      |
+| `listApplicants`                                                                               | JotForm sync → applicants (tenant-scoped)                                   |
+| `detect-hires-bamboohr`, `detect-hires-jazzhr`                                                 | Hire detection (cron or manual trigger)                                     |
+| `process-hire`                                                                                 | Create WP user + LearnDash enrollment after hire                            |
+| `sync-training`, `sync-wp-users`                                                               | LearnDash/WP sync (cron)                                                    |
+| `jotform-webhook`                                                                              | JotForm inbound webhook                                                     |
+| `getApplicantDetails`, `sendOffer`, `sendRequirementRequest`, `onboard-employee`               | Applicant/offer/onboarding flows                                            |
+| `ai-rank-applicants`, `ai-draft-offer-letter`, `ai-onboarding-logic`, `ai-wp-validation`       | AI features                                                                 |
+
 
 Deploy: `npx supabase functions deploy <function-name>`  
 Logs: `npx supabase functions logs <function-name> --tail`
@@ -113,7 +119,7 @@ Logs: `npx supabase functions logs <function-name> --tail`
 
 - **Migrations:** `npx supabase link` (first time), then `npx supabase db push`
 - **Inspect:** `npx supabase db inspect tables`
-- Schema and RLS: **`docs/Project Docs/SCHEMA.md`**
+- Schema and RLS: `**docs/Project Docs/SCHEMA.md`**
 
 ---
 
@@ -128,7 +134,7 @@ Logs: `npx supabase functions logs <function-name> --tail`
 - `/settings/users` — Tenant user management  
 - `/settings/system` — System settings  
 - `/admin/ai-dashboard` — AI usage (admin)  
-- `/profile` — User profile  
+- `/profile` — User profile
 
 Auth: Supabase Auth; tenant and role from JWT `app_metadata` (`tenant_id`, `role`: platform_admin | tenant_admin | hr_admin).
 
@@ -136,21 +142,24 @@ Auth: Supabase Auth; tenant and role from JWT `app_metadata` (`tenant_id`, `role
 
 ## Documentation
 
-| Doc | Purpose |
-|-----|---------|
-| **docs/Project Docs/RUNBOOK.md** | Local setup, deploy, tenant setup, troubleshooting |
-| **docs/Project Docs/SPRINT_PLAN.md** | Epic/story status and acceptance criteria |
-| **docs/Project Docs/PROJECT_LOG.md** | Change log |
-| **docs/Project Docs/DECISIONS.md** | Architecture and product decisions |
-| **docs/Project Docs/INTEGRATIONS.md** | External API specs (BambooHR, JazzHR, WP, JotForm) |
-| **docs/Project Docs/SCHEMA.md** | Tables and RLS |
-| **CLAUDE.md** (repo root) | High-level repo guidance |
-| **prolific-hr-app/docs/Project Docs/CLAUDE.md** | App-level implementation rules |
+
+| Doc                                             | Purpose                                            |
+| ----------------------------------------------- | -------------------------------------------------- |
+| **docs/Project Docs/RUNBOOK.md**                | Local setup, deploy, tenant setup, troubleshooting |
+| **docs/Project Docs/SPRINT_PLAN.md**            | Epic/story status and acceptance criteria          |
+| **docs/Project Docs/PROJECT_LOG.md**            | Change log                                         |
+| **docs/Project Docs/DECISIONS.md**              | Architecture and product decisions                 |
+| **docs/Project Docs/INTEGRATIONS.md**           | External API specs (BambooHR, JazzHR, WP, JotForm) |
+| **docs/Project Docs/SCHEMA.md**                 | Tables and RLS                                     |
+| **CLAUDE.md** (repo root)                       | High-level repo guidance                           |
+| **prolific-hr-app/docs/Project Docs/CLAUDE.md** | App-level implementation rules                     |
+
 
 ---
 
 ## Testing
 
 - **EF shared utilities (Deno):**  
-  `cd supabase/functions && deno test _shared/tests/ --allow-env --allow-net`
+`cd supabase/functions && deno test _shared/tests/ --allow-env --allow-net`
 - **RLS isolation:** See RUNBOOK “Running Tests” (local Supabase + seed + test script).
+

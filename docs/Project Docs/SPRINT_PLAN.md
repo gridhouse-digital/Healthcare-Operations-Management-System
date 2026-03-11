@@ -1,6 +1,6 @@
 # SPRINT PLAN — HOMS MVP
 
-> Updated: 2026-03-10
+> Updated: 2026-03-11
 > Sprint window: 60-90 days from 2026-03-04
 > Methodology: Epic-gated. Each epic has a CI gate. Next epic only starts after gate passes.
 
@@ -308,9 +308,28 @@
 - `ProfilePage.tsx`: read/write via tenant_users + auth.users metadata
 - `Header.tsx`: user name from session, not profiles table
 - Drop `profiles` table after migration
-- Status: [x] Complete — 2026-03-10 (migration `20260310000002` already applied on linked DB; remote schema confirms `profiles` dropped; affected EFs verified against `tenant_users` + auth metadata)
+- Follow-up: Drop legacy auth signup trigger still inserting into `public.profiles`
+- Status: [x] Complete — 2026-03-11 (migration `20260311000006` drops `on_auth_user_created` + `public.handle_new_user()`; fixes auth user creation after `profiles` drop)
 
-**Epic 5 Gate:** Stories 5.1–5.8 are functionally complete on the linked project. Remote DB matches the post-migration model, and active EF/runtime paths no longer depend on `employees`, `settings`, or `profiles`. Residual non-blocking cleanup may remain in unused files (for example `src/services/userService.ts`) and optional remote EF deployment auditing.
+### Story 5.9 — Public request-access onboarding intake
+**AC:**
+- Public route `/request-access` is reachable without authentication
+- Valid submissions persist to `tenant_access_requests` only; no tenant, auth, or `tenant_users` rows are created
+- Ops/admin notification email is sent from platform-level configuration, not `tenant_settings`
+- Success state explains manual review and follow-up expectations
+- Validation errors return structured client responses
+- Notification failures retain the DB row for manual recovery and return a clear error
+- Status: [x] Complete — 2026-03-11
+
+### Story 5.10 — Request-access hardening + platform-admin review
+**AC:**
+- Public request-access EF applies basic anti-spam controls (honeypot plus simple rate limits)
+- Requester receives a confirmation email when the request is accepted
+- Platform-admin-only screen exists in the app for reviewing and updating `tenant_access_requests`
+- Internal page surfaces delivery failures and keeps manual tenant provisioning expectations explicit
+- Status: [x] Complete — 2026-03-11
+
+**Epic 5 Gate:** Stories 5.1–5.10 are functionally complete on the linked project. Remote DB matches the post-migration model, active EF/runtime paths no longer depend on `employees`, `settings`, or `profiles`, and public request-access intake now hands off cleanly into the manual onboarding flow. Tenant provisioning itself is still manual and remains the next obvious platform-admin workflow gap.
 
 ---
 

@@ -4,6 +4,100 @@
 
 ---
 
+## 2026-03-11 — Auth user creation fix (profiles trigger cleanup)
+
+### What shipped
+
+- Dropped legacy `auth.users` trigger `on_auth_user_created` and `public.handle_new_user()` which still tried inserting into `public.profiles` after Epic 5 removed the table
+- This unblocks creating users in Supabase Authentication (signup/admin create) on the linked project
+
+### Files changed
+
+- `supabase/migrations/20260311000006_drop_legacy_profiles_auth_trigger.sql`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- Confirmed trigger removed from `auth.users` and `public.handle_new_user` no longer exists on project `peffyuhhlmidldugqalo`
+
+---
+
+## 2026-03-11 — Public request-access intake MVP
+
+### What shipped
+
+- Added a public `/request-access` route and a new auth-shell intake page for organizations that do not yet have a workspace
+- Added the `request-access` Supabase Edge Function to validate submissions, persist them in `tenant_access_requests`, and notify ops/admin through platform-level Brevo configuration
+- Added `tenant_access_requests` as an intentionally non-tenant-scoped table with RLS, operational status fields, and notification recovery fields
+- Added a new login-page CTA for organizations that need onboarding rather than direct sign-in
+- Documented the manual handoff from request submission into tenant seeding and first-user setup
+
+### Design decisions
+
+- Request rows are retained even when the notification email fails; the EF returns a clear error and marks `notification_status = 'failed'` so ops can recover the submission manually
+- Public notification uses platform-level secrets instead of `tenant_settings` because no tenant exists at intake time
+- Open requests are deduplicated by normalized organization name plus work email so repeated submissions update the same in-flight request instead of spamming duplicate rows
+
+### Files changed
+
+- `src/App.tsx`
+- `src/features/auth/LoginPage.tsx`
+- `src/features/auth/RequestAccessPage.tsx`
+- `supabase/migrations/20260311000004_mvp_tenant_access_requests.sql`
+- `supabase/functions/request-access/index.ts`
+- `supabase/functions/_shared/emails/AccessRequestNotificationEmail.tsx`
+- `docs/Project Docs/RUNBOOK.md`
+- `docs/Project Docs/SCHEMA.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `deno check` run for the new request-access Edge Function
+- Frontend TypeScript validation attempted, but the repo already has unrelated errors in `src/features/auth/ProtectedRoute.tsx`, `src/features/auth/UpdatePasswordPage.tsx`, `src/features/training/hooks/useTrainingCompliance.ts`, `src/hooks/useUserRole.ts`, `src/lib/supabase.ts`, and `src/services/dashboardService.ts`
+
+---
+
+## 2026-03-11 — Request-access guardrails + platform-admin review page
+
+### What shipped
+
+- Added lightweight anti-spam controls to the public `request-access` EF:
+  - honeypot field
+  - rate limiting by recent email submissions
+  - rate limiting by recent request IP
+- Added applicant-facing confirmation email delivery after ops notification succeeds
+- Added request metadata and confirmation tracking fields on `tenant_access_requests`
+- Added a platform-admin-only internal page for reviewing `tenant_access_requests`, inspecting delivery state, and updating request status
+
+### Design decisions
+
+- Internal ops notification remains the hard requirement; requester confirmation failure is recorded but does not fail the submission after ops has already been notified
+- Tenant provisioning is still manual. The new admin page makes that explicit instead of pretending the workflow is automated
+- Platform-admin review uses direct table access under RLS rather than a dedicated read EF because the table already has platform-admin select/update policies
+
+### Files changed
+
+- `src/App.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/features/auth/RequestAccessPage.tsx`
+- `src/features/admin/hooks/useAccessRequests.ts`
+- `src/features/admin/pages/AccessRequestsPage.tsx`
+- `supabase/migrations/20260311000005_request_access_guardrails.sql`
+- `supabase/functions/request-access/index.ts`
+- `supabase/functions/_shared/emails/AccessRequestConfirmationEmail.tsx`
+- `docs/Project Docs/RUNBOOK.md`
+- `docs/Project Docs/SCHEMA.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `deno check request-access/index.ts` run after the guardrail and confirmation-email changes
+
+---
+
 ## 2026-03-10 — Applicants read path decoupled from JotForm sync
 
 ### What shipped
