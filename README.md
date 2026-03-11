@@ -1,73 +1,156 @@
-# React + TypeScript + Vite
+# HOMS — Healthcare Operations Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Multi-tenant, compliance-grade operations platform for healthcare agencies. Automates the hire-to-onboard pipeline: detects hires from BambooHR or JazzHR, creates WordPress users and LearnDash enrollments, tracks training compliance, ingests applications via JotForm, and supports tamper-evident compliance exports.
 
-Currently, two official plugins are available:
+**Product name:** HOMS (placeholder; final branding at MVP launch)  
+**Supabase project:** `peffyuhhlmidldugqalo`
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## Tech stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+| Layer | Stack |
+|-------|--------|
+| Frontend | React 19, TypeScript, Vite 7, TailwindCSS v4, shadcn/ui (Radix), React Query v5, react-hook-form + Zod |
+| Backend | Supabase (PostgreSQL, Deno Edge Functions) |
+| External | BambooHR, JazzHR, WordPress/LearnDash, JotForm, Anthropic Claude API |
+| Import alias | `@/` → `src/` |
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Node.js 22+**
+- **Supabase CLI** — `npm install -g supabase`
+- **Deno 1.40+** — for Edge Function tests only
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Quick start
+
+```bash
+cd prolific-hr-app
+npm install
+# Copy .env.example to .env and fill in values (see Environment variables)
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+App: **http://localhost:5173**
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server |
+| `npm run build` | Type-check + production build |
+| `npm run lint` | ESLint |
+| `npm run preview` | Serve production build locally |
+
+---
+
+## Environment variables
+
+**Frontend** (`prolific-hr-app/.env`):
+
+- `VITE_SUPABASE_URL` — Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` — Supabase anon key (Dashboard → Settings → API)
+- `VITE_WP_API_URL`, `VITE_WP_USERNAME`, `VITE_WP_APP_PASSWORD` — WordPress/LearnDash (optional for full onboarding)
+
+**Edge Functions** (Supabase Dashboard → Edge Functions → Manage Secrets):
+
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — usually auto-injected
+- `PGCRYPTO_ENCRYPTION_KEY` — used to encrypt/decrypt connector API keys in `tenant_settings`
+- `JOTFORM_API_KEY`, `ANTHROPIC_API_KEY` — integrations
+- `ALLOWED_ORIGIN_1` — deployed frontend URL (e.g. `https://app.example.com`)
+
+Full list and troubleshooting: **`docs/Project Docs/RUNBOOK.md`**
+
+---
+
+## Project structure
+
 ```
+prolific-hr-app/
+├── src/
+│   ├── features/          # Auth, applicants, offers, employees, dashboard, training, settings, admin, profile
+│   ├── components/         # layout, ui (shadcn), shared, applicants, ai
+│   ├── lib/                # supabase, aiClient, utils
+│   ├── hooks/              # useUserRole, useApplicants, useAI, etc.
+│   ├── services/           # dashboard, applicant, offer, employee, settings
+│   └── types/
+├── supabase/
+│   ├── functions/          # Deno Edge Functions (+ _shared utilities)
+│   └── migrations/         # PostgreSQL migrations
+└── docs/Project Docs/      # RUNBOOK, SPRINT_PLAN, DECISIONS, SCHEMA, INTEGRATIONS
+```
+
+---
+
+## Edge Functions (summary)
+
+| Function | Purpose |
+|----------|---------|
+| `test-connector` | Validate BambooHR/JazzHR credentials |
+| `save-connector` | Persist encrypted connector settings (BambooHR, JazzHR, WordPress, JotForm) |
+| `save-ld-mappings` | LearnDash group → role mappings |
+| `list-tenant-users`, `invite-tenant-user`, `update-tenant-user-role`, `deactivate-tenant-user` | Tenant user management |
+| `listApplicants` | JotForm sync → applicants (tenant-scoped) |
+| `detect-hires-bamboohr`, `detect-hires-jazzhr` | Hire detection (cron or manual trigger) |
+| `process-hire` | Create WP user + LearnDash enrollment after hire |
+| `sync-training`, `sync-wp-users` | LearnDash/WP sync (cron) |
+| `jotform-webhook` | JotForm inbound webhook |
+| `getApplicantDetails`, `sendOffer`, `sendRequirementRequest`, `onboard-employee` | Applicant/offer/onboarding flows |
+| `ai-rank-applicants`, `ai-draft-offer-letter`, `ai-onboarding-logic`, `ai-wp-validation` | AI features |
+
+Deploy: `npx supabase functions deploy <function-name>`  
+Logs: `npx supabase functions logs <function-name> --tail`
+
+---
+
+## Database
+
+- **Migrations:** `npx supabase link` (first time), then `npx supabase db push`
+- **Inspect:** `npx supabase db inspect tables`
+- Schema and RLS: **`docs/Project Docs/SCHEMA.md`**
+
+---
+
+## Main app routes
+
+- `/` — Dashboard  
+- `/applicants`, `/applicants/:id` — Applicants  
+- `/offers`, `/offers/new` — Offers (public offer view: `/offer/:token`)  
+- `/employees` — Employees  
+- `/training`, `/training/:employeeId` — Training compliance  
+- `/settings/connectors` — Connectors (BambooHR, JazzHR, WordPress, JotForm)  
+- `/settings/users` — Tenant user management  
+- `/settings/system` — System settings  
+- `/admin/ai-dashboard` — AI usage (admin)  
+- `/profile` — User profile  
+
+Auth: Supabase Auth; tenant and role from JWT `app_metadata` (`tenant_id`, `role`: platform_admin | tenant_admin | hr_admin).
+
+---
+
+## Documentation
+
+| Doc | Purpose |
+|-----|---------|
+| **docs/Project Docs/RUNBOOK.md** | Local setup, deploy, tenant setup, troubleshooting |
+| **docs/Project Docs/SPRINT_PLAN.md** | Epic/story status and acceptance criteria |
+| **docs/Project Docs/PROJECT_LOG.md** | Change log |
+| **docs/Project Docs/DECISIONS.md** | Architecture and product decisions |
+| **docs/Project Docs/INTEGRATIONS.md** | External API specs (BambooHR, JazzHR, WP, JotForm) |
+| **docs/Project Docs/SCHEMA.md** | Tables and RLS |
+| **CLAUDE.md** (repo root) | High-level repo guidance |
+| **prolific-hr-app/docs/Project Docs/CLAUDE.md** | App-level implementation rules |
+
+---
+
+## Testing
+
+- **EF shared utilities (Deno):**  
+  `cd supabase/functions && deno test _shared/tests/ --allow-env --allow-net`
+- **RLS isolation:** See RUNBOOK “Running Tests” (local Supabase + seed + test script).
