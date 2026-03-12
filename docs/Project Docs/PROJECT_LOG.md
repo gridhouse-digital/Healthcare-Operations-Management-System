@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-03-12 — LearnDash group reconciliation slice + multi-rule recurring validation
+
+### What shipped
+
+- Added a new migration to create `learndash_group_courses` and derive active training from current LearnDash group context instead of showing every historical synced course as active
+- Updated `sync-training` to:
+  - fetch current LearnDash groups per user
+  - reconcile `employee_group_enrollments` when users leave or re-enter groups
+  - sync group-to-course mappings from LearnDash
+- Updated active training UI paths to read the reconciled onboarding-safe view instead of raw `training_records`
+- Confirmed the second recurring compliance rule path works end-to-end after production backfill/rebuild:
+  - rule visible in UI
+  - anchors created
+  - compliance instances created
+  - correct employees see the rule and unrelated employees do not
+
+### Design decisions
+
+- Historical training records remain in `training_records`; the new behavior only changes which courses count as active in admin views
+- Group re-entry currently behaves like `resume_previous_series` because `employee_group_enrollments` is reactivated in place and preserves the original anchor
+- Recurring compliance status now hides rows tied to inactive group enrollments instead of deleting old cycles
+
+### Files changed
+
+- `supabase/migrations/20260312000002_story511_group_reconciliation.sql`
+- `supabase/functions/sync-training/index.ts`
+- `src/features/employees/EmployeeList.tsx`
+- `src/features/training/hooks/useEmployeeTrainingDetail.ts`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+- `docs/Project Docs/ISSUES.md`
+
+### Verified
+
+- `npx tsc --noEmit`
+- `deno check supabase/functions/sync-training/index.ts`
+- `npm run build`
+
+---
+
 ## 2026-03-11 — Auth user creation fix (profiles trigger cleanup)
 
 ### What shipped

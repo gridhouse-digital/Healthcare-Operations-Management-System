@@ -18,8 +18,6 @@ interface TrainingRecord {
     course_name: string;
     status: string;
     progress_pct: number;
-    steps_completed: number;
-    steps_total: number;
 }
 
 interface RecurringComplianceRecord {
@@ -56,6 +54,15 @@ function recurringStatusClass(status: RecurringComplianceRecord['compliance_stat
         case 'not_yet_due':
             return 'border-border bg-muted/40 text-muted-foreground';
     }
+}
+
+function isMissingSchema(error: unknown) {
+    const code = (error as { code?: string } | null)?.code;
+    const message = String((error as { message?: string } | null)?.message ?? '');
+    return code === '42P01' ||
+        code === 'PGRST205' ||
+        /relation .* does not exist/i.test(message) ||
+        /schema cache/i.test(message);
 }
 
 export function EmployeeList() {
@@ -103,17 +110,54 @@ export function EmployeeList() {
     const loadTrainingRecords = async (personId: string) => {
         setLoadingTraining(true);
         try {
-            const { data, error: trErr } = await supabase
-                .from('training_records')
-                .select('id, course_name, status, progress_pct, steps_completed, steps_total')
+            let activeQuery = await supabase
+                .from('v_onboarding_training_compliance')
+                .select('training_record_id, course_name, effective_status, effective_completion_pct')
                 .eq('person_id', personId)
                 .order('course_name');
 
-            if (trErr) throw trErr;
-            setTrainingRecords(data || []);
+            if (activeQuery.error && isMissingSchema(activeQuery.error)) {
+                const fallbackQuery = await supabase
+                    .from('training_records')
+                    .select('id, course_name, status, completion_pct')
+                    .eq('person_id', personId)
+                    .order('course_name');
+
+                if (fallbackQuery.error) throw fallbackQuery.error;
+
+                const normalized = (fallbackQuery.data || []).map((row) => ({
+                    id: row.id,
+                    course_name: row.course_name,
+                    status: row.status,
+                    progress_pct: row.completion_pct ?? 0,
+                }));
+
+                setTrainingRecords(normalized);
+
+                const allDone = normalized.length > 0 && normalized.every((r) => r.status === 'completed');
+                if (allDone && selectedEmployee && selectedEmployee.employee_status === 'Onboarding') {
+                    await employeeService.updateEmployee(selectedEmployee.id, { employee_status: 'Active' } as Partial<Employee>);
+                    toast.success('All courses completed! Status updated to Active.');
+                    await loadEmployees();
+                    setSelectedEmployee({ ...selectedEmployee, employee_status: 'Active' });
+                }
+
+                return;
+            }
+
+            if (activeQuery.error) throw activeQuery.error;
+
+            const normalized = (activeQuery.data || []).map((row) => ({
+                id: row.training_record_id,
+                course_name: row.course_name,
+                status: row.effective_status,
+                progress_pct: row.effective_completion_pct ?? 0,
+            }));
+
+            setTrainingRecords(normalized);
 
             // Auto-update status if all courses completed
-            const allDone = data && data.length > 0 && data.every((r: TrainingRecord) => r.status === 'completed');
+            const allDone = normalized.length > 0 && normalized.every((r) => r.status === 'completed');
             if (allDone && selectedEmployee && selectedEmployee.employee_status === 'Onboarding') {
                 await employeeService.updateEmployee(selectedEmployee.id, { employee_status: 'Active' } as Partial<Employee>);
                 toast.success('All courses completed! Status updated to Active.');
@@ -410,8 +454,7 @@ export function EmployeeList() {
                                                     style={{ width: `${record.progress_pct}%` }}
                                                 />
                                             </div>
-                                            <div className="flex justify-between text-[11px] text-muted-foreground">
-                                                <span>{record.steps_completed} / {record.steps_total} steps</span>
+                                            <div className="flex justify-end text-[11px] text-muted-foreground">
                                                 <span>{record.progress_pct}%</span>
                                             </div>
                                         </div>

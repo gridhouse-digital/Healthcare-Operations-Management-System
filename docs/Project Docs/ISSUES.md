@@ -25,8 +25,8 @@ This document tracks active product and engineering issues that require follow-u
 
 | # | Issue | Priority | Severity | Owner | Next Action | Target Sprint |
 |---|---|---|---|---|---|---|
-| 1 | WordPress group change does not fully resync HR app training assignments | `P1` | `High` | Engineering + Architecture | Define and implement group-change reconciliation and supersession model | Next sprint |
-| 2 | Second recurring compliance rule not visible or generating compliance records | `P1` | `High` | Engineering | Fix multi-rule UI loading, anchor generation, and rebuild coverage | Immediate / Next sprint |
+| 1 | WordPress group change does not fully resync HR app training assignments | `P1` | `High` | Engineering + Architecture | Deploy and validate the new group-reconciliation slice against real LearnDash group changes | Current sprint |
+| 2 | Second recurring compliance rule not visible or generating compliance records | `P1` | `High` | Engineering | Monitor after production validation; keep regression coverage for multi-rule recurring compliance | Current sprint |
 | 3 | Platform admin applicant visibility lacks tenant filter | `P2` | `Medium` | Product + UX, then Engineering | Define tenant filter UX and implement scoped applicant view | Upcoming sprint |
 
 ---
@@ -38,10 +38,10 @@ This document tracks active product and engineering issues that require follow-u
 | Priority | `P1` |
 | Severity | `High` |
 | Area | Sync pipeline -> `sync-wp-users` / `sync-training` / training ledger |
-| Status | Open |
+| Status | In progress |
 | Owner | Engineering + Architecture |
-| Next Action | Create reconciliation logic for removed groups and define how superseded training/recurring obligations behave in active views |
-| Target Sprint | Next sprint |
+| Next Action | Deploy the reconciliation migration and `sync-training`, then validate A -> B -> A/C reassignment behavior in the app |
+| Target Sprint | Current sprint |
 | Date discovered | 2026-03-11 |
 | Reported by | Oyiny |
 
@@ -110,10 +110,10 @@ This leaves stale course assignments and can cause the HR app to show a user as 
 | Priority | `P1` |
 | Severity | `High` |
 | Area | Settings -> Training Compliance Rules UI, anchor generation, recurring compliance pipeline |
-| Status | Open |
+| Status | Validated / Monitoring |
 | Owner | Engineering |
-| Next Action | Verify multi-rule UI loading, multi-context anchor generation, and rebuild iteration across active rules |
-| Target Sprint | Immediate / Next sprint |
+| Next Action | Keep regression coverage in place and verify no regression after the group-reconciliation deployment |
+| Target Sprint | Current sprint |
 | Date discovered | 2026-03-11 |
 | Reported by | Oyiny |
 
@@ -175,6 +175,16 @@ Observed symptoms:
 - Employees in the second rule's group receive anchors in `employee_group_enrollments`.
 - Employees in that group receive instances in `employee_compliance_instances`.
 - `v_recurring_compliance_status` returns rows for the second rule.
+
+### Validation notes
+
+- Verified on 2026-03-12 with a second recurring rule:
+  - `ODP - Annual Employee Compliance Review`
+  - `group_id = 1428`
+  - `course_id = 1472`
+- Production backfill inserted anchors from `training_record` evidence for the correct employees.
+- Production rebuild generated cycle rows for that rule.
+- UI rule filter and employee recurring views showed the second rule for the right employees only.
 
 ### Linked stories
 

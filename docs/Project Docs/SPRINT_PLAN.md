@@ -335,7 +335,7 @@
 - Training tied only to removed groups is marked inactive, legacy, or superseded in active HR views
 - Active compliance counts no longer include removed-group obligations
 - Historical training remains traceable for audit/admin review
-- Status: [ ] Not started
+- Status: [~] In progress - 2026-03-12
 - Plan: `docs/plans/2026-03-12-epic5-story511-plan.md`
 
 ### Story 5.12 - Recurring compliance supersession on group change
@@ -343,7 +343,7 @@
 - Removed-group recurring anchors/instances no longer count as active obligations
 - Historical recurring cycles remain visible for audit
 - Rebuild logic does not recreate superseded old-group obligations
-- Status: [ ] Not started
+- Status: [~] In progress - 2026-03-12
 - Plan: `docs/plans/2026-03-12-epic5-story512-plan.md`
 
 ### Story 5.13 - Multi-rule recurring compliance UI loading fix
@@ -351,7 +351,7 @@
 - All active recurring rules for a tenant appear in the admin UI
 - Rules from different group/course contexts are visible and selectable
 - No tenant-scoping regression in settings/training views
-- Status: [ ] Not started
+- Status: [x] Complete - 2026-03-12
 - Plan: `docs/plans/2026-03-12-epic5-story513-plan.md`
 
 ### Story 5.14 - Multi-rule anchor generation fix
@@ -359,7 +359,7 @@
 - Employees in every configured recurring rule context receive anchors
 - Anchor generation prefers actual LearnDash assignment evidence over weak inference
 - Backfill remains idempotent
-- Status: [ ] Not started
+- Status: [x] Complete - 2026-03-12
 - Plan: `docs/plans/2026-03-12-epic5-story514-plan.md`
 
 ### Story 5.15 - Multi-rule recurring instance rebuild fix
@@ -367,7 +367,7 @@
 - Rebuild creates instances for all active recurring rules
 - `v_recurring_compliance_status` shows rows for every active rule context
 - No duplicate cycle rows are created
-- Status: [ ] Not started
+- Status: [x] Complete - 2026-03-12
 - Plan: `docs/plans/2026-03-12-epic5-story515-plan.md`
 
 ### Story 5.16 - Platform-admin applicant tenant filter
