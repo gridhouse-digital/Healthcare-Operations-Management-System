@@ -25,9 +25,9 @@ This document tracks active product and engineering issues that require follow-u
 
 | # | Issue | Priority | Severity | Owner | Next Action | Target Sprint |
 |---|---|---|---|---|---|---|
-| 1 | WordPress group change does not fully resync HR app training assignments | `P1` | `High` | Engineering + Architecture | Deploy and validate the new group-reconciliation slice against real LearnDash group changes | Current sprint |
-| 2 | Second recurring compliance rule not visible or generating compliance records | `P1` | `High` | Engineering | Monitor after production validation; keep regression coverage for multi-rule recurring compliance | Current sprint |
-| 3 | Platform admin applicant visibility lacks tenant filter | `P2` | `Medium` | Product + UX, then Engineering | Define tenant filter UX and implement scoped applicant view | Upcoming sprint |
+| 1 | WordPress group change does not fully resync HR app training assignments | `P1` | `High` | Engineering + Architecture | Close out re-entry validation and finalize superseded-state behavior for multi-group edge cases | Current sprint |
+| 2 | Second recurring compliance rule not visible or generating compliance records | `P1` | `High` | Engineering | Keep regression coverage only; issue validated on production data | Current sprint |
+| 3 | Platform admin applicant visibility lacks tenant filter | `P2` | `Medium` | Product + UX, then Engineering | Monitor after rollout; keep behavior unchanged for tenant-admin and HR-admin roles | Current sprint |
 
 ---
 
@@ -38,9 +38,9 @@ This document tracks active product and engineering issues that require follow-u
 | Priority | `P1` |
 | Severity | `High` |
 | Area | Sync pipeline -> `sync-wp-users` / `sync-training` / training ledger |
-| Status | In progress |
+| Status | In progress / narrowed |
 | Owner | Engineering + Architecture |
-| Next Action | Deploy the reconciliation migration and `sync-training`, then validate A -> B -> A/C reassignment behavior in the app |
+| Next Action | Validate A -> B -> A/C reassignment behavior, confirm expected UX for superseded training history, and document any required re-entry override |
 | Target Sprint | Current sprint |
 | Date discovered | 2026-03-11 |
 | Reported by | Oyiny |
@@ -82,12 +82,19 @@ This leaves stale course assignments and can cause the HR app to show a user as 
 - Compliance counts may be inflated.
 - Recurring compliance may continue to count obligations from the old group after reassignment.
 
+### Current validation notes
+
+- Production validation on 2026-03-12 confirmed old-group training is removed from active views for a user reassigned from group `54` to group `1428`.
+- A multi-group leader case remains intentional rather than defective when the user truly belongs to both groups in LearnDash.
+- `primary_compliance_group_id` now lets HR keep multi-group access while scoping onboarding and recurring compliance to one selected group.
+
 ### Proposed direction
 
 - Add a reconciliation step during sync that compares current LearnDash groups vs prior synced groups per user.
 - Mark training tied only to removed groups as inactive, legacy, or superseded.
 - Define how recurring compliance anchors and instances are paused, closed, or superseded when a group context changes.
 - Add diagnostics/audit logging for group-change reconciliation.
+- For intentional multi-group leaders, add an HR-owned primary compliance group so LearnDash access does not automatically equal compliance responsibility.
 
 ### Acceptance criteria
 
@@ -101,6 +108,10 @@ This leaves stale course assignments and can cause the HR app to show a user as 
 - Story 5.11 - Training sync group change reconciliation
 - Story 5.12 - Recurring compliance supersession on group change
 
+### Related design note
+
+- `docs/plans/2026-03-12-epic5-multi-group-compliance-policy-plan.md`
+
 ---
 
 ## 2. Second recurring compliance rule not visible or generating compliance records
@@ -110,9 +121,9 @@ This leaves stale course assignments and can cause the HR app to show a user as 
 | Priority | `P1` |
 | Severity | `High` |
 | Area | Settings -> Training Compliance Rules UI, anchor generation, recurring compliance pipeline |
-| Status | Validated / Monitoring |
+| Status | Resolved / Monitoring |
 | Owner | Engineering |
-| Next Action | Keep regression coverage in place and verify no regression after the group-reconciliation deployment |
+| Next Action | Keep regression coverage in place and verify no regression after future sync / recurring changes |
 | Target Sprint | Current sprint |
 | Date discovered | 2026-03-11 |
 | Reported by | Oyiny |
@@ -201,10 +212,10 @@ Observed symptoms:
 | Priority | `P2` |
 | Severity | `Medium` |
 | Area | Applicants / Platform admin UX |
-| Status | Open |
+| Status | Resolved / Monitoring |
 | Owner | Product + UX, then Engineering |
-| Next Action | Define tenant filter UX (`All tenants` vs tenant-specific) and then implement tenant-aware applicant filtering |
-| Target Sprint | Upcoming sprint |
+| Next Action | Monitor after rollout and add tenant context to details/reporting only if platform-admin volume warrants it |
+| Target Sprint | Current sprint |
 | Date discovered | 2026-03-11 |
 | Reported by | Oyiny |
 
@@ -263,6 +274,12 @@ This is acceptable at very small scale, but it becomes increasingly difficult to
 - Platform admins can select `All tenants` or a specific tenant in the applicant UI.
 - When a tenant is selected, the applicant list is scoped to that tenant.
 - `tenant_admin` and `hr_admin` behavior remains unchanged.
+
+### Validation notes
+
+- Implemented on 2026-03-12 in `ApplicantList` with a platform-admin-only tenant dropdown.
+- `useApplicants` now supports tenant-scoped queries and `useApplicantTenants` loads filter options from `public.tenants`.
+- Non-platform roles still use the existing tenant-scoped applicant experience with no additional filter shown.
 
 ### Linked stories
 

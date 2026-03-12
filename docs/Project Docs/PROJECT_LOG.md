@@ -3,6 +3,60 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-03-12 â€” Shared dropdown standardization + design-system green hover state
+
+### What shipped
+
+- Standardized all app dropdowns under `src` onto the shared `AppSelect` component instead of mixing native `<select>` elements with custom dropdowns
+- Updated form-backed pages to use the same dropdown style through controlled `react-hook-form` integrations
+- Updated the shared dropdown-menu primitive so highlighted and mouse-over states use the design-system green (`--severity-low`)
+
+### Files changed
+
+- `src/components/ui/AppSelect.tsx`
+- `src/components/ui/dropdown-menu.tsx`
+- `src/features/employees/EmployeeList.tsx`
+- `src/features/training/TrainingPage.tsx`
+- `src/features/training/components/RecurringComplianceDashboard.tsx`
+- `src/features/training/components/TrainingAdjustmentModal.tsx`
+- `src/features/settings/components/TrainingComplianceRulesPage.tsx`
+- `src/features/auth/RequestAccessPage.tsx`
+- `src/features/offers/OfferEditor.tsx`
+- `src/features/settings/components/users/UserManagementPage.tsx`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `rg -n -F "<select" src` returns no matches
+- `npx tsc --noEmit`
+- `npm run build`
+
+---
+
+## 2026-03-12 — Primary compliance group override
+
+### What shipped
+
+- Added `people.primary_compliance_group_id` so HR can choose one active LearnDash group as the compliance-driving group for intentional multi-group employees
+- Updated active training and recurring compliance views to prefer the primary compliance group when it points to an active group
+- Updated `rebuild-compliance-instances` so recurring cycles are generated only for the selected primary compliance group when one is set
+- Added a simple employee-profile control to review active LearnDash groups and choose a primary compliance group when multiple groups are active
+
+### Files changed
+
+- `supabase/migrations/20260312000003_primary_compliance_group.sql`
+- `supabase/functions/rebuild-compliance-instances/index.ts`
+- `src/types/index.ts`
+- `src/features/employees/EmployeeList.tsx`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `npx tsc --noEmit`
+- `deno check supabase/functions/rebuild-compliance-instances/index.ts`
+- `npm run build`
+
+---
 
 ## 2026-03-12 — LearnDash group reconciliation slice + multi-rule recurring validation
 
@@ -41,6 +95,21 @@
 - `npx tsc --noEmit`
 - `deno check supabase/functions/sync-training/index.ts`
 - `npm run build`
+
+---
+
+## 2026-03-12 — Multi-group compliance assignment policy spec
+
+### What shipped
+
+- Added a small implementation spec for intentional multi-group users such as supervisors or group leaders who need LearnDash access across multiple groups without inheriting every group's compliance obligations
+- Recommended an HR-owned `primary_compliance_group_id` model as the first implementation cut
+
+### Files changed
+
+- `docs/plans/2026-03-12-epic5-multi-group-compliance-policy-plan.md`
+- `docs/Project Docs/ISSUES.md`
+- `docs/Project Docs/PROJECT_LOG.md`
 
 ---
 

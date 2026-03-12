@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { UserCog, UserPlus, ChevronDown } from "lucide-react";
+import { UserCog, UserPlus } from "lucide-react";
 import {
   useTenantUsers,
   useInviteUser,
@@ -10,6 +10,7 @@ import {
 } from "../../hooks/useUserManagement";
 import type { TenantUser, TenantRole } from "../../hooks/useUserManagement";
 import { Button } from "@/components/ui/button";
+import { AppSelect } from "@/components/ui/AppSelect";
 
 // ---------------------------------------------------------------------------
 // Shared styles (matches SystemSettingsPage)
@@ -114,18 +115,16 @@ function UserRow({ user }: { user: TenantUser }) {
       <td className="px-4 py-3">
         {user.status !== "deactivated" && (
           <div className="flex items-center gap-2">
-            <div className="relative">
-              <select
-                value={user.role}
-                onChange={(e) => void handleRoleChange(e.target.value as TenantRole)}
-                disabled={updateRole.isPending}
-                className="appearance-none bg-card border border-border text-muted-foreground text-[11px] rounded-md px-3 py-1.5 pr-6 focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow cursor-pointer [&_option]:bg-card [&_option]:text-foreground"
-              >
-                <option value="hr_admin">HR Admin</option>
-                <option value="tenant_admin">Tenant Admin</option>
-              </select>
-              <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
+            <AppSelect
+              value={user.role}
+              onValueChange={(value) => void handleRoleChange(value as TenantRole)}
+              disabled={updateRole.isPending}
+              options={[
+                { value: "hr_admin", label: "HR Admin" },
+                { value: "tenant_admin", label: "Tenant Admin" },
+              ]}
+              className="h-8 min-w-[130px] px-3 text-[11px] text-muted-foreground"
+            />
 
             {!confirmDeactivate ? (
               <button
@@ -168,7 +167,7 @@ interface InviteFormValues {
 }
 
 function InviteModal({ onClose }: { onClose: () => void }) {
-  const { register, handleSubmit, formState: { isSubmitting } } =
+  const { control, register, handleSubmit, formState: { isSubmitting } } =
     useForm<InviteFormValues>({ defaultValues: { role: "hr_admin" } });
   const invite = useInviteUser();
 
@@ -201,13 +200,21 @@ function InviteModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className={labelCls}>Role</label>
-            <select
-              {...register("role")}
-              className={inputCls}
-            >
-              <option value="hr_admin">HR Admin</option>
-              <option value="tenant_admin">Tenant Admin</option>
-            </select>
+            <Controller
+              control={control}
+              name="role"
+              render={({ field }) => (
+                <AppSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  options={[
+                    { value: "hr_admin", label: "HR Admin" },
+                    { value: "tenant_admin", label: "Tenant Admin" },
+                  ]}
+                  className={inputCls + " justify-between"}
+                />
+              )}
+            />
           </div>
 
           <div className="flex gap-3 pt-1">

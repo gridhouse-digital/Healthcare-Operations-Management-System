@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { AppSelect } from '@/components/ui/AppSelect';
 
 const teamSizeOptions = ['1-10', '11-25', '26-50', '51-100', '100+'] as const;
 
@@ -104,6 +105,7 @@ async function extractInvokeErrorMessage(error: unknown, data: unknown): Promise
 
 export function RequestAccessPage() {
     const {
+        control,
         register,
         handleSubmit,
         setError,
@@ -278,14 +280,22 @@ export function RequestAccessPage() {
 
                                     <div>
                                         <label className="form-label">Estimated Team Size</label>
-                                        <select {...register('teamSize')} className="saas-input appearance-none">
-                                            <option value="">Select team size</option>
-                                            {teamSizeOptions.map((option) => (
-                                                <option key={option} value={option}>
-                                                    {option}
-                                                </option>
-                                            ))}
-                                        </select>
+                                        <Controller
+                                            control={control}
+                                            name="teamSize"
+                                            render={({ field }) => (
+                                                <AppSelect
+                                                    value={field.value}
+                                                    onValueChange={field.onChange}
+                                                    placeholder="Select team size"
+                                                    options={teamSizeOptions.map((option) => ({
+                                                        value: option,
+                                                        label: option,
+                                                    }))}
+                                                    className="saas-input justify-between"
+                                                />
+                                            )}
+                                        />
                                         {errors.teamSize?.message && (
                                             <p className="mt-1.5 text-[12px] text-destructive">{errors.teamSize.message}</p>
                                         )}

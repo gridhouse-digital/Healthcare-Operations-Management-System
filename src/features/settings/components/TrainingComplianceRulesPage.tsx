@@ -2,6 +2,7 @@ import { useState } from "react";
 import { BookCheck, Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SlideOver } from "@/components/ui/SlideOver";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { toast } from "@/hooks/useToast";
 import {
   useSaveTrainingComplianceRule,
@@ -309,95 +310,97 @@ export function TrainingComplianceRulesPage() {
             </div>
             <div>
               <label className={labelCls}>Rule Template</label>
-              <select
+              <AppSelect
                 value={draft.rule_template ?? ""}
-                onChange={(event) => updateDraft("rule_template", event.target.value || null)}
+                onValueChange={(value) => updateDraft("rule_template", value || null)}
+                options={[
+                  { value: "", label: "Custom" },
+                  ...templateOptions.map((option) => ({ value: option.value, label: option.label })),
+                ]}
                 className={inputCls}
-              >
-                <option value="">Custom</option>
-                {templateOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label className={labelCls}>Rule Type</label>
-              <select
+              <AppSelect
                 value={draft.rule_type}
-                onChange={(event) => updateDraft("rule_type", event.target.value as TrainingComplianceRuleDraft["rule_type"])}
+                onValueChange={(value) => updateDraft("rule_type", value as TrainingComplianceRuleDraft["rule_type"])}
+                options={[
+                  { value: "annual_recurring", label: "Annual Recurring" },
+                  { value: "interval_recurring", label: "Interval Recurring" },
+                  { value: "assignment_specific", label: "Assignment-Specific" },
+                ]}
                 className={inputCls}
-              >
-                <option value="annual_recurring">Annual Recurring</option>
-                <option value="interval_recurring">Interval Recurring</option>
-                <option value="assignment_specific">Assignment-Specific</option>
-              </select>
+              />
             </div>
             <div>
               <label className={labelCls}>Anchor Date</label>
-              <select
+              <AppSelect
                 value={draft.anchor_type}
-                onChange={(event) => updateDraft("anchor_type", event.target.value as TrainingComplianceRuleDraft["anchor_type"])}
+                onValueChange={(value) => updateDraft("anchor_type", value as TrainingComplianceRuleDraft["anchor_type"])}
+                options={[
+                  { value: "group_enrollment", label: "Group enrollment date" },
+                  { value: "hire_date", label: "Hire date" },
+                  { value: "manual", label: "Manual anchor" },
+                ]}
                 className={inputCls}
-              >
-                <option value="group_enrollment">Group enrollment date</option>
-                <option value="hire_date">Hire date</option>
-                <option value="manual">Manual anchor</option>
-              </select>
+              />
             </div>
             <div>
               <label className={labelCls}>LearnDash Group</label>
-              <select
+              <AppSelect
                 value={draft.group_id}
-                onChange={(event) => updateDraft("group_id", event.target.value)}
+                onValueChange={(value) => updateDraft("group_id", value)}
+                options={[
+                  { value: "", label: "Select group" },
+                  ...((data?.groups ?? []).map((group) => ({ value: group.group_id, label: group.label }))),
+                ]}
                 className={inputCls}
-              >
-                <option value="">Select group</option>
-                {data?.groups.map((group) => (
-                  <option key={group.group_id} value={group.group_id}>{group.label}</option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label className={labelCls}>LearnDash Course</label>
-              <select
+              <AppSelect
                 value={draft.course_id}
-                onChange={(event) => updateDraft("course_id", event.target.value)}
+                onValueChange={(value) => updateDraft("course_id", value)}
+                options={[
+                  { value: "", label: "Select course" },
+                  ...((data?.courses ?? []).map((course) => ({
+                    value: course.course_id,
+                    label: course.course_name ?? course.course_id,
+                  }))),
+                ]}
                 className={inputCls}
-              >
-                <option value="">Select course</option>
-                {data?.courses.map((course) => (
-                  <option key={course.course_id} value={course.course_id}>
-                    {course.course_name ?? course.course_id}
-                  </option>
-                ))}
-              </select>
+              />
               <p className="mt-1 text-[12px] text-muted-foreground">
                 Courses come from synced LearnDash catalog data, with fallback to existing training history if the catalog is still empty.
               </p>
             </div>
             <div>
               <label className={labelCls}>First Due</label>
-              <select
-                value={draft.initial_due_offset_months}
-                onChange={(event) => updateDraft("initial_due_offset_months", Number(event.target.value))}
+              <AppSelect
+                value={String(draft.initial_due_offset_months)}
+                onValueChange={(value) => updateDraft("initial_due_offset_months", Number(value))}
+                options={[
+                  { value: "12", label: "12 months after anchor date" },
+                  { value: "24", label: "24 months after anchor date" },
+                  { value: "6", label: "6 months after anchor date" },
+                ]}
                 className={inputCls}
-              >
-                <option value={12}>12 months after anchor date</option>
-                <option value={24}>24 months after anchor date</option>
-                <option value={6}>6 months after anchor date</option>
-              </select>
+              />
             </div>
             <div>
               <label className={labelCls}>Repeats Every</label>
-              <select
-                value={draft.recurrence_interval_months}
-                onChange={(event) => updateDraft("recurrence_interval_months", Number(event.target.value))}
+              <AppSelect
+                value={String(draft.recurrence_interval_months)}
+                onValueChange={(value) => updateDraft("recurrence_interval_months", Number(value))}
+                options={[
+                  { value: "12", label: "12 months" },
+                  { value: "24", label: "24 months" },
+                  { value: "36", label: "36 months" },
+                ]}
                 className={inputCls}
-              >
-                <option value={12}>12 months</option>
-                <option value={24}>24 months</option>
-                <option value={36}>36 months</option>
-              </select>
+              />
             </div>
           </div>
 

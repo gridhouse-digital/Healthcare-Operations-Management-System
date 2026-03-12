@@ -7,6 +7,7 @@ import { TrainingStatsCards } from './components/TrainingStatsCards';
 import { TrainingEmployeeTable } from './components/TrainingEmployeeTable';
 import { RecurringComplianceDashboard } from './components/RecurringComplianceDashboard';
 import type { ComplianceStatus } from './types';
+import { AppSelect } from '@/components/ui/AppSelect';
 
 const inputCls = 'w-full px-3 h-9 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60 [&_option]:bg-card [&_option]:text-foreground';
 
@@ -152,28 +153,28 @@ export function TrainingPage() {
                   className="w-full rounded-md border border-border bg-transparent pl-8 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/35 h-9"
                 />
               </div>
-              <select
+              <AppSelect
                 value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value as 'all' | ComplianceStatus)}
+                onValueChange={value => setFilterStatus(value as 'all' | ComplianceStatus)}
+                options={[
+                  { value: 'all', label: 'All Statuses' },
+                  { value: 'compliant', label: 'Compliant' },
+                  { value: 'overdue', label: 'Overdue' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'not_started', label: 'Not Started' },
+                  { value: 'no_courses', label: 'No Courses' },
+                ]}
                 className={inputCls}
-              >
-                <option value="all">All Statuses</option>
-                <option value="compliant">Compliant</option>
-                <option value="overdue">Overdue</option>
-                <option value="in_progress">In Progress</option>
-                <option value="not_started">Not Started</option>
-                <option value="no_courses">No Courses</option>
-              </select>
-              <select
+              />
+              <AppSelect
                 value={filterCourse}
-                onChange={e => setFilterCourse(e.target.value)}
+                onValueChange={setFilterCourse}
+                options={[
+                  { value: 'all', label: 'All Courses' },
+                  ...courseNames.map(name => ({ value: name, label: name })),
+                ]}
                 className={inputCls}
-              >
-                <option value="all">All Courses</option>
-                {courseNames.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 

@@ -49,6 +49,7 @@ export interface Employee {
     profile_source?: string | null;
     wp_user_id?: number | null;
     hired_at?: string | null;
+    primary_compliance_group_id?: string | null;
     applicant_id?: string | null;
     created_at: string;
     updated_at: string;

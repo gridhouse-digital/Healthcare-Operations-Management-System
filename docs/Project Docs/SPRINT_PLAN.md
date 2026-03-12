@@ -336,6 +336,11 @@
 - Active compliance counts no longer include removed-group obligations
 - Historical training remains traceable for audit/admin review
 - Status: [~] In progress - 2026-03-12
+- Current state:
+  - `sync-training` now reconciles active/inactive group enrollments
+  - active onboarding/training views now derive from current LearnDash group context
+  - validated for A -> B reassignment on production data
+  - remaining work is closeout validation for re-entry cases and any final superseded-state UX
 - Plan: `docs/plans/2026-03-12-epic5-story511-plan.md`
 
 ### Story 5.12 - Recurring compliance supersession on group change
@@ -344,6 +349,10 @@
 - Historical recurring cycles remain visible for audit
 - Rebuild logic does not recreate superseded old-group obligations
 - Status: [~] In progress - 2026-03-12
+- Current state:
+  - inactive group enrollments no longer surface recurring obligations in `v_recurring_compliance_status`
+  - `primary_compliance_group_id` now supports intentional multi-group users without forcing every group into compliance
+  - remaining work is finalizing re-entry policy handling beyond the current `resume_previous_series` behavior and validating broader edge cases
 - Plan: `docs/plans/2026-03-12-epic5-story512-plan.md`
 
 ### Story 5.13 - Multi-rule recurring compliance UI loading fix
@@ -375,19 +384,21 @@
 - Platform admins can choose `All tenants` or a specific tenant in applicant UI
 - Applicant list scopes correctly when a tenant is selected
 - `tenant_admin` and `hr_admin` behavior remains unchanged
-- Status: [ ] Not started
+- Status: [x] Complete - 2026-03-12
 - Plan: `docs/plans/2026-03-12-epic5-story516-plan.md`
 
 **Epic 5 Gate:** Stories 5.1-5.10 are functionally complete on the linked project. Remote DB matches the post-migration model, active EF/runtime paths no longer depend on `employees`, `settings`, or `profiles`, and public request-access intake now hands off cleanly into the manual onboarding flow. Tenant provisioning itself is still manual and remains the next obvious platform-admin workflow gap.
 
+### Epic 5 UI consistency note
+
+- 2026-03-12: all dropdowns under `src` standardized on the shared `AppSelect` component; shared hover/highlight state now uses the design-system green.
+
 ### Epic 5 Follow-up Priority Order
 
-1. Story 5.13 - Multi-rule recurring compliance UI loading fix
-2. Story 5.14 - Multi-rule anchor generation fix
-3. Story 5.15 - Multi-rule recurring instance rebuild fix
-4. Story 5.11 - Training sync group change reconciliation
-5. Story 5.12 - Recurring compliance supersession on group change
-6. Story 5.16 - Platform-admin applicant tenant filter
+1. Story 5.11 - Training sync group change reconciliation closeout and re-entry QA
+2. Story 5.12 - Recurring compliance supersession policy completion
+3. Recurring compliance reminder / manual cycle action slice
+4. Epic 6 - Compliance exports
 
 ---
 

@@ -4,7 +4,6 @@ import {
   AlertTriangle,
   Building2,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   Inbox,
   LayoutDashboard,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { AppSelect } from '@/components/ui/AppSelect';
 import {
   type AccessRequestRecord,
   type AccessRequestStatus,
@@ -128,8 +128,8 @@ function QueueItem({
       type="button"
       onClick={onSelect}
       className={cn(
-        'w-full text-left p-4 border-b border-border/50 transition-colors last:border-b-0 hover:bg-muted/10',
-        selected ? 'bg-primary/5' : ''
+        'w-full text-left p-4 border-b border-border/50 transition-colors last:border-b-0 hover:bg-muted/5',
+        selected && 'bg-card/80'
       )}
     >
       <div className="flex items-start justify-between gap-3 mb-1">
@@ -249,9 +249,9 @@ function RequestDetails({
     request.requester_confirmation_status === 'failed';
 
   return (
-    <div className="saas-card flex flex-col h-full overflow-hidden shadow-sm">
-      {/* Header Area */}
-      <div className="px-6 py-6 border-b border-border/60 bg-muted/20">
+    <div className="flex flex-col h-full overflow-hidden gap-6">
+      {/* Header Area sitting on page background */}
+      <div className="px-2 sm:px-4 md:px-6 pt-2 pb-4">
         <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-6">
           <div className="space-y-3 max-w-2xl">
             <div className="flex items-center gap-3">
@@ -270,21 +270,16 @@ function RequestDetails({
 
           <div className="flex flex-col gap-2 min-w-[200px]">
             <span className="meta-label">Review State</span>
-            <div className="relative">
-              <select
-                value={request.status}
-                onChange={(event) => void onStatusChange(request, event.target.value as AccessRequestStatus)}
-                disabled={updateStatus.isPending}
-                className={cn(inputCls, 'py-1.5 pr-10 appearance-none cursor-pointer w-full')}
-              >
-                {statusOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {formatStatusLabel(option)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            </div>
+            <AppSelect
+              value={request.status}
+              onValueChange={(value) => void onStatusChange(request, value as AccessRequestStatus)}
+              disabled={updateStatus.isPending}
+              options={statusOptions.map((option) => ({
+                value: option,
+                label: formatStatusLabel(option),
+              }))}
+              className={cn(inputCls, 'py-1.5 w-full bg-card/80 border-border/70')}
+            />
           </div>
         </div>
 
@@ -301,12 +296,12 @@ function RequestDetails({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 md:p-8 max-w-4xl grid gap-10">
+      <div className="flex-1 overflow-y-auto pb-4">
+        <div className="px-2 sm:px-4 md:px-6 max-w-4xl grid gap-6">
           {/* Data Section */}
-          <section>
-            <h3 className="zone-label mb-5 border-b border-border/40 pb-2">Contact Details</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-8 gap-x-12">
+          <section className="rounded-2xl bg-card/80 border border-border/70 px-6 py-5">
+            <h3 className="zone-label mb-4">Contact Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-10">
               <DetailField label="Primary Contact" value={request.primary_contact_name} />
               <DetailField label="Work Email" value={request.work_email} />
               <DetailField label="Phone" value={request.phone || '—'} />
@@ -317,9 +312,9 @@ function RequestDetails({
           </section>
 
           {/* Context Section */}
-          <section>
-            <h3 className="zone-label mb-5 border-b border-border/40 pb-2">Business Context</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          <section className="rounded-2xl bg-card/80 border border-border/70 px-6 py-5">
+            <h3 className="zone-label mb-4">Business Context</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
               <div className="space-y-2">
                 <span className="meta-label">Integration Needs</span>
                 <p className="text-[14px] leading-relaxed text-foreground whitespace-pre-wrap">
@@ -336,9 +331,9 @@ function RequestDetails({
           </section>
 
           {/* Infrastructure Section */}
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-            <div>
-              <h3 className="zone-label mb-5 border-b border-border/40 pb-2">Delivery Log</h3>
+          <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="rounded-2xl bg-card/80 border border-border/70 px-6 py-5">
+              <h3 className="zone-label mb-4">Delivery Log</h3>
               <div className="divide-y divide-border/40">
                 <DeliveryRow
                   label="Internal Ops Notification"
@@ -355,8 +350,8 @@ function RequestDetails({
               </div>
             </div>
 
-            <div>
-              <h3 className="zone-label mb-5 border-b border-border/40 pb-2">Telemetry</h3>
+            <div className="rounded-2xl bg-card/80 border border-border/70 px-6 py-5">
+              <h3 className="zone-label mb-4">Telemetry</h3>
               <div className="grid grid-cols-1 gap-6">
                 <DetailField label="Request IP" value={request.request_ip || '—'} mono />
                 <DetailField label="Origin Host" value={request.request_origin || '—'} mono />
@@ -477,8 +472,8 @@ export function AccessRequestsPage() {
         </div>
       )}
 
-      {/* Metric Blocks Layout */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Metric Blocks Layout – top pipeline bar */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <SummaryTile
           label="Total Intake"
           value={requests.length.toString()}
@@ -512,8 +507,8 @@ export function AccessRequestsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start h-[700px]">
         
         {/* Sleek List sidebar */}
-        <div className="saas-card flex flex-col h-full overflow-hidden">
-          <div className="border-b border-border bg-card z-10">
+        <div className="flex flex-col h-full overflow-hidden rounded-2xl border border-border/60 bg-transparent">
+          <div className="border-b border-border bg-transparent z-10">
             <div className="p-3 border-b border-border/50">
               <div className="input-with-icon">
                 <Search size={14} className="input-icon" />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useApplicants, useSyncApplicants } from '@/hooks/useApplicants';
+import { useApplicantTenants, useApplicants, useSyncApplicants } from '@/hooks/useApplicants';
 import { settingsService } from '@/services/settingsService';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { format } from 'date-fns';
@@ -7,6 +7,8 @@ import { Search, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { AppSelect } from '@/components/ui/AppSelect';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
     jotform:  { bg: 'color-mix(in srgb, var(--severity-medium) 12%, transparent)', text: 'var(--severity-high)', border: 'color-mix(in srgb, var(--severity-medium) 22%, transparent)' },
@@ -42,13 +44,14 @@ function SourceBadge({ source }: { source?: string }) {
 }
 
 export function ApplicantList() {
-    const { data: applicants = [], isLoading: loading, error } = useApplicants();
+    const { isPlatformAdmin } = useUserRole();
+    const [tenantFilter, setTenantFilter] = useState('all');
+    const { data: applicants = [], isLoading: loading, error } = useApplicants(
+        isPlatformAdmin ? tenantFilter : undefined,
+    );
+    const { data: tenantOptions = [] } = useApplicantTenants(isPlatformAdmin);
     const syncMutation = useSyncApplicants();
     const navigate = useNavigate();
-
-    console.log('ApplicantList: applicants data:', applicants);
-    console.log('ApplicantList: loading:', loading);
-    console.log('ApplicantList: error:', error);
 
     // UI States
     const [filterStatus, setFilterStatus] = useState('all');
@@ -94,6 +97,7 @@ export function ApplicantList() {
                     <h1 className="page-header-title">Applicants</h1>
                     <p className="page-header-meta">
                         {filteredApplicants.length} records
+                        {isPlatformAdmin && tenantFilter !== 'all' && ` · ${tenantOptions.find((tenant) => tenant.id === tenantFilter)?.name ?? 'Selected tenant'}`}
                         {filterStatus !== 'all' && ` · ${filterStatus}`}
                         {searchTerm && ` · "${searchTerm}"`}
                     </p>
@@ -140,33 +144,43 @@ export function ApplicantList() {
                 </div>
 
                 {/* Role select */}
-                <select
+                <AppSelect
                     value={filterRole}
-                    onChange={(e) => setFilterRole(e.target.value)}
-                    className="h-8 px-2.5 pr-7 bg-card border border-border rounded-md text-[13px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all appearance-none cursor-pointer"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
-                >
-                    <option value="all">All roles</option>
-                    {availableRoles.map((role) => (
-                        <option key={role} value={role}>{role}</option>
-                    ))}
-                </select>
+                    onValueChange={setFilterRole}
+                    options={[
+                        { value: 'all', label: 'All roles' },
+                        ...availableRoles.map((role) => ({ value: role, label: role })),
+                    ]}
+                    className="h-8 bg-card border border-border text-[13px] font-medium focus:ring-1 focus:ring-primary/40 transition-all"
+                />
+
+                {isPlatformAdmin && (
+                    <AppSelect
+                        value={tenantFilter}
+                        onValueChange={setTenantFilter}
+                        options={[
+                            { value: 'all', label: 'All tenants' },
+                            ...tenantOptions.map((tenant) => ({ value: tenant.id, label: tenant.name })),
+                        ]}
+                        className="h-8 bg-card border border-border text-[13px] font-medium focus:ring-1 focus:ring-primary/40 transition-all"
+                    />
+                )}
 
                 {/* Status select */}
-                <select
+                <AppSelect
                     value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="h-8 px-2.5 pr-7 bg-card border border-border rounded-md text-[13px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-primary/40 transition-all appearance-none cursor-pointer"
-                    style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23888' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}
-                >
-                    <option value="all">All statuses</option>
-                    <option value="New">New</option>
-                    <option value="Screening">Screening</option>
-                    <option value="Interview">Interview</option>
-                    <option value="Offer">Offer</option>
-                    <option value="Hired">Hired</option>
-                    <option value="Rejected">Rejected</option>
-                </select>
+                    onValueChange={setFilterStatus}
+                    options={[
+                        { value: 'all', label: 'All statuses' },
+                        { value: 'New', label: 'New' },
+                        { value: 'Screening', label: 'Screening' },
+                        { value: 'Interview', label: 'Interview' },
+                        { value: 'Offer', label: 'Offer' },
+                        { value: 'Hired', label: 'Hired' },
+                        { value: 'Rejected', label: 'Rejected' },
+                    ]}
+                    className="h-8 bg-card border border-border text-[13px] font-medium focus:ring-1 focus:ring-primary/40 transition-all"
+                />
             </div>
 
             {/* ── Table ── */}

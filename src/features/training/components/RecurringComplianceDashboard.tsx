@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { CalendarClock, Search } from "lucide-react";
 import { format } from "date-fns";
 import { SlideOver } from "@/components/ui/SlideOver";
+import { AppSelect } from "@/components/ui/AppSelect";
 import { useRecurringComplianceDashboard } from "../hooks/useRecurringComplianceDashboard";
 import type {
   RecurringComplianceEmployeeRow,
@@ -134,20 +135,28 @@ export function RecurringComplianceDashboard() {
               className="w-full rounded-md border border-border bg-transparent pl-8 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/35 h-9"
             />
           </div>
-          <select value={ruleFilter} onChange={(event) => setRuleFilter(event.target.value)} className={inputCls}>
-            <option value="all">All Rules</option>
-            {(data?.ruleOptions ?? []).map((rule) => (
-              <option key={rule.rule_id} value={rule.rule_id}>{rule.label}</option>
-            ))}
-          </select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | RecurringComplianceStatus)} className={inputCls}>
-            <option value="all">All Statuses</option>
-            <option value="not_yet_due">Not Yet Due</option>
-            <option value="due_soon">Due Soon</option>
-            <option value="due">Due</option>
-            <option value="overdue">Overdue</option>
-            <option value="completed">Completed</option>
-          </select>
+          <AppSelect
+            value={ruleFilter}
+            onValueChange={setRuleFilter}
+            options={[
+              { value: "all", label: "All Rules" },
+              ...((data?.ruleOptions ?? []).map((rule) => ({ value: rule.rule_id, label: rule.label }))),
+            ]}
+            className={inputCls}
+          />
+          <AppSelect
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as "all" | RecurringComplianceStatus)}
+            options={[
+              { value: "all", label: "All Statuses" },
+              { value: "not_yet_due", label: "Not Yet Due" },
+              { value: "due_soon", label: "Due Soon" },
+              { value: "due", label: "Due" },
+              { value: "overdue", label: "Overdue" },
+              { value: "completed", label: "Completed" },
+            ]}
+            className={inputCls}
+          />
         </div>
       </div>
 

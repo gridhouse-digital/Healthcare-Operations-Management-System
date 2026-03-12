@@ -2,18 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { Applicant } from '@/types';
 
+interface ApplicantTenantOption {
+    id: string;
+    name: string;
+}
+
 /**
  * Fetches applicants directly from the Supabase database.
  * This is a fast read-only operation that does not trigger a sync with JotForm.
  */
-export const useApplicants = () => {
+export const useApplicants = (tenantId?: string) => {
     return useQuery({
-        queryKey: ['applicants'],
+        queryKey: ['applicants', tenantId ?? 'all'],
         queryFn: async () => {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('applicants')
                 .select('*')
                 .order('created_at', { ascending: false });
+
+            if (tenantId && tenantId !== 'all') {
+                query = query.eq('tenant_id', tenantId);
+            }
+
+            const { data, error } = await query;
 
             if (error) {
                 console.error('Failed to fetch applicants from DB:', error);
@@ -21,6 +32,26 @@ export const useApplicants = () => {
             }
 
             return data as Applicant[];
+        },
+    });
+};
+
+export const useApplicantTenants = (enabled: boolean) => {
+    return useQuery({
+        queryKey: ['applicant-tenants'],
+        enabled,
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('tenants')
+                .select('id, name')
+                .order('name', { ascending: true });
+
+            if (error) {
+                console.error('Failed to fetch tenants for applicant filter:', error);
+                throw new Error(`Failed to load tenants: ${error.message}`);
+            }
+
+            return (data ?? []) as ApplicantTenantOption[];
         },
     });
 };

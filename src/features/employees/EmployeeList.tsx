@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { employeeService } from '@/services/employeeService';
 import type { Employee } from '@/types';
 import { format } from 'date-fns';
-import { Search, Mail, Phone, Calendar, Building, MoreHorizontal, BookOpen, Edit2, Save, X, Plus, ClipboardCheck } from 'lucide-react';
+import { Search, Mail, Phone, Calendar, Building, MoreHorizontal, BookOpen, Edit2, Save, X, Plus, ClipboardCheck, Users, ShieldCheck } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { SlideOver } from '@/components/ui/SlideOver';
 import { OnboardingSummaryPanel } from '@/components/ai/OnboardingSummaryPanel';
 import { toast } from '@/hooks/useToast';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { AppSelect } from '@/components/ui/AppSelect';
 
 const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
 const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
@@ -73,6 +74,7 @@ export function EmployeeList() {
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [trainingRecords, setTrainingRecords] = useState<TrainingRecord[]>([]);
     const [recurringRecords, setRecurringRecords] = useState<RecurringComplianceRecord[]>([]);
+    const [activeGroupIds, setActiveGroupIds] = useState<string[]>([]);
     const [loadingTraining, setLoadingTraining] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -89,9 +91,11 @@ export function EmployeeList() {
         if (selectedEmployee) {
             loadTrainingRecords(selectedEmployee.id);
             loadRecurringCompliance(selectedEmployee.id);
+            loadActiveComplianceGroups(selectedEmployee.id);
         } else {
             setTrainingRecords([]);
             setRecurringRecords([]);
+            setActiveGroupIds([]);
         }
     }, [selectedEmployee]);
 
@@ -202,6 +206,26 @@ export function EmployeeList() {
         }
     };
 
+    const loadActiveComplianceGroups = async (personId: string) => {
+        try {
+            const { data, error: groupsErr } = await supabase
+                .from('employee_group_enrollments')
+                .select('group_id')
+                .eq('person_id', personId)
+                .eq('active', true)
+                .order('group_id');
+
+            if (groupsErr) throw groupsErr;
+
+            setActiveGroupIds(
+                Array.from(new Set((data || []).map((row) => row.group_id as string)))
+            );
+        } catch (err) {
+            console.error('Failed to load active compliance groups', err);
+            setActiveGroupIds([]);
+        }
+    };
+
     const handleEditClick = () => {
         if (selectedEmployee) {
             setEditFormData({
@@ -213,6 +237,7 @@ export function EmployeeList() {
                 department: selectedEmployee.department,
                 hired_at: selectedEmployee.hired_at,
                 employee_status: selectedEmployee.employee_status,
+                primary_compliance_group_id: selectedEmployee.primary_compliance_group_id,
             });
             setIsEditing(true);
         }
@@ -286,26 +311,26 @@ export function EmployeeList() {
                             className="w-full pl-8 pr-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60"
                         />
                     </div>
-                    <select
+                    <AppSelect
                         value={filterDept}
-                        onChange={(e) => setFilterDept(e.target.value)}
-                        className={inputCls}
-                    >
-                        <option value="all">All Departments</option>
-                        <option value="Nursing">Nursing</option>
-                        <option value="Care">Care</option>
-                        <option value="Admin">Admin</option>
-                    </select>
-                    <select
+                        onValueChange={setFilterDept}
+                        options={[
+                            { value: 'all', label: 'All Departments' },
+                            { value: 'Nursing', label: 'Nursing' },
+                            { value: 'Care', label: 'Care' },
+                            { value: 'Admin', label: 'Admin' },
+                        ]}
+                    />
+                    <AppSelect
                         value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className={inputCls}
-                    >
-                        <option value="all">All Statuses</option>
-                        <option value="Active">Active</option>
-                        <option value="Onboarding">Onboarding</option>
-                        <option value="Terminated">Terminated</option>
-                    </select>
+                        onValueChange={setFilterStatus}
+                        options={[
+                            { value: 'all', label: 'All Statuses' },
+                            { value: 'Active', label: 'Active' },
+                            { value: 'Onboarding', label: 'Onboarding' },
+                            { value: 'Terminated', label: 'Terminated' },
+                        ]}
+                    />
                 </div>
             </div>
 
@@ -543,11 +568,18 @@ export function EmployeeList() {
                                     </div>
                                     <div>
                                         <label className={labelCls}>Status</label>
-                                        <select value={editFormData.employee_status || ''} onChange={(e) => setEditFormData({ ...editFormData, employee_status: e.target.value })} className={inputCls}>
-                                            <option value="Active">Active</option>
-                                            <option value="Onboarding">Onboarding</option>
-                                            <option value="Terminated">Terminated</option>
-                                        </select>
+                                        <AppSelect
+                                            value={editFormData.employee_status || 'Active'}
+                                            onValueChange={(value) => setEditFormData({
+                                                ...editFormData,
+                                                employee_status: value,
+                                            })}
+                                            options={[
+                                                { value: 'Active', label: 'Active' },
+                                                { value: 'Onboarding', label: 'Onboarding' },
+                                                { value: 'Terminated', label: 'Terminated' },
+                                            ]}
+                                        />
                                     </div>
                                 </div>
                             ) : (
@@ -590,6 +622,56 @@ export function EmployeeList() {
                                         <p className="text-[13px] text-foreground">{selectedEmployee.department || '—'}</p>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <Users size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                    <div>
+                                        <p className="zone-label mb-0.5">Active LearnDash Groups</p>
+                                        <p className="text-[13px] text-foreground">
+                                            {activeGroupIds.length > 0 ? activeGroupIds.join(', ') : 'â€”'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <ShieldCheck size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                    <div>
+                                        <p className="zone-label mb-0.5">Primary Compliance Group</p>
+                                        <p className="text-[13px] text-foreground">
+                                            {selectedEmployee.primary_compliance_group_id || 'All active groups'}
+                                        </p>
+                                        {activeGroupIds.length > 1 && !selectedEmployee.primary_compliance_group_id && (
+                                            <p className="mt-1 text-[11px] text-[var(--severity-medium)]">
+                                                Multiple active groups. Choose a primary compliance group to narrow onboarding and recurring obligations.
+                                            </p>
+                                        )}
+                                        {activeGroupIds.length > 1 && !isEditing && (
+                                            <p className="mt-1 text-[11px] text-muted-foreground">
+                                                Use Edit Profile to change this setting.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                    {isEditing && activeGroupIds.length > 1 && (
+                                        <div className="px-4 py-3">
+                                            <label className={labelCls}>Primary Compliance Group</label>
+                                        <AppSelect
+                                            value={editFormData.primary_compliance_group_id || ''}
+                                            onValueChange={(value) => setEditFormData({
+                                                ...editFormData,
+                                                primary_compliance_group_id: value || null,
+                                            })}
+                                            options={[
+                                                { value: '', label: 'All active groups' },
+                                                ...activeGroupIds.map((groupId) => ({
+                                                    value: groupId,
+                                                    label: `Group ${groupId}`,
+                                                })),
+                                            ]}
+                                        />
+                                        <p className="mt-1 text-[11px] text-muted-foreground">
+                                            Active LearnDash groups are read-only. This setting only changes which group drives HR compliance.
+                                        </p>
+                                    </div>
+                                )}
                                 {selectedEmployee.employee_id && (
                                     <div className="flex items-center gap-3 px-4 py-3">
                                         <span className="text-[11px] font-mono text-muted-foreground flex-shrink-0">#</span>

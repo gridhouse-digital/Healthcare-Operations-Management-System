@@ -48,6 +48,11 @@ interface TrainingCompletion {
   status: string | null;
 }
 
+interface PersonCompliancePreference {
+  id: string;
+  primary_compliance_group_id: string | null;
+}
+
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -99,7 +104,7 @@ async function rebuildTenant(
   let skipped = 0;
   let errors = 0;
 
-  const [{ data: rules, error: rulesErr }, { data: enrollments, error: enrollmentsErr }, { data: instances, error: instancesErr }, { data: completions, error: completionsErr }] =
+  const [{ data: rules, error: rulesErr }, { data: enrollments, error: enrollmentsErr }, { data: instances, error: instancesErr }, { data: completions, error: completionsErr }, { data: people, error: peopleErr }] =
     await Promise.all([
       admin
         .from("training_compliance_rules")
@@ -136,17 +141,36 @@ async function rebuildTenant(
         .select("person_id, course_id, completed_at, status")
         .eq("tenant_id", tenantId)
         .eq("status", "completed"),
+      admin
+        .from("people")
+        .select("id, primary_compliance_group_id")
+        .eq("tenant_id", tenantId)
+        .eq("type", "employee"),
     ]);
 
   if (rulesErr) throw rulesErr;
   if (enrollmentsErr) throw enrollmentsErr;
   if (instancesErr) throw instancesErr;
   if (completionsErr) throw completionsErr;
+  if (peopleErr) throw peopleErr;
 
   const activeRules = (rules ?? []) as ComplianceRule[];
   const activeEnrollments = (enrollments ?? []) as GroupEnrollment[];
   const existingInstances = (instances ?? []) as ExistingInstance[];
   const trainingCompletions = (completions ?? []) as TrainingCompletion[];
+  const personPreferences = (people ?? []) as PersonCompliancePreference[];
+
+  const activeGroupsByPerson = new Map<string, Set<string>>();
+  for (const enrollment of activeEnrollments) {
+    const groups = activeGroupsByPerson.get(enrollment.person_id) ?? new Set<string>();
+    groups.add(enrollment.group_id);
+    activeGroupsByPerson.set(enrollment.person_id, groups);
+  }
+
+  const primaryComplianceGroupByPerson = new Map<string, string | null>();
+  for (const person of personPreferences) {
+    primaryComplianceGroupByPerson.set(person.id, person.primary_compliance_group_id);
+  }
 
   const instancesByKey = new Map<string, ExistingInstance>();
   for (const instance of existingInstances) {
@@ -166,9 +190,21 @@ async function rebuildTenant(
 
   const now = new Date();
 
+  function groupCountsForCompliance(personId: string, groupId: string): boolean {
+    const primaryGroupId = primaryComplianceGroupByPerson.get(personId) ?? null;
+    if (!primaryGroupId) return true;
+
+    const activeGroups = activeGroupsByPerson.get(personId);
+    if (!activeGroups?.has(primaryGroupId)) return true;
+
+    return groupId === primaryGroupId;
+  }
+
   for (const rule of activeRules) {
     const matchingEnrollments = activeEnrollments.filter(
-      (enrollment) => enrollment.group_id === rule.group_id,
+      (enrollment) =>
+        enrollment.group_id === rule.group_id &&
+        groupCountsForCompliance(enrollment.person_id, enrollment.group_id),
     );
 
     for (const enrollment of matchingEnrollments) {
