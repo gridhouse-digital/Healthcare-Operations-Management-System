@@ -5,11 +5,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // ---------------------------------------------------------------------------
 
 export interface AuditEntry {
-  tenantId: string;
-  actorId: string;
+  tenantId?: string;
+  actorId?: string;
   action: string;
   tableName: string;
-  recordId: string;
+  recordId?: string;
   before?: unknown;
   after?: unknown;
 }
@@ -43,11 +43,11 @@ async function _writeAudit(entry: AuditEntry): Promise<void> {
   });
 
   await supabase.from("audit_log").insert({
-    tenant_id: entry.tenantId,
-    actor_id: entry.actorId,
+    tenant_id: entry.tenantId ?? null,
+    actor_id: entry.actorId ?? null,
     action: entry.action,
     table_name: entry.tableName,
-    record_id: entry.recordId,
+    record_id: entry.recordId ?? null,
     before: entry.before ?? null,
     after: entry.after ?? null,
     // created_at is set by DB default

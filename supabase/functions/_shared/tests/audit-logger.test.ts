@@ -72,6 +72,15 @@ Deno.test("logAudit accepts optional before/after fields", async () => {
   assertEquals(true, true);
 });
 
+Deno.test("logAudit accepts optional tenant, actor, and record identifiers", async () => {
+  await logAudit({
+    action: "system.job.completed",
+    tableName: "integration_log",
+    after: { ok: true },
+  });
+  assertEquals(true, true);
+});
+
 Deno.test("logAudit is non-blocking (resolves without awaiting DB)", async () => {
   const start = Date.now();
   await logAudit({

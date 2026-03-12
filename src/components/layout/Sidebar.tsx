@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, Users, FileText, Briefcase, BookOpenCheck, Sparkles, PanelLeftClose, PanelLeftOpen, Plug, UserCog, Wrench, Mail, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Briefcase, BookOpenCheck, Sparkles, PanelLeftClose, PanelLeftOpen, Plug, UserCog, Wrench, Mail, ClipboardCheck, type LucideIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -52,6 +52,7 @@ const navGroups: NavGroup[] = [
             { name: 'AI Dashboard',     href: '/admin/ai-dashboard',    icon: Sparkles, adminOnly: true,  isAI: true },
             { name: 'Access Requests',  href: '/admin/access-requests', icon: Mail,      adminOnly: true,  platformAdminOnly: true, isAI: false },
             { name: 'Connectors',        href: '/settings/connectors',   icon: Plug,      adminOnly: true,  isAI: false },
+            { name: 'Training Rules',    href: '/settings/training-rules', icon: ClipboardCheck, adminOnly: true, isAI: false },
             { name: 'Users',             href: '/settings/users',        icon: UserCog,   adminOnly: true,  isAI: false },
             { name: 'System Settings',   href: '/settings/system',       icon: Wrench,    adminOnly: true,  isAI: false },
         ],

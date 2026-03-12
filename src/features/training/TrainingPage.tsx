@@ -1,11 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Search, Link as LinkIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useTrainingCompliance } from './hooks/useTrainingCompliance';
 import { useTrainingStats } from './hooks/useTrainingStats';
 import { TrainingStatsCards } from './components/TrainingStatsCards';
 import { TrainingEmployeeTable } from './components/TrainingEmployeeTable';
+import { RecurringComplianceDashboard } from './components/RecurringComplianceDashboard';
 import type { ComplianceStatus } from './types';
-import { Link } from 'react-router-dom';
 
 const inputCls = 'w-full px-3 h-9 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60 [&_option]:bg-card [&_option]:text-foreground';
 
@@ -16,6 +17,7 @@ export function TrainingPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | ComplianceStatus>('all');
   const [filterCourse, setFilterCourse] = useState('all');
+  const [activeTab, setActiveTab] = useState<'onboarding' | 'recurring'>('onboarding');
 
   const courseNames = useMemo(() => {
     const names = new Set<string>();
@@ -56,7 +58,7 @@ export function TrainingPage() {
     );
   }
 
-  if (employees.length === 0) {
+  if (employees.length === 0 && activeTab === 'onboarding') {
     return (
       <div className="animate-fade-in space-y-6">
         <div className="pl-1">
@@ -64,6 +66,18 @@ export function TrainingPage() {
           <p className="page-header-meta">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
           </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button className="inline-flex h-9 items-center rounded-md bg-primary px-3 text-[13px] font-medium text-white">
+            Initial Onboarding
+          </button>
+          <button
+            onClick={() => setActiveTab('recurring')}
+            className="inline-flex h-9 items-center rounded-md border border-border bg-card px-3 text-[13px] font-medium text-muted-foreground hover:text-foreground"
+          >
+            Recurring Compliance
+          </button>
         </div>
 
         <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card py-20">
@@ -92,53 +106,82 @@ export function TrainingPage() {
         </p>
       </div>
 
-      <div>
-        <p className="zone-label mb-2">Compliance Overview</p>
-        <TrainingStatsCards
-          employees={employees}
-          lastSyncAt={stats?.lastSyncAt ?? null}
-          pendingAdjustments={stats?.pendingAdjustments ?? 0}
-        />
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setActiveTab('onboarding')}
+          className={`inline-flex h-9 items-center rounded-md px-3 text-[13px] font-medium transition-colors ${
+            activeTab === 'onboarding'
+              ? 'bg-primary text-white'
+              : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Initial Onboarding
+        </button>
+        <button
+          onClick={() => setActiveTab('recurring')}
+          className={`inline-flex h-9 items-center rounded-md px-3 text-[13px] font-medium transition-colors ${
+            activeTab === 'recurring'
+              ? 'bg-primary text-white'
+              : 'border border-border bg-card text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Recurring Compliance
+        </button>
       </div>
 
-      <div className="saas-card p-3">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} strokeWidth={2} />
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full rounded-md border border-border bg-transparent pl-8 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/35 h-9"
+      {activeTab === 'onboarding' ? (
+        <>
+          <div>
+            <p className="zone-label mb-2">Compliance Overview</p>
+            <TrainingStatsCards
+              employees={employees}
+              lastSyncAt={stats?.lastSyncAt ?? null}
+              pendingAdjustments={stats?.pendingAdjustments ?? 0}
             />
           </div>
-          <select
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value as 'all' | ComplianceStatus)}
-            className={inputCls}
-          >
-            <option value="all">All Statuses</option>
-            <option value="compliant">Compliant</option>
-            <option value="overdue">Overdue</option>
-            <option value="in_progress">In Progress</option>
-            <option value="not_started">Not Started</option>
-            <option value="no_courses">No Courses</option>
-          </select>
-          <select
-            value={filterCourse}
-            onChange={e => setFilterCourse(e.target.value)}
-            className={inputCls}
-          >
-            <option value="all">All Courses</option>
-            {courseNames.map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
 
-      <TrainingEmployeeTable employees={filtered} />
+          <div className="saas-card p-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+              <div className="relative md:col-span-2">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} strokeWidth={2} />
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full rounded-md border border-border bg-transparent pl-8 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/35 h-9"
+                />
+              </div>
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value as 'all' | ComplianceStatus)}
+                className={inputCls}
+              >
+                <option value="all">All Statuses</option>
+                <option value="compliant">Compliant</option>
+                <option value="overdue">Overdue</option>
+                <option value="in_progress">In Progress</option>
+                <option value="not_started">Not Started</option>
+                <option value="no_courses">No Courses</option>
+              </select>
+              <select
+                value={filterCourse}
+                onChange={e => setFilterCourse(e.target.value)}
+                className={inputCls}
+              >
+                <option value="all">All Courses</option>
+                {courseNames.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <TrainingEmployeeTable employees={filtered} />
+        </>
+      ) : (
+        <RecurringComplianceDashboard />
+      )}
     </div>
   );
 }

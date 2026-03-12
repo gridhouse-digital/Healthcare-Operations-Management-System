@@ -60,7 +60,7 @@ const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY") ?? "";
 // ── Helpers ─────────────────────────────────────────────────────────
 
 async function decryptKey(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   encrypted: string,
 ): Promise<string> {
   const { data, error } = await admin.rpc("pgp_sym_decrypt_text", {
@@ -122,6 +122,39 @@ async function fetchCourseName(
   return name;
 }
 
+async function upsertTrainingCourse(
+  admin: any,
+  params: {
+    tenantId: string;
+    courseId: string;
+    courseName: string;
+  },
+): Promise<void> {
+  const { error } = await admin
+    .from("training_courses")
+    .upsert(
+      {
+        tenant_id: params.tenantId,
+        course_id: params.courseId,
+        course_name: params.courseName,
+        active: true,
+        wp_meta: { source: "learndash_sync" },
+        last_seen_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "tenant_id,course_id",
+        ignoreDuplicates: false,
+      },
+    );
+
+  if (error) {
+    throw new Error(
+      `Course catalog upsert failed for course ${params.courseId}: ${error.message}`,
+    );
+  }
+}
+
 // ── fetchAllCourseProgress (paginated) ──────────────────────────────
 
 async function fetchAllCourseProgress(
@@ -165,7 +198,7 @@ async function fetchAllCourseProgress(
 // ── checkRunDedup ───────────────────────────────────────────────────
 
 async function checkRunDedup(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   tenantId: string,
   force: boolean,
 ): Promise<"proceed" | "skip" | { staleRunId: string }> {
@@ -183,7 +216,7 @@ async function checkRunDedup(
 
   if (!runs || runs.length === 0) return "proceed";
 
-  const run = runs[0];
+  const run = runs[0] as { id: string; started_at: string };
   const startedAt = new Date(run.started_at as string).getTime();
   const age = Date.now() - startedAt;
   const ONE_HOUR = 60 * 60 * 1000;
@@ -338,6 +371,20 @@ async function processTenant(
             courseId,
             courseNameCache,
           );
+
+          try {
+            await upsertTrainingCourse(admin, {
+              tenantId: config.tenant_id,
+              courseId: String(courseId),
+              courseName,
+            });
+          } catch (courseCatalogErr) {
+            console.warn(
+              courseCatalogErr instanceof Error
+                ? courseCatalogErr.message
+                : String(courseCatalogErr),
+            );
+          }
 
           const { error: upsertErr } = await admin
             .from("training_records")

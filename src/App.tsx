@@ -20,6 +20,7 @@ import { AIDashboardPage } from '@/features/admin/pages/AIDashboardPage';
 import { AccessRequestsPage } from '@/features/admin/pages/AccessRequestsPage';
 
 import { ConnectorSettingsPage } from '@/features/settings/components/ConnectorSettingsPage';
+import { TrainingComplianceRulesPage } from '@/features/settings/components/TrainingComplianceRulesPage';
 import { UserManagementPage } from '@/features/settings/components/users/UserManagementPage';
 import { SystemSettingsPage } from '@/features/settings/SystemSettingsPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
@@ -51,6 +52,7 @@ function App() {
               <Route path="training/:employeeId" element={<EmployeeTrainingDetailPage />} />
               <Route element={<ProtectedRoute allowedRoles={['platform_admin', 'tenant_admin']} />}>
                 <Route path="settings/connectors" element={<ConnectorSettingsPage />} />
+                <Route path="settings/training-rules" element={<TrainingComplianceRulesPage />} />
                 <Route path="settings/users" element={<UserManagementPage />} />
                 <Route path="settings/system" element={<SystemSettingsPage />} />
                 <Route path="admin/ai-dashboard" element={<AIDashboardPage />} />

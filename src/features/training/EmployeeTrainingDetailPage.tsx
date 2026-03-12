@@ -1,16 +1,10 @@
 import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
-import {
-  Check,
-  ChevronLeft,
-  Circle,
-  ClipboardEdit,
-  PenLine,
-} from 'lucide-react';
+import { Check, ChevronLeft, Circle, ClipboardEdit, PenLine } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEmployeeTrainingDetail } from './hooks/useEmployeeTrainingDetail';
 import { TrainingAdjustmentModal } from './components/TrainingAdjustmentModal';
-import type { TrainingComplianceRecord } from './types';
+import type { TrainingComplianceRecord, TrainingEvent } from './types';
 import { Button } from '@/components/ui/button';
 
 const courseStatusStyles: Record<string, { text: string; bg: string; border: string; label: string }> = {
@@ -27,13 +21,20 @@ const eventStyles = {
   expired: { icon: Circle, color: 'hsl(4 82% 52%)', label: 'Expired' },
 } as const;
 
+type DisplayEvent = {
+  id: string;
+  courseLabel: string;
+  eventType: TrainingEvent['event_type'];
+  occurredAt: string;
+};
+
 function formatDate(value: string | null) {
-  if (!value) return '—';
+  if (!value) return '-';
   return format(new Date(value), 'MMM d, yyyy h:mm a');
 }
 
 function formatHours(minutes: number | null) {
-  if (minutes == null) return '—';
+  if (minutes == null) return '-';
   const hours = Math.floor(minutes / 60);
   const remaining = minutes % 60;
   if (hours === 0) return `${remaining}m`;
@@ -41,10 +42,9 @@ function formatHours(minutes: number | null) {
   return `${hours}h ${remaining}m`;
 }
 
-function normalizeCourseTitle(raw: string): string {
+function normalizeCourseTitle(raw: string) {
   if (!raw) return raw;
-  const lower = raw.toLowerCase();
-  return lower.replace(/\b\w/g, (c) => c.toUpperCase());
+  return raw.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatAdjustmentValue(field: string, value: string) {
@@ -58,25 +58,19 @@ function getComparisonLines(record: TrainingComplianceRecord) {
   const comparisons: string[] = [];
 
   if (record.raw_status !== record.effective_status && record.effective_status) {
-    comparisons.push(`Original: ${record.raw_status ?? '—'} -> Adjusted: ${record.effective_status}`);
+    comparisons.push(`Original: ${record.raw_status ?? '-'} -> Adjusted: ${record.effective_status}`);
   }
 
   if (record.raw_completion_pct !== record.effective_completion_pct && record.effective_completion_pct != null) {
-    comparisons.push(
-      `Original: ${record.raw_completion_pct ?? 0}% -> Adjusted: ${record.effective_completion_pct}%`,
-    );
+    comparisons.push(`Original: ${record.raw_completion_pct ?? 0}% -> Adjusted: ${record.effective_completion_pct}%`);
   }
 
   if (record.raw_completed_at !== record.effective_completed_at && record.effective_completed_at) {
-    comparisons.push(
-      `Original: ${formatDate(record.raw_completed_at)} -> Adjusted: ${formatDate(record.effective_completed_at)}`,
-    );
+    comparisons.push(`Original: ${formatDate(record.raw_completed_at)} -> Adjusted: ${formatDate(record.effective_completed_at)}`);
   }
 
   if (record.raw_training_hours !== record.effective_training_hours && record.effective_training_hours != null) {
-    comparisons.push(
-      `Original: ${formatHours(record.raw_training_hours)} -> Adjusted: ${formatHours(record.effective_training_hours)}`,
-    );
+    comparisons.push(`Original: ${formatHours(record.raw_training_hours)} -> Adjusted: ${formatHours(record.effective_training_hours)}`);
   }
 
   return comparisons;
@@ -89,6 +83,63 @@ function getSummaryChipClass(label: string) {
   return 'status-chip status-chip-muted';
 }
 
+function getPayloadString(payload: Record<string, unknown>, key: string) {
+  const value = payload[key];
+
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+
+  if (typeof value === 'number') {
+    return String(value);
+  }
+
+  return null;
+}
+
+function getEventCourseId(event: TrainingEvent) {
+  return event.course_id ?? getPayloadString(event.payload, 'course_id');
+}
+
+function getEventCourseLabel(event: TrainingEvent, courseNameById: Map<string, string>) {
+  const courseId = getEventCourseId(event);
+
+  if (courseId) {
+    const knownLabel = courseNameById.get(courseId);
+    if (knownLabel) return normalizeCourseTitle(knownLabel);
+  }
+
+  const payloadLabel =
+    getPayloadString(event.payload, 'course_name') ??
+    getPayloadString(event.payload, 'course_title');
+
+  return payloadLabel ? normalizeCourseTitle(payloadLabel) : null;
+}
+
+function getEventOccurredAt(
+  event: TrainingEvent,
+  courseEnrolledAtById: Map<string, string | null>,
+  courseId: string | null,
+) {
+  if (event.event_type === 'enrolled') {
+    return (
+      (courseId ? courseEnrolledAtById.get(courseId) : null) ??
+      getPayloadString(event.payload, 'enrolled_at') ??
+      event.created_at
+    );
+  }
+
+  if (event.event_type === 'completed') {
+    return getPayloadString(event.payload, 'completed_at') ?? event.created_at;
+  }
+
+  if (event.event_type === 'expired') {
+    return getPayloadString(event.payload, 'expired_at') ?? event.created_at;
+  }
+
+  return getPayloadString(event.payload, 'adjusted_at') ?? event.created_at;
+}
+
 export function EmployeeTrainingDetailPage() {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
@@ -96,20 +147,46 @@ export function EmployeeTrainingDetailPage() {
 
   const { data, isLoading, error } = useEmployeeTrainingDetail(employeeId);
 
-  const courseNameById = useMemo(() => {
-    return new Map(
-      (data?.courses ?? []).map((course) => [
-        course.course_id,
-        course.course_name ?? `Course #${course.course_id}`,
-      ]),
-    );
-  }, [data?.courses]);
+  const courseNameById = useMemo(
+    () => new Map((data?.courses ?? []).map((course) => [course.course_id, course.course_name ?? `Course #${course.course_id}`])),
+    [data?.courses],
+  );
 
-  const courseEnrolledAtById = useMemo(() => {
-    return new Map(
-      (data?.courses ?? []).map((course) => [course.course_id, course.enrolled_at ?? null]),
-    );
-  }, [data?.courses]);
+  const courseEnrolledAtById = useMemo(
+    () => new Map((data?.courses ?? []).map((course) => [course.course_id, course.enrolled_at ?? null])),
+    [data?.courses],
+  );
+
+  const displayEvents = useMemo<DisplayEvent[]>(() => {
+    const dedupedEvents: DisplayEvent[] = [];
+    const seen = new Set<string>();
+
+    for (const event of data?.events ?? []) {
+      const courseId = getEventCourseId(event);
+      const courseLabel = getEventCourseLabel(event, courseNameById);
+
+      if (!courseLabel) {
+        continue;
+      }
+
+      const occurredAt = getEventOccurredAt(event, courseEnrolledAtById, courseId);
+      const dedupeKey = `${event.event_type}|${courseId ?? courseLabel.toLowerCase()}|${occurredAt}`;
+
+      if (seen.has(dedupeKey)) {
+        continue;
+      }
+
+      seen.add(dedupeKey);
+      dedupedEvents.push({
+        id: event.id,
+        courseLabel,
+        eventType: event.event_type,
+        occurredAt,
+      });
+    }
+
+    return dedupedEvents;
+  }, [courseEnrolledAtById, courseNameById, data?.events]);
 
   if (isLoading) {
     return (
@@ -137,7 +214,7 @@ export function EmployeeTrainingDetailPage() {
     );
   }
 
-  const { employee, courses, adjustments, events, stats } = data;
+  const { employee, courses, adjustments, stats } = data;
   const fullName = `${employee.first_name ?? ''} ${employee.last_name ?? ''}`.trim() || employee.email;
   const monogram = `${employee.first_name?.[0] ?? ''}${employee.last_name?.[0] ?? ''}` || employee.email[0]?.toUpperCase();
 
@@ -166,7 +243,7 @@ export function EmployeeTrainingDetailPage() {
               <div className="min-w-0 pl-1">
                 <h1 className="page-header-title">{fullName}</h1>
                 <p className="page-header-meta">
-                  {employee.job_title ?? 'No job title'} · {employee.employee_status ?? 'Active'}
+                  {employee.job_title ?? 'No job title'} - {employee.employee_status ?? 'Active'}
                 </p>
               </div>
             </div>
@@ -178,16 +255,13 @@ export function EmployeeTrainingDetailPage() {
                 `${stats.overdue} overdue`,
                 `${stats.adjusted} adjusted`,
                 stats.totalHours > 0 ? `${formatHours(stats.totalHours)} recorded` : null,
-              ].map((label) => (
-                label && (
-                <span
-                  key={label}
-                  className={getSummaryChipClass(label)}
-                >
-                  {label}
-                </span>
-                )
-              ))}
+              ].map((label) =>
+                label ? (
+                  <span key={label} className={getSummaryChipClass(label)}>
+                    {label}
+                  </span>
+                ) : null,
+              )}
             </div>
           </div>
 
@@ -217,16 +291,13 @@ export function EmployeeTrainingDetailPage() {
             </div>
           ) : (
             courses.map((record) => {
-              const isOverdue = !!record.expires_at && new Date(record.expires_at) < new Date();
+              const isOverdue = Boolean(record.expires_at) && new Date(record.expires_at as string) < new Date();
               const statusKey = isOverdue ? 'overdue' : (record.effective_status ?? 'not_started');
               const statusStyle = courseStatusStyles[statusKey] ?? courseStatusStyles.not_started;
               const comparisonLines = getComparisonLines(record);
 
               return (
-                <div
-                  key={record.training_record_id}
-                  className="saas-card p-5"
-                >
+                <div key={record.training_record_id} className="saas-card p-5">
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="space-y-1.5">
@@ -244,11 +315,7 @@ export function EmployeeTrainingDetailPage() {
                           >
                             {statusStyle.label}
                           </span>
-                          {record.has_overrides && (
-                            <span className="status-chip status-chip-cyan">
-                              Adjusted
-                            </span>
-                          )}
+                          {record.has_overrides ? <span className="status-chip status-chip-cyan">Adjusted</span> : null}
                         </div>
                       </div>
 
@@ -296,15 +363,13 @@ export function EmployeeTrainingDetailPage() {
                       </div>
                     </div>
 
-                    {comparisonLines.length > 0 && (
-                      <div
-                        className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground"
-                      >
+                    {comparisonLines.length > 0 ? (
+                      <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground">
                         {comparisonLines.map((line) => (
                           <p key={line}>{line}</p>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               );
@@ -331,7 +396,7 @@ export function EmployeeTrainingDetailPage() {
                           {courseNameById.get(adjustment.course_id) ?? `Course #${adjustment.course_id}`}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {adjustment.field.replace('_', ' ')} · {formatAdjustmentValue(adjustment.field, adjustment.value)}
+                          {adjustment.field.replace('_', ' ')} - {formatAdjustmentValue(adjustment.field, adjustment.value)}
                         </p>
                       </div>
                       <span className="whitespace-nowrap text-xs text-muted-foreground">
@@ -351,29 +416,13 @@ export function EmployeeTrainingDetailPage() {
               <h3 className="text-sm font-semibold text-foreground">Training Events</h3>
             </div>
 
-            {events.length === 0 ? (
+            {displayEvents.length === 0 ? (
               <p className="text-[13px] text-muted-foreground">No events recorded</p>
             ) : (
               <div className="space-y-4">
-                {events.map((event, index) => {
-                  const style = eventStyles[event.event_type] ?? eventStyles.enrolled;
+                {displayEvents.map((event, index) => {
+                  const style = eventStyles[event.eventType] ?? eventStyles.enrolled;
                   const Icon = style.icon;
-                  const payloadCourseName =
-                    (event.payload as any)?.course_name &&
-                    typeof (event.payload as any).course_name === 'string'
-                      ? String((event.payload as any).course_name)
-                      : null;
-                  const rawCourseLabel =
-                    courseNameById.get(event.course_id) ??
-                    payloadCourseName ??
-                    `Course #${event.course_id}`;
-                  const courseLabel = normalizeCourseTitle(rawCourseLabel);
-                  const enrolledAt =
-                    event.event_type === 'enrolled'
-                      ? courseEnrolledAtById.get(event.course_id) ??
-                        ((event.payload as any)?.enrolled_at as string | null) ??
-                        event.created_at
-                      : event.created_at;
 
                   return (
                     <div key={event.id} className="flex gap-3">
@@ -384,17 +433,17 @@ export function EmployeeTrainingDetailPage() {
                         >
                           <Icon size={13} strokeWidth={2} />
                         </div>
-                        {index < events.length - 1 && (
+                        {index < displayEvents.length - 1 ? (
                           <div className="mt-1 w-px flex-1 bg-border" style={{ minHeight: '22px' }} />
-                        )}
+                        ) : null}
                       </div>
 
                       <div className="min-w-0 pb-2">
                         <p className="text-[13px] font-medium tracking-[-0.01em] text-foreground">
-                          {courseLabel}
+                          {event.courseLabel}
                         </p>
                         <p className="mt-1 text-[12px] tracking-[0.005em] text-muted-foreground">
-                          {style.label} · {formatDate(enrolledAt)}
+                          {style.label} - {formatDate(event.occurredAt)}
                         </p>
                       </div>
                     </div>

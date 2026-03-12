@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { employeeService } from '@/services/employeeService';
 import type { Employee } from '@/types';
 import { format } from 'date-fns';
-import { Search, Mail, Phone, Calendar, Building, MoreHorizontal, BookOpen, Edit2, Save, X, Plus } from 'lucide-react';
+import { Search, Mail, Phone, Calendar, Building, MoreHorizontal, BookOpen, Edit2, Save, X, Plus, ClipboardCheck } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { SlideOver } from '@/components/ui/SlideOver';
 import { OnboardingSummaryPanel } from '@/components/ai/OnboardingSummaryPanel';
@@ -22,6 +22,42 @@ interface TrainingRecord {
     steps_total: number;
 }
 
+interface RecurringComplianceRecord {
+    instance_id: string;
+    rule_id: string;
+    rule_name: string;
+    group_id: string;
+    due_at: string;
+    completed_at: string | null;
+    completion_source: string | null;
+    compliance_status: 'not_yet_due' | 'due_soon' | 'due' | 'overdue' | 'completed';
+}
+
+function recurringStatusLabel(status: RecurringComplianceRecord['compliance_status']) {
+    switch (status) {
+        case 'not_yet_due': return 'Not Yet Due';
+        case 'due_soon': return 'Due Soon';
+        case 'due': return 'Due';
+        case 'overdue': return 'Overdue';
+        case 'completed': return 'Completed';
+    }
+}
+
+function recurringStatusClass(status: RecurringComplianceRecord['compliance_status']) {
+    switch (status) {
+        case 'completed':
+            return 'border-[color-mix(in_srgb,var(--severity-low)_25%,transparent)] bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)]';
+        case 'overdue':
+            return 'border-[hsl(4,82%,52%)]/25 bg-[hsl(4,82%,52%)]/10 text-[hsl(4,76%,60%)]';
+        case 'due':
+            return 'border-[color-mix(in_srgb,var(--primary)_25%,transparent)] bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] text-primary';
+        case 'due_soon':
+            return 'border-[color-mix(in_srgb,var(--severity-medium)_25%,transparent)] bg-[color-mix(in_srgb,var(--severity-medium)_10%,transparent)] text-[var(--severity-medium)]';
+        case 'not_yet_due':
+            return 'border-border bg-muted/40 text-muted-foreground';
+    }
+}
+
 export function EmployeeList() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
@@ -29,6 +65,7 @@ export function EmployeeList() {
 
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [trainingRecords, setTrainingRecords] = useState<TrainingRecord[]>([]);
+    const [recurringRecords, setRecurringRecords] = useState<RecurringComplianceRecord[]>([]);
     const [loadingTraining, setLoadingTraining] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,8 +81,10 @@ export function EmployeeList() {
     useEffect(() => {
         if (selectedEmployee) {
             loadTrainingRecords(selectedEmployee.id);
+            loadRecurringCompliance(selectedEmployee.id);
         } else {
             setTrainingRecords([]);
+            setRecurringRecords([]);
         }
     }, [selectedEmployee]);
 
@@ -85,6 +124,37 @@ export function EmployeeList() {
             console.error('Failed to load training records', err);
         } finally {
             setLoadingTraining(false);
+        }
+    };
+
+    const loadRecurringCompliance = async (personId: string) => {
+        try {
+            const { data, error: recurringErr } = await supabase
+                .from('v_recurring_compliance_status')
+                .select('instance_id, rule_id, rule_name, group_id, due_at, completed_at, completion_source, compliance_status, cycle_number')
+                .eq('person_id', personId)
+                .order('cycle_number', { ascending: false });
+
+            if (recurringErr) {
+                const message = recurringErr.message || '';
+                if (/relation .* does not exist/i.test(message) || /schema cache/i.test(message)) {
+                    setRecurringRecords([]);
+                    return;
+                }
+                throw recurringErr;
+            }
+
+            const latestByRule = new Map<string, RecurringComplianceRecord>();
+            for (const row of (data || []) as Array<RecurringComplianceRecord & { cycle_number?: number }>) {
+                if (!latestByRule.has(row.rule_id)) {
+                    latestByRule.set(row.rule_id, row);
+                }
+            }
+
+            setRecurringRecords(Array.from(latestByRule.values()));
+        } catch (err) {
+            console.error('Failed to load recurring compliance', err);
+            setRecurringRecords([]);
         }
     };
 
@@ -351,6 +421,44 @@ export function EmployeeList() {
                                 <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
                                     <p className="text-[12px] text-muted-foreground">No training data available.</p>
                                     <p className="mt-1 text-[11px] text-muted-foreground/70">Run "Sync LearnDash Training" from Settings → Connectors.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Recurring Compliance */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <ClipboardCheck size={13} className="text-primary" strokeWidth={2} />
+                                <span className="zone-label">Recurring Compliance</span>
+                            </div>
+                            {recurringRecords.length > 0 ? (
+                                <div className="space-y-3">
+                                    {recurringRecords.map((record) => (
+                                        <div key={record.instance_id} className="rounded-md border border-border p-3.5">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[13px] font-medium text-foreground">{record.rule_name}</p>
+                                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                                        Due {record.due_at ? format(new Date(record.due_at), 'MMMM d, yyyy') : '—'}
+                                                    </p>
+                                                    {record.completed_at && (
+                                                        <p className="mt-1 text-[11px] text-muted-foreground">
+                                                            Completed {format(new Date(record.completed_at), 'MMMM d, yyyy')}
+                                                            {record.completion_source ? ` via ${record.completion_source}` : ''}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${recurringStatusClass(record.compliance_status)}`}>
+                                                    {recurringStatusLabel(record.compliance_status)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
+                                    <p className="text-[12px] text-muted-foreground">No recurring compliance records available.</p>
+                                    <p className="mt-1 text-[11px] text-muted-foreground/70">This will populate after Epic 5.9 migrations and rules are configured.</p>
                                 </div>
                             )}
                         </div>
