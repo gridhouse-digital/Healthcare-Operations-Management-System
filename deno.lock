@@ -2223,6 +2223,7 @@
         "npm:@types/react@^19.2.5",
         "npm:@vitejs/plugin-react@^5.1.1",
         "npm:autoprefixer@^10.4.22",
+        "npm:baseline-browser-mapping@^2.10.0",
         "npm:class-variance-authority@~0.7.1",
         "npm:clsx@^2.1.1",
         "npm:date-fns@^4.1.0",

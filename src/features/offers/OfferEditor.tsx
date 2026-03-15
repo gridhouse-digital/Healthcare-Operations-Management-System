@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { offerService } from '@/services/offerService';
 import { applicantService } from '@/services/applicantService';
@@ -7,6 +7,7 @@ import type { Applicant } from '@/types';
 import { ArrowLeft, Save, User, Briefcase, DollarSign, Calendar } from 'lucide-react';
 import { OfferLetterDraftPanel } from '@/components/ai/OfferLetterDraftPanel';
 import { toast } from '@/hooks/useToast';
+import { AppSelect } from '@/components/ui/AppSelect';
 
 interface OfferFormData {
     applicant_id: string;
@@ -25,7 +26,7 @@ export function OfferEditor() {
     const [applicants, setApplicants] = useState<Applicant[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const { register, handleSubmit, watch, formState: { errors }, reset, setValue } = useForm<OfferFormData>();
+    const { control, register, handleSubmit, watch, formState: { errors }, reset, setValue } = useForm<OfferFormData>();
 
     useEffect(() => { loadApplicants(); }, []);
     useEffect(() => { if (id) loadOffer(id); }, [id]);
@@ -111,17 +112,23 @@ export function OfferEditor() {
                             <label className={labelCls}>Applicant</label>
                             <div className="relative">
                                 <User size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                                <select
-                                    {...register('applicant_id', { required: 'Applicant is required' })}
-                                    className={fieldWithIconCls + ' appearance-none pr-7'}
-                                >
-                                    <option value="">Select an applicant</option>
-                                    {applicants.map((app) => (
-                                        <option key={app.id} value={app.id}>
-                                            {app.first_name} {app.last_name} ({app.email})
-                                        </option>
-                                    ))}
-                                </select>
+                                <Controller
+                                    control={control}
+                                    name="applicant_id"
+                                    rules={{ required: 'Applicant is required' }}
+                                    render={({ field }) => (
+                                        <AppSelect
+                                            value={field.value ?? ''}
+                                            onValueChange={field.onChange}
+                                            placeholder="Select an applicant"
+                                            options={applicants.map((app) => ({
+                                                value: app.id,
+                                                label: `${app.first_name} ${app.last_name} (${app.email})`,
+                                            }))}
+                                            className={fieldWithIconCls + ' justify-between'}
+                                        />
+                                    )}
+                                />
                             </div>
                             {errors.applicant_id && (
                                 <p className="mt-1.5 text-[11px] text-destructive">{errors.applicant_id.message}</p>

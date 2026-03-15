@@ -1,6 +1,6 @@
 # RUNBOOK — HOMS
 
-> How to run, test, deploy, and troubleshoot. Updated: 2026-03-06.
+> How to run, test, deploy, and troubleshoot. Updated: 2026-03-11.
 
 ---
 
@@ -34,6 +34,13 @@ JOTFORM_API_KEY=<JotForm API key>
 ANTHROPIC_API_KEY=<Anthropic API key>
 ALLOWED_ORIGIN_1=<your deployed frontend URL>
 SUPABASE_SERVICE_ROLE_KEY=<from Dashboard → Settings → API>
+PLATFORM_BREVO_API_KEY=<platform Brevo key for public request-access notifications>
+REQUEST_ACCESS_NOTIFICATION_TO=<comma-separated ops/admin recipient emails>
+REQUEST_ACCESS_FROM_EMAIL=<verified sender email for request-access notifications>
+REQUEST_ACCESS_FROM_NAME=<optional sender display name>
+REQUEST_ACCESS_RATE_LIMIT_WINDOW_MINUTES=<optional, default 60>
+REQUEST_ACCESS_RATE_LIMIT_MAX_PER_EMAIL=<optional, default 3>
+REQUEST_ACCESS_RATE_LIMIT_MAX_PER_IP=<optional, default 10>
 ```
 
 ---
@@ -67,7 +74,8 @@ npx supabase db inspect tables
 ```bash
 cd prolific-hr-app
 npx supabase functions deploy test-connector save-connector save-ld-mappings \
-  list-tenant-users invite-tenant-user update-tenant-user-role deactivate-tenant-user
+  list-tenant-users invite-tenant-user update-tenant-user-role deactivate-tenant-user \
+  request-access
 ```
 
 ### Deploy a single function
@@ -116,6 +124,12 @@ deno run --allow-env --allow-net scripts/test-rls-isolation.ts
 
 ## Tenant Setup (Production)
 
+### Review request-access submissions
+1. Check the latest row in `public.tenant_access_requests` or monitor the request-access notification mailbox.
+2. Confirm the request is legitimate and collect any missing onboarding details by replying to the requester.
+3. If email notification failed, look for rows with `notification_status = 'failed'`. The submission row is retained intentionally so ops can recover it manually.
+4. Applicant-facing confirmation delivery is tracked separately in `requester_confirmation_status`.
+
 ### Seed a new tenant
 ```sql
 -- Run in Supabase Dashboard SQL editor
@@ -126,15 +140,34 @@ INSERT INTO public.tenant_settings (tenant_id)
 VALUES (<new_tenant_id>);
 ```
 
-### Assign a user to a tenant
+### Create or invite the primary tenant admin
+1. Create the auth user from Supabase Dashboard if they do not exist yet.
+2. Insert a `tenant_users` row for the new tenant admin.
+3. Ask the user to sign out and back in so the custom access token hook can inject fresh JWT app metadata.
+
 ```sql
-UPDATE auth.users
-SET raw_app_meta_data = raw_app_meta_data ||
-  '{"tenant_id": "<tenant_id>", "role": "tenant_admin"}'::jsonb
-WHERE email = 'user@example.com';
+INSERT INTO public.tenant_users (tenant_id, user_id, role, status)
+VALUES (
+  <tenant_id>,
+  (
+    SELECT id
+    FROM auth.users
+    WHERE email = 'user@example.com'
+  ),
+  'tenant_admin',
+  'active'
+);
 ```
 
-**Then user must sign out and sign back in** to get a fresh JWT with the new app_metadata.
+### Request-access handoff
+1. Review and approve the submitted request.
+2. Seed the tenant and `tenant_settings`.
+3. Create the initial auth user and add the `tenant_users` row shown above.
+4. Have the new admin sign in, then complete connector setup from `/settings/connectors`.
+
+### Platform admin access
+- The app can show platform-admin-only screens only if the user signs in with JWT `app_metadata.role = 'platform_admin'`.
+- Today there is still no in-app tenant provisioning workflow. A software admin can review requests inside the app, but tenant creation remains the manual SQL/runbook path until a dedicated provisioning flow is added.
 
 ---
 
@@ -152,6 +185,14 @@ WHERE email = 'user@example.com';
 - Cause: `ALLOWED_ORIGIN_1` secret not set, or set to wrong URL.
 - Fix: Supabase Dashboard → Edge Functions → Manage Secrets → set `ALLOWED_ORIGIN_1` to exact frontend URL (no trailing slash).
 - Local dev note: loopback origins like `http://localhost:5173`, `http://localhost:5174`, and `http://127.0.0.1:*` should be allowed by the shared CORS helper after redeploying the function code.
+
+### Request-access submission returns 502 notification failure
+- Cause: The request row was saved, but platform-level email secrets are missing or Brevo rejected the send.
+- Fix: Verify `PLATFORM_BREVO_API_KEY`, `REQUEST_ACCESS_NOTIFICATION_TO`, and `REQUEST_ACCESS_FROM_EMAIL`, then re-submit or manually recover the retained row from `tenant_access_requests`.
+
+### Request-access returns 429 rate limited
+- Cause: Too many recent requests were submitted for the same email or IP within the configured window.
+- Fix: Wait for the rate-limit window to pass, or adjust `REQUEST_ACCESS_RATE_LIMIT_WINDOW_MINUTES`, `REQUEST_ACCESS_RATE_LIMIT_MAX_PER_EMAIL`, and `REQUEST_ACCESS_RATE_LIMIT_MAX_PER_IP` if the thresholds are too strict for your environment.
 
 ### BambooHR/JazzHR connector test fails
 - Check: API key is correct and has read permissions.

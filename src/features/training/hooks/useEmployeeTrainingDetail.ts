@@ -7,15 +7,24 @@ import type {
   TrainingEvent,
 } from '../types';
 
+function isMissingSchema(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  const message = String((error as { message?: string } | null)?.message ?? '');
+  return code === '42P01' ||
+    code === 'PGRST205' ||
+    /relation .* does not exist/i.test(message) ||
+    /schema cache/i.test(message);
+}
+
 async function fetchEmployeeTrainingDetail(employeeId: string): Promise<EmployeeTrainingDetail> {
-  const [employeeResult, coursesResult, adjustmentsResult, eventsResult] = await Promise.all([
+  const [employeeResult, activeCoursesResult, adjustmentsResult, eventsResult] = await Promise.all([
     supabase
       .from('people')
       .select('id, first_name, last_name, email, job_title, employee_status')
       .eq('id', employeeId)
       .single(),
     supabase
-      .from('v_training_compliance')
+      .from('v_onboarding_training_compliance')
       .select('*')
       .eq('person_id', employeeId)
       .order('course_name'),
@@ -32,11 +41,26 @@ async function fetchEmployeeTrainingDetail(employeeId: string): Promise<Employee
   ]);
 
   if (employeeResult.error) throw employeeResult.error;
-  if (coursesResult.error) throw coursesResult.error;
   if (adjustmentsResult.error) throw adjustmentsResult.error;
   if (eventsResult.error) throw eventsResult.error;
 
-  const courses = (coursesResult.data ?? []) as TrainingComplianceRecord[];
+  let courses = (activeCoursesResult.data ?? []) as TrainingComplianceRecord[];
+
+  if (activeCoursesResult.error) {
+    if (!isMissingSchema(activeCoursesResult.error)) {
+      throw activeCoursesResult.error;
+    }
+
+    const legacyCoursesResult = await supabase
+      .from('v_training_compliance')
+      .select('*')
+      .eq('person_id', employeeId)
+      .order('course_name');
+
+    if (legacyCoursesResult.error) throw legacyCoursesResult.error;
+    courses = (legacyCoursesResult.data ?? []) as TrainingComplianceRecord[];
+  }
+
   const adjustments = (adjustmentsResult.data ?? []) as TrainingAdjustment[];
   const events = (eventsResult.data ?? []) as TrainingEvent[];
 

@@ -2,6 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { TrainingComplianceRecord, TrainingEmployee, ComplianceStatus } from '../types';
 
+function isMissingSchema(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  const message = String((error as { message?: string } | null)?.message ?? '');
+  return code === '42P01' ||
+    code === 'PGRST205' ||
+    /relation .* does not exist/i.test(message) ||
+    /schema cache/i.test(message);
+}
+
 // Compliance status priority (intentional ordering):
 // 1. no_courses — employee exists but has zero training records.
 // 2. overdue — any expired certification (expires_at < now) takes priority,
@@ -38,10 +47,19 @@ async function fetchTrainingCompliance(): Promise<TrainingEmployee[]> {
   if (!employees || employees.length === 0) return [];
 
   // Fetch all compliance records for these employees
-  const { data: records, error: recErr } = await supabase
-    .from('v_training_compliance')
+  let recordsQuery = await supabase
+    .from('v_onboarding_training_compliance')
     .select('*')
     .order('person_id');
+
+  if (recordsQuery.error && isMissingSchema(recordsQuery.error)) {
+    recordsQuery = await supabase
+      .from('v_training_compliance')
+      .select('*')
+      .order('person_id');
+  }
+
+  const { data: records, error: recErr } = recordsQuery;
 
   if (recErr) throw recErr;
 

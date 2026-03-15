@@ -4,18 +4,29 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useEffect, useState } from 'react';
 import { settingsService } from '@/services/settingsService';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { LayoutDashboard, Users, FileText, Briefcase, Plug, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Briefcase, Plug, Sparkles, Mail, ClipboardCheck, BookOpenCheck, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
 import defaultLogoDark from '@/assets/logo-dark.png';
 
-const navigation = [
+interface MobileNavItem {
+    name: string;
+    href: string;
+    icon: LucideIcon;
+    adminOnly?: boolean;
+    platformAdminOnly?: boolean;
+}
+
+const navigation: MobileNavItem[] = [
     { name: 'Dashboard',    href: '/',                      icon: LayoutDashboard },
     { name: 'Applicants',   href: '/applicants',            icon: Users },
     { name: 'Offers',       href: '/offers',                icon: FileText },
     { name: 'Employees',    href: '/employees',             icon: Briefcase },
+    { name: 'Compliance',   href: '/training',              icon: BookOpenCheck },
     { name: 'AI Dashboard', href: '/admin/ai-dashboard',    icon: Sparkles,  adminOnly: true },
+    { name: 'Access Requests', href: '/admin/access-requests', icon: Mail, adminOnly: true, platformAdminOnly: true },
     { name: 'Connectors',   href: '/settings/connectors',   icon: Plug,      adminOnly: true },
+    { name: 'Training Rules', href: '/settings/training-rules', icon: ClipboardCheck, adminOnly: true },
 ];
 
 interface MobileNavProps {
@@ -25,7 +36,7 @@ interface MobileNavProps {
 
 export function MobileNav({ isOpen, onClose }: MobileNavProps) {
     const location = useLocation();
-    const { isAdmin } = useUserRole();
+    const { isAdmin, isPlatformAdmin } = useUserRole();
     const [logoLight, setLogoLight] = useState(defaultLogoDark);
     const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
 
@@ -36,7 +47,12 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
         }).catch(() => {});
     }, []);
 
-    const filteredNav = navigation.filter(item => !item.adminOnly || isAdmin);
+    const filteredNav = navigation.filter(item => {
+        if (item.adminOnly && !isAdmin) return false;
+        if (item.platformAdminOnly && !isPlatformAdmin) return false;
+        return true;
+    });
+
     const currentPath = location.pathname;
 
     return (

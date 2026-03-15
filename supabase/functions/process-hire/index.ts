@@ -34,7 +34,7 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY") ?? "";
 
 async function decryptKey(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   encrypted: string,
 ): Promise<string> {
   const { data, error } = await admin.rpc("pgp_sym_decrypt_text", {
@@ -121,6 +121,42 @@ async function enrollLdGroup(
   }
 }
 
+async function upsertGroupEnrollmentAnchor(
+  admin: any,
+  params: {
+    tenantId: string;
+    personId: string;
+    groupId: string;
+    enrolledAt: string;
+  },
+): Promise<void> {
+  const { error } = await admin
+    .from("employee_group_enrollments")
+    .upsert(
+      {
+        tenant_id: params.tenantId,
+        person_id: params.personId,
+        group_id: params.groupId,
+        enrolled_at: params.enrolledAt,
+        anchor_date: params.enrolledAt,
+        anchor_source: "process_hire",
+        active: true,
+        ended_at: null,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "tenant_id,person_id,group_id",
+        ignoreDuplicates: false,
+      },
+    );
+
+  if (error) {
+    throw new Error(
+      `Failed to record enrollment anchor for group ${params.groupId}: ${error.message}`,
+    );
+  }
+}
+
 interface HireRow {
   id: string;
   tenant_id: string;
@@ -128,28 +164,41 @@ interface HireRow {
 }
 
 async function processHire(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   hire: HireRow,
 ): Promise<"processed" | "skipped" | "partial_failure"> {
   const email = hire.idempotency_key;
 
   // Fetch people record
-  const { data: person, error: pErr } = await admin
+  const { data: personRow, error: pErr } = await admin
     .from("people")
-    .select("first_name, last_name, job_title, wp_user_id")
+    .select("id, first_name, last_name, job_title, wp_user_id")
     .eq("tenant_id", hire.tenant_id)
     .eq("email", email)
     .single();
+  const person = personRow as {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    job_title: string | null;
+    wp_user_id: number | null;
+  } | null;
   if (pErr || !person) throw new Error(`No people record for ${email}`);
 
   // Fetch tenant WP config
-  const { data: cfg, error: cErr } = await admin
+  const { data: cfgRow, error: cErr } = await admin
     .from("tenant_settings")
     .select(
       "wp_site_url, wp_username_encrypted, wp_app_password_encrypted, ld_group_mappings",
     )
     .eq("tenant_id", hire.tenant_id)
     .single();
+  const cfg = cfgRow as {
+    wp_site_url: string | null;
+    wp_username_encrypted: string | null;
+    wp_app_password_encrypted: string | null;
+    ld_group_mappings: LdGroupMapping[] | null;
+  } | null;
 
   if (cErr || !cfg?.wp_site_url || !cfg?.wp_username_encrypted) {
     // WP not configured — mark skipped, not failed
@@ -188,17 +237,27 @@ async function processHire(
       .eq("email", email);
   }
 
-  // LearnDash group enrollment
+  // LearnDash group enrollment (match job title with singular/plural: Caregiver <-> Caregivers)
   const mappings = (cfg.ld_group_mappings as LdGroupMapping[] | null) ?? [];
-  const jobTitle = (person.job_title || "").toLowerCase().trim();
-  const matched = mappings.filter(
-    (m) => m.job_title.toLowerCase().trim() === jobTitle,
-  );
+  const personTitle = (person.job_title ?? "").trim().toLowerCase().replace(/\r\n?|\n/g, "");
+  const matched = mappings.filter((m) => {
+    const mTitle = m.job_title.trim().toLowerCase();
+    if (personTitle === mTitle) return true;
+    if (personTitle.endsWith("s") && personTitle.slice(0, -1) === mTitle) return true;
+    if (mTitle.endsWith("s") && mTitle.slice(0, -1) === personTitle) return true;
+    return false;
+  });
 
   const enrollErrors: string[] = [];
   for (const m of matched) {
     try {
       await enrollLdGroup(siteUrl, auth, m.group_id, wpUserId);
+      await upsertGroupEnrollmentAnchor(admin, {
+        tenantId: hire.tenant_id,
+        personId: person.id as string,
+        groupId: m.group_id,
+        enrolledAt: new Date().toISOString(),
+      });
     } catch (e) {
       enrollErrors.push(e instanceof Error ? e.message : String(e));
     }

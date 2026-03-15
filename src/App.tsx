@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { MainLayout } from '@/components/layout/MainLayout';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
+import { RequestAccessPage } from '@/features/auth/RequestAccessPage';
 import { UpdatePasswordPage } from '@/features/auth/UpdatePasswordPage';
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
 
@@ -16,8 +17,10 @@ import { EmployeeList } from '@/features/employees/EmployeeList';
 import { TrainingPage } from '@/features/training/TrainingPage';
 import { EmployeeTrainingDetailPage } from '@/features/training/EmployeeTrainingDetailPage';
 import { AIDashboardPage } from '@/features/admin/pages/AIDashboardPage';
+import { AccessRequestsPage } from '@/features/admin/pages/AccessRequestsPage';
 
 import { ConnectorSettingsPage } from '@/features/settings/components/ConnectorSettingsPage';
+import { TrainingComplianceRulesPage } from '@/features/settings/components/TrainingComplianceRulesPage';
 import { UserManagementPage } from '@/features/settings/components/users/UserManagementPage';
 import { SystemSettingsPage } from '@/features/settings/SystemSettingsPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
@@ -33,6 +36,7 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/request-access" element={<RequestAccessPage />} />
           <Route path="/offer/:token" element={<OfferPublicView />} />
 
           <Route element={<ProtectedRoute />}>
@@ -48,9 +52,13 @@ function App() {
               <Route path="training/:employeeId" element={<EmployeeTrainingDetailPage />} />
               <Route element={<ProtectedRoute allowedRoles={['platform_admin', 'tenant_admin']} />}>
                 <Route path="settings/connectors" element={<ConnectorSettingsPage />} />
+                <Route path="settings/training-rules" element={<TrainingComplianceRulesPage />} />
                 <Route path="settings/users" element={<UserManagementPage />} />
                 <Route path="settings/system" element={<SystemSettingsPage />} />
                 <Route path="admin/ai-dashboard" element={<AIDashboardPage />} />
+                <Route element={<ProtectedRoute allowedRoles={['platform_admin']} />}>
+                  <Route path="admin/access-requests" element={<AccessRequestsPage />} />
+                </Route>
               </Route>
               <Route path="profile" element={<ProfilePage />} />
             </Route>

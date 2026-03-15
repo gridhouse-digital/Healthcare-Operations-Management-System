@@ -1,7 +1,7 @@
 # SCHEMA — HOMS
 
-> Canonical table reference. Updated: 2026-03-09.
-> All tables have RLS enabled. All MVP tables have audit triggers.
+> Canonical table reference. Updated: 2026-03-11.
+> All tables have RLS enabled. Tenant-scoped MVP tables have audit triggers. `tenant_access_requests` is the intentional pre-tenant exception because `audit_log` requires a tenant context.
 
 ---
 
@@ -26,6 +26,40 @@ created_at  TIMESTAMPTZ
 **RLS:**
 - `platform_admin`: read/write all
 - `tenant_admin` / `hr_admin`: SELECT own tenant only (`id = JWT app_metadata tenant_id`)
+
+---
+
+## tenant_access_requests
+
+```
+id                           UUID PK
+organization_name            TEXT NOT NULL
+organization_name_normalized TEXT GENERATED (lower(trim(...))) STORED
+primary_contact_name         TEXT NOT NULL
+work_email                   TEXT NOT NULL
+work_email_normalized        TEXT GENERATED (lower(trim(...))) STORED
+phone                        TEXT
+team_size                    TEXT NOT NULL   -- '1-10' | '11-25' | '26-50' | '51-100' | '100+'
+integration_needs            TEXT
+notes                        TEXT
+status                       TEXT NOT NULL   -- 'submitted' | 'under_review' | 'approved' | 'rejected' | 'provisioned'
+notification_status          TEXT NOT NULL   -- 'pending' | 'sent' | 'failed'
+notification_error           TEXT
+notification_sent_at         TIMESTAMPTZ
+requester_confirmation_status TEXT NOT NULL  -- 'pending' | 'sent' | 'failed' | 'skipped'
+requester_confirmation_error  TEXT
+requester_confirmation_sent_at TIMESTAMPTZ
+request_ip                   TEXT
+request_origin               TEXT
+user_agent                   TEXT
+created_at                   TIMESTAMPTZ
+updated_at                   TIMESTAMPTZ
+```
+
+**Purpose:** Public request-access intake before any tenant exists.
+**RLS:** No anonymous table access. `platform_admin` may read/update via policy; the public Edge Function writes with the service role key.
+**Indexes:** lookup on normalized organization/email, status+created_at, a partial unique index that allows only one open (`submitted` or `under_review`) request per organization/email pair, and an IP+created_at index for lightweight abuse review.
+**Critical:** This table intentionally does **not** include `tenant_id`. The request-access EF stores the row first, then attempts ops notification email. If notification fails, the row is retained with `notification_status = 'failed'` for manual recovery. Applicant-facing confirmation email state is tracked separately so ops can see whether the requester got an acknowledgement even if internal delivery succeeded.
 
 ---
 

@@ -3,6 +3,209 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-03-12 â€” Shared dropdown standardization + design-system green hover state
+
+### What shipped
+
+- Standardized all app dropdowns under `src` onto the shared `AppSelect` component instead of mixing native `<select>` elements with custom dropdowns
+- Updated form-backed pages to use the same dropdown style through controlled `react-hook-form` integrations
+- Updated the shared dropdown-menu primitive so highlighted and mouse-over states use the design-system green (`--severity-low`)
+
+### Files changed
+
+- `src/components/ui/AppSelect.tsx`
+- `src/components/ui/dropdown-menu.tsx`
+- `src/features/employees/EmployeeList.tsx`
+- `src/features/training/TrainingPage.tsx`
+- `src/features/training/components/RecurringComplianceDashboard.tsx`
+- `src/features/training/components/TrainingAdjustmentModal.tsx`
+- `src/features/settings/components/TrainingComplianceRulesPage.tsx`
+- `src/features/auth/RequestAccessPage.tsx`
+- `src/features/offers/OfferEditor.tsx`
+- `src/features/settings/components/users/UserManagementPage.tsx`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `rg -n -F "<select" src` returns no matches
+- `npx tsc --noEmit`
+- `npm run build`
+
+---
+
+## 2026-03-12 — Primary compliance group override
+
+### What shipped
+
+- Added `people.primary_compliance_group_id` so HR can choose one active LearnDash group as the compliance-driving group for intentional multi-group employees
+- Updated active training and recurring compliance views to prefer the primary compliance group when it points to an active group
+- Updated `rebuild-compliance-instances` so recurring cycles are generated only for the selected primary compliance group when one is set
+- Added a simple employee-profile control to review active LearnDash groups and choose a primary compliance group when multiple groups are active
+
+### Files changed
+
+- `supabase/migrations/20260312000003_primary_compliance_group.sql`
+- `supabase/functions/rebuild-compliance-instances/index.ts`
+- `src/types/index.ts`
+- `src/features/employees/EmployeeList.tsx`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `npx tsc --noEmit`
+- `deno check supabase/functions/rebuild-compliance-instances/index.ts`
+- `npm run build`
+
+---
+
+## 2026-03-12 — LearnDash group reconciliation slice + multi-rule recurring validation
+
+### What shipped
+
+- Added a new migration to create `learndash_group_courses` and derive active training from current LearnDash group context instead of showing every historical synced course as active
+- Updated `sync-training` to:
+  - fetch current LearnDash groups per user
+  - reconcile `employee_group_enrollments` when users leave or re-enter groups
+  - sync group-to-course mappings from LearnDash
+- Updated active training UI paths to read the reconciled onboarding-safe view instead of raw `training_records`
+- Confirmed the second recurring compliance rule path works end-to-end after production backfill/rebuild:
+  - rule visible in UI
+  - anchors created
+  - compliance instances created
+  - correct employees see the rule and unrelated employees do not
+
+### Design decisions
+
+- Historical training records remain in `training_records`; the new behavior only changes which courses count as active in admin views
+- Group re-entry currently behaves like `resume_previous_series` because `employee_group_enrollments` is reactivated in place and preserves the original anchor
+- Recurring compliance status now hides rows tied to inactive group enrollments instead of deleting old cycles
+
+### Files changed
+
+- `supabase/migrations/20260312000002_story511_group_reconciliation.sql`
+- `supabase/functions/sync-training/index.ts`
+- `src/features/employees/EmployeeList.tsx`
+- `src/features/training/hooks/useEmployeeTrainingDetail.ts`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+- `docs/Project Docs/ISSUES.md`
+
+### Verified
+
+- `npx tsc --noEmit`
+- `deno check supabase/functions/sync-training/index.ts`
+- `npm run build`
+
+---
+
+## 2026-03-12 — Multi-group compliance assignment policy spec
+
+### What shipped
+
+- Added a small implementation spec for intentional multi-group users such as supervisors or group leaders who need LearnDash access across multiple groups without inheriting every group's compliance obligations
+- Recommended an HR-owned `primary_compliance_group_id` model as the first implementation cut
+
+### Files changed
+
+- `docs/plans/2026-03-12-epic5-multi-group-compliance-policy-plan.md`
+- `docs/Project Docs/ISSUES.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+---
+
+## 2026-03-11 — Auth user creation fix (profiles trigger cleanup)
+
+### What shipped
+
+- Dropped legacy `auth.users` trigger `on_auth_user_created` and `public.handle_new_user()` which still tried inserting into `public.profiles` after Epic 5 removed the table
+- This unblocks creating users in Supabase Authentication (signup/admin create) on the linked project
+
+### Files changed
+
+- `supabase/migrations/20260311000006_drop_legacy_profiles_auth_trigger.sql`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- Confirmed trigger removed from `auth.users` and `public.handle_new_user` no longer exists on project `peffyuhhlmidldugqalo`
+
+---
+
+## 2026-03-11 — Public request-access intake MVP
+
+### What shipped
+
+- Added a public `/request-access` route and a new auth-shell intake page for organizations that do not yet have a workspace
+- Added the `request-access` Supabase Edge Function to validate submissions, persist them in `tenant_access_requests`, and notify ops/admin through platform-level Brevo configuration
+- Added `tenant_access_requests` as an intentionally non-tenant-scoped table with RLS, operational status fields, and notification recovery fields
+- Added a new login-page CTA for organizations that need onboarding rather than direct sign-in
+- Documented the manual handoff from request submission into tenant seeding and first-user setup
+
+### Design decisions
+
+- Request rows are retained even when the notification email fails; the EF returns a clear error and marks `notification_status = 'failed'` so ops can recover the submission manually
+- Public notification uses platform-level secrets instead of `tenant_settings` because no tenant exists at intake time
+- Open requests are deduplicated by normalized organization name plus work email so repeated submissions update the same in-flight request instead of spamming duplicate rows
+
+### Files changed
+
+- `src/App.tsx`
+- `src/features/auth/LoginPage.tsx`
+- `src/features/auth/RequestAccessPage.tsx`
+- `supabase/migrations/20260311000004_mvp_tenant_access_requests.sql`
+- `supabase/functions/request-access/index.ts`
+- `supabase/functions/_shared/emails/AccessRequestNotificationEmail.tsx`
+- `docs/Project Docs/RUNBOOK.md`
+- `docs/Project Docs/SCHEMA.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `deno check` run for the new request-access Edge Function
+- Frontend TypeScript validation attempted, but the repo already has unrelated errors in `src/features/auth/ProtectedRoute.tsx`, `src/features/auth/UpdatePasswordPage.tsx`, `src/features/training/hooks/useTrainingCompliance.ts`, `src/hooks/useUserRole.ts`, `src/lib/supabase.ts`, and `src/services/dashboardService.ts`
+
+---
+
+## 2026-03-11 — Request-access guardrails + platform-admin review page
+
+### What shipped
+
+- Added lightweight anti-spam controls to the public `request-access` EF:
+  - honeypot field
+  - rate limiting by recent email submissions
+  - rate limiting by recent request IP
+- Added applicant-facing confirmation email delivery after ops notification succeeds
+- Added request metadata and confirmation tracking fields on `tenant_access_requests`
+- Added a platform-admin-only internal page for reviewing `tenant_access_requests`, inspecting delivery state, and updating request status
+
+### Design decisions
+
+- Internal ops notification remains the hard requirement; requester confirmation failure is recorded but does not fail the submission after ops has already been notified
+- Tenant provisioning is still manual. The new admin page makes that explicit instead of pretending the workflow is automated
+- Platform-admin review uses direct table access under RLS rather than a dedicated read EF because the table already has platform-admin select/update policies
+
+### Files changed
+
+- `src/App.tsx`
+- `src/components/layout/Sidebar.tsx`
+- `src/features/auth/RequestAccessPage.tsx`
+- `src/features/admin/hooks/useAccessRequests.ts`
+- `src/features/admin/pages/AccessRequestsPage.tsx`
+- `supabase/migrations/20260311000005_request_access_guardrails.sql`
+- `supabase/functions/request-access/index.ts`
+- `supabase/functions/_shared/emails/AccessRequestConfirmationEmail.tsx`
+- `docs/Project Docs/RUNBOOK.md`
+- `docs/Project Docs/SCHEMA.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `deno check request-access/index.ts` run after the guardrail and confirmation-email changes
+
+---
 
 ## 2026-03-10 — Applicants read path decoupled from JotForm sync
 

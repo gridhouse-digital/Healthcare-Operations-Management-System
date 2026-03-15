@@ -3,6 +3,7 @@ import { X, AlertTriangle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { AppSelect } from '@/components/ui/AppSelect';
 import type { TrainingComplianceRecord, AdjustmentFormData } from '../types';
 
 interface TrainingAdjustmentModalProps {
@@ -100,30 +101,29 @@ export function TrainingAdjustmentModal({ record, employeeName, onClose }: Train
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
           <div>
             <label className={labelCls}>Field</label>
-            <select
+            <AppSelect
               value={form.field}
-              onChange={e => setForm({ ...form, field: e.target.value as AdjustmentFormData['field'], value: '' })}
+              onValueChange={value => setForm({ ...form, field: value as AdjustmentFormData['field'], value: '' })}
+              options={FIELD_OPTIONS.map(opt => ({ value: opt.value, label: opt.label }))}
               className={inputCls}
-            >
-              {FIELD_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            />
           </div>
 
           <div>
             <label className={labelCls}>Value</label>
             {form.field === 'status' ? (
-              <select
+              <AppSelect
                 value={form.value}
-                onChange={e => setForm({ ...form, value: e.target.value })}
+                onValueChange={value => setForm({ ...form, value })}
+                options={[
+                  { value: '', label: 'Select status...' },
+                  { value: 'not_started', label: 'Not Started' },
+                  { value: 'in_progress', label: 'In Progress' },
+                  { value: 'completed', label: 'Completed' },
+                ]}
                 className={inputCls}
-              >
-                <option value="">Select status...</option>
-                <option value="not_started">Not Started</option>
-                <option value="in_progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
+                placeholder="Select status..."
+              />
             ) : form.field === 'completed_at' ? (
               <input
                 type="date"

@@ -53,7 +53,7 @@ export interface TrainingAdjustment {
 
 export interface TrainingEvent {
   id: string;
-  course_id: string;
+  course_id: string | null;
   event_type: 'enrolled' | 'completed' | 'expired' | 'adjusted';
   payload: Record<string, unknown>;
   created_at: string;

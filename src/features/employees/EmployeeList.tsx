@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { employeeService } from '@/services/employeeService';
 import type { Employee } from '@/types';
 import { format } from 'date-fns';
-import { Search, Mail, Phone, Calendar, Building, MoreHorizontal, BookOpen, Edit2, Save, X, Plus } from 'lucide-react';
+import { Search, Mail, Phone, Calendar, Building, MoreHorizontal, BookOpen, Edit2, Save, X, Plus, ClipboardCheck, Users, ShieldCheck } from 'lucide-react';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { SlideOver } from '@/components/ui/SlideOver';
 import { OnboardingSummaryPanel } from '@/components/ai/OnboardingSummaryPanel';
 import { toast } from '@/hooks/useToast';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
+import { AppSelect } from '@/components/ui/AppSelect';
 
 const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
 const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
@@ -18,8 +19,51 @@ interface TrainingRecord {
     course_name: string;
     status: string;
     progress_pct: number;
-    steps_completed: number;
-    steps_total: number;
+}
+
+interface RecurringComplianceRecord {
+    instance_id: string;
+    rule_id: string;
+    rule_name: string;
+    group_id: string;
+    due_at: string;
+    completed_at: string | null;
+    completion_source: string | null;
+    compliance_status: 'not_yet_due' | 'due_soon' | 'due' | 'overdue' | 'completed';
+}
+
+function recurringStatusLabel(status: RecurringComplianceRecord['compliance_status']) {
+    switch (status) {
+        case 'not_yet_due': return 'Not Yet Due';
+        case 'due_soon': return 'Due Soon';
+        case 'due': return 'Due';
+        case 'overdue': return 'Overdue';
+        case 'completed': return 'Completed';
+    }
+}
+
+function recurringStatusClass(status: RecurringComplianceRecord['compliance_status']) {
+    switch (status) {
+        case 'completed':
+            return 'border-[color-mix(in_srgb,var(--severity-low)_25%,transparent)] bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)]';
+        case 'overdue':
+            return 'border-[hsl(4,82%,52%)]/25 bg-[hsl(4,82%,52%)]/10 text-[hsl(4,76%,60%)]';
+        case 'due':
+            return 'border-[color-mix(in_srgb,var(--primary)_25%,transparent)] bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] text-primary';
+        case 'due_soon':
+            return 'border-[color-mix(in_srgb,var(--severity-medium)_25%,transparent)] bg-[color-mix(in_srgb,var(--severity-medium)_10%,transparent)] text-[var(--severity-medium)]';
+        case 'not_yet_due':
+            return 'border-border bg-muted/40 text-muted-foreground';
+    }
+}
+
+function isMissingSchema(error: unknown) {
+    const code = (error as { code?: string } | null)?.code;
+    const message = String((error as { message?: string } | null)?.message ?? '');
+    return code === '42P01' ||
+        code === 'PGRST205' ||
+        /relation .* does not exist/i.test(message) ||
+        /schema cache/i.test(message);
 }
 
 export function EmployeeList() {
@@ -29,6 +73,8 @@ export function EmployeeList() {
 
     const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
     const [trainingRecords, setTrainingRecords] = useState<TrainingRecord[]>([]);
+    const [recurringRecords, setRecurringRecords] = useState<RecurringComplianceRecord[]>([]);
+    const [activeGroupIds, setActiveGroupIds] = useState<string[]>([]);
     const [loadingTraining, setLoadingTraining] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -44,8 +90,12 @@ export function EmployeeList() {
     useEffect(() => {
         if (selectedEmployee) {
             loadTrainingRecords(selectedEmployee.id);
+            loadRecurringCompliance(selectedEmployee.id);
+            loadActiveComplianceGroups(selectedEmployee.id);
         } else {
             setTrainingRecords([]);
+            setRecurringRecords([]);
+            setActiveGroupIds([]);
         }
     }, [selectedEmployee]);
 
@@ -64,17 +114,54 @@ export function EmployeeList() {
     const loadTrainingRecords = async (personId: string) => {
         setLoadingTraining(true);
         try {
-            const { data, error: trErr } = await supabase
-                .from('training_records')
-                .select('id, course_name, status, progress_pct, steps_completed, steps_total')
+            let activeQuery = await supabase
+                .from('v_onboarding_training_compliance')
+                .select('training_record_id, course_name, effective_status, effective_completion_pct')
                 .eq('person_id', personId)
                 .order('course_name');
 
-            if (trErr) throw trErr;
-            setTrainingRecords(data || []);
+            if (activeQuery.error && isMissingSchema(activeQuery.error)) {
+                const fallbackQuery = await supabase
+                    .from('training_records')
+                    .select('id, course_name, status, completion_pct')
+                    .eq('person_id', personId)
+                    .order('course_name');
+
+                if (fallbackQuery.error) throw fallbackQuery.error;
+
+                const normalized = (fallbackQuery.data || []).map((row) => ({
+                    id: row.id,
+                    course_name: row.course_name,
+                    status: row.status,
+                    progress_pct: row.completion_pct ?? 0,
+                }));
+
+                setTrainingRecords(normalized);
+
+                const allDone = normalized.length > 0 && normalized.every((r) => r.status === 'completed');
+                if (allDone && selectedEmployee && selectedEmployee.employee_status === 'Onboarding') {
+                    await employeeService.updateEmployee(selectedEmployee.id, { employee_status: 'Active' } as Partial<Employee>);
+                    toast.success('All courses completed! Status updated to Active.');
+                    await loadEmployees();
+                    setSelectedEmployee({ ...selectedEmployee, employee_status: 'Active' });
+                }
+
+                return;
+            }
+
+            if (activeQuery.error) throw activeQuery.error;
+
+            const normalized = (activeQuery.data || []).map((row) => ({
+                id: row.training_record_id,
+                course_name: row.course_name,
+                status: row.effective_status,
+                progress_pct: row.effective_completion_pct ?? 0,
+            }));
+
+            setTrainingRecords(normalized);
 
             // Auto-update status if all courses completed
-            const allDone = data && data.length > 0 && data.every((r: TrainingRecord) => r.status === 'completed');
+            const allDone = normalized.length > 0 && normalized.every((r) => r.status === 'completed');
             if (allDone && selectedEmployee && selectedEmployee.employee_status === 'Onboarding') {
                 await employeeService.updateEmployee(selectedEmployee.id, { employee_status: 'Active' } as Partial<Employee>);
                 toast.success('All courses completed! Status updated to Active.');
@@ -85,6 +172,57 @@ export function EmployeeList() {
             console.error('Failed to load training records', err);
         } finally {
             setLoadingTraining(false);
+        }
+    };
+
+    const loadRecurringCompliance = async (personId: string) => {
+        try {
+            const { data, error: recurringErr } = await supabase
+                .from('v_recurring_compliance_status')
+                .select('instance_id, rule_id, rule_name, group_id, due_at, completed_at, completion_source, compliance_status, cycle_number')
+                .eq('person_id', personId)
+                .order('cycle_number', { ascending: false });
+
+            if (recurringErr) {
+                const message = recurringErr.message || '';
+                if (/relation .* does not exist/i.test(message) || /schema cache/i.test(message)) {
+                    setRecurringRecords([]);
+                    return;
+                }
+                throw recurringErr;
+            }
+
+            const latestByRule = new Map<string, RecurringComplianceRecord>();
+            for (const row of (data || []) as Array<RecurringComplianceRecord & { cycle_number?: number }>) {
+                if (!latestByRule.has(row.rule_id)) {
+                    latestByRule.set(row.rule_id, row);
+                }
+            }
+
+            setRecurringRecords(Array.from(latestByRule.values()));
+        } catch (err) {
+            console.error('Failed to load recurring compliance', err);
+            setRecurringRecords([]);
+        }
+    };
+
+    const loadActiveComplianceGroups = async (personId: string) => {
+        try {
+            const { data, error: groupsErr } = await supabase
+                .from('employee_group_enrollments')
+                .select('group_id')
+                .eq('person_id', personId)
+                .eq('active', true)
+                .order('group_id');
+
+            if (groupsErr) throw groupsErr;
+
+            setActiveGroupIds(
+                Array.from(new Set((data || []).map((row) => row.group_id as string)))
+            );
+        } catch (err) {
+            console.error('Failed to load active compliance groups', err);
+            setActiveGroupIds([]);
         }
     };
 
@@ -99,6 +237,7 @@ export function EmployeeList() {
                 department: selectedEmployee.department,
                 hired_at: selectedEmployee.hired_at,
                 employee_status: selectedEmployee.employee_status,
+                primary_compliance_group_id: selectedEmployee.primary_compliance_group_id,
             });
             setIsEditing(true);
         }
@@ -172,26 +311,26 @@ export function EmployeeList() {
                             className="w-full pl-8 pr-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60"
                         />
                     </div>
-                    <select
+                    <AppSelect
                         value={filterDept}
-                        onChange={(e) => setFilterDept(e.target.value)}
-                        className={inputCls}
-                    >
-                        <option value="all">All Departments</option>
-                        <option value="Nursing">Nursing</option>
-                        <option value="Care">Care</option>
-                        <option value="Admin">Admin</option>
-                    </select>
-                    <select
+                        onValueChange={setFilterDept}
+                        options={[
+                            { value: 'all', label: 'All Departments' },
+                            { value: 'Nursing', label: 'Nursing' },
+                            { value: 'Care', label: 'Care' },
+                            { value: 'Admin', label: 'Admin' },
+                        ]}
+                    />
+                    <AppSelect
                         value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className={inputCls}
-                    >
-                        <option value="all">All Statuses</option>
-                        <option value="Active">Active</option>
-                        <option value="Onboarding">Onboarding</option>
-                        <option value="Terminated">Terminated</option>
-                    </select>
+                        onValueChange={setFilterStatus}
+                        options={[
+                            { value: 'all', label: 'All Statuses' },
+                            { value: 'Active', label: 'Active' },
+                            { value: 'Onboarding', label: 'Onboarding' },
+                            { value: 'Terminated', label: 'Terminated' },
+                        ]}
+                    />
                 </div>
             </div>
 
@@ -340,8 +479,7 @@ export function EmployeeList() {
                                                     style={{ width: `${record.progress_pct}%` }}
                                                 />
                                             </div>
-                                            <div className="flex justify-between text-[11px] text-muted-foreground">
-                                                <span>{record.steps_completed} / {record.steps_total} steps</span>
+                                            <div className="flex justify-end text-[11px] text-muted-foreground">
                                                 <span>{record.progress_pct}%</span>
                                             </div>
                                         </div>
@@ -351,6 +489,44 @@ export function EmployeeList() {
                                 <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
                                     <p className="text-[12px] text-muted-foreground">No training data available.</p>
                                     <p className="mt-1 text-[11px] text-muted-foreground/70">Run "Sync LearnDash Training" from Settings → Connectors.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Recurring Compliance */}
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <ClipboardCheck size={13} className="text-primary" strokeWidth={2} />
+                                <span className="zone-label">Recurring Compliance</span>
+                            </div>
+                            {recurringRecords.length > 0 ? (
+                                <div className="space-y-3">
+                                    {recurringRecords.map((record) => (
+                                        <div key={record.instance_id} className="rounded-md border border-border p-3.5">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="text-[13px] font-medium text-foreground">{record.rule_name}</p>
+                                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                                        Due {record.due_at ? format(new Date(record.due_at), 'MMMM d, yyyy') : '—'}
+                                                    </p>
+                                                    {record.completed_at && (
+                                                        <p className="mt-1 text-[11px] text-muted-foreground">
+                                                            Completed {format(new Date(record.completed_at), 'MMMM d, yyyy')}
+                                                            {record.completion_source ? ` via ${record.completion_source}` : ''}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${recurringStatusClass(record.compliance_status)}`}>
+                                                    {recurringStatusLabel(record.compliance_status)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
+                                    <p className="text-[12px] text-muted-foreground">No recurring compliance records available.</p>
+                                    <p className="mt-1 text-[11px] text-muted-foreground/70">This will populate after Epic 5.9 migrations and rules are configured.</p>
                                 </div>
                             )}
                         </div>
@@ -392,11 +568,18 @@ export function EmployeeList() {
                                     </div>
                                     <div>
                                         <label className={labelCls}>Status</label>
-                                        <select value={editFormData.employee_status || ''} onChange={(e) => setEditFormData({ ...editFormData, employee_status: e.target.value })} className={inputCls}>
-                                            <option value="Active">Active</option>
-                                            <option value="Onboarding">Onboarding</option>
-                                            <option value="Terminated">Terminated</option>
-                                        </select>
+                                        <AppSelect
+                                            value={editFormData.employee_status || 'Active'}
+                                            onValueChange={(value) => setEditFormData({
+                                                ...editFormData,
+                                                employee_status: value,
+                                            })}
+                                            options={[
+                                                { value: 'Active', label: 'Active' },
+                                                { value: 'Onboarding', label: 'Onboarding' },
+                                                { value: 'Terminated', label: 'Terminated' },
+                                            ]}
+                                        />
                                     </div>
                                 </div>
                             ) : (
@@ -439,6 +622,56 @@ export function EmployeeList() {
                                         <p className="text-[13px] text-foreground">{selectedEmployee.department || '—'}</p>
                                     </div>
                                 </div>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <Users size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                    <div>
+                                        <p className="zone-label mb-0.5">Active LearnDash Groups</p>
+                                        <p className="text-[13px] text-foreground">
+                                            {activeGroupIds.length > 0 ? activeGroupIds.join(', ') : 'â€”'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 px-4 py-3">
+                                    <ShieldCheck size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
+                                    <div>
+                                        <p className="zone-label mb-0.5">Primary Compliance Group</p>
+                                        <p className="text-[13px] text-foreground">
+                                            {selectedEmployee.primary_compliance_group_id || 'All active groups'}
+                                        </p>
+                                        {activeGroupIds.length > 1 && !selectedEmployee.primary_compliance_group_id && (
+                                            <p className="mt-1 text-[11px] text-[var(--severity-medium)]">
+                                                Multiple active groups. Choose a primary compliance group to narrow onboarding and recurring obligations.
+                                            </p>
+                                        )}
+                                        {activeGroupIds.length > 1 && !isEditing && (
+                                            <p className="mt-1 text-[11px] text-muted-foreground">
+                                                Use Edit Profile to change this setting.
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                    {isEditing && activeGroupIds.length > 1 && (
+                                        <div className="px-4 py-3">
+                                            <label className={labelCls}>Primary Compliance Group</label>
+                                        <AppSelect
+                                            value={editFormData.primary_compliance_group_id || ''}
+                                            onValueChange={(value) => setEditFormData({
+                                                ...editFormData,
+                                                primary_compliance_group_id: value || null,
+                                            })}
+                                            options={[
+                                                { value: '', label: 'All active groups' },
+                                                ...activeGroupIds.map((groupId) => ({
+                                                    value: groupId,
+                                                    label: `Group ${groupId}`,
+                                                })),
+                                            ]}
+                                        />
+                                        <p className="mt-1 text-[11px] text-muted-foreground">
+                                            Active LearnDash groups are read-only. This setting only changes which group drives HR compliance.
+                                        </p>
+                                    </div>
+                                )}
                                 {selectedEmployee.employee_id && (
                                     <div className="flex items-center gap-3 px-4 py-3">
                                         <span className="text-[11px] font-mono text-muted-foreground flex-shrink-0">#</span>

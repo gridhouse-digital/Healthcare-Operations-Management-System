@@ -1,12 +1,26 @@
 import { useState } from 'react';
-import { LayoutDashboard, Users, FileText, Briefcase, BookOpenCheck, Sparkles, PanelLeftClose, PanelLeftOpen, Plug, UserCog, Wrench } from 'lucide-react';
+import { LayoutDashboard, Users, FileText, Briefcase, BookOpenCheck, Sparkles, PanelLeftClose, PanelLeftOpen, Plug, UserCog, Wrench, Mail, ClipboardCheck, type LucideIcon } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSidebar } from './SidebarContext';
 
-const navGroups = [
+interface NavItem {
+    name: string;
+    href: string;
+    icon: LucideIcon;
+    adminOnly: boolean;
+    isAI: boolean;
+    platformAdminOnly?: boolean;
+}
+
+interface NavGroup {
+    label: string;
+    items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
     {
         label: 'Overview',
         items: [
@@ -36,7 +50,9 @@ const navGroups = [
         label: 'AI & Admin',
         items: [
             { name: 'AI Dashboard',     href: '/admin/ai-dashboard',    icon: Sparkles, adminOnly: true,  isAI: true },
+            { name: 'Access Requests',  href: '/admin/access-requests', icon: Mail,      adminOnly: true,  platformAdminOnly: true, isAI: false },
             { name: 'Connectors',        href: '/settings/connectors',   icon: Plug,      adminOnly: true,  isAI: false },
+            { name: 'Training Rules',    href: '/settings/training-rules', icon: ClipboardCheck, adminOnly: true, isAI: false },
             { name: 'Users',             href: '/settings/users',        icon: UserCog,   adminOnly: true,  isAI: false },
             { name: 'System Settings',   href: '/settings/system',       icon: Wrench,    adminOnly: true,  isAI: false },
         ],
@@ -45,7 +61,7 @@ const navGroups = [
 
 export function Sidebar() {
     const location = useLocation();
-    const { isAdmin } = useUserRole();
+    const { isAdmin, isPlatformAdmin } = useUserRole();
     const { expanded, pinned, togglePin, setHovered } = useSidebar();
     const [tooltipItem, setTooltipItem] = useState<string | null>(null);
 
@@ -68,7 +84,11 @@ export function Sidebar() {
             {/* ── Navigation ── */}
             <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2">
                 {navGroups.map((group, gi) => {
-                    const visibleItems = group.items.filter(item => !item.adminOnly || isAdmin);
+                    const visibleItems = group.items.filter(item => {
+                        if (item.adminOnly && !isAdmin) return false;
+                        if (item.platformAdminOnly && !isPlatformAdmin) return false;
+                        return true;
+                    });
                     if (visibleItems.length === 0) return null;
 
                     return (
