@@ -400,6 +400,36 @@
   - Dashboard actions shipped: `Mark Complete`, `Reopen Cycle`, `Suppress/Resume Reminders`, `Update Anchor Date`
   - Reminder notification automation remains follow-up work; this slice ships the operator controls first
 
+### Story 5.18 - JotForm compliance catalog restructure
+**AC:**
+- HR can sync available JotForm forms for the tenant from the JotForm connector
+- HR can choose which JotForm forms count as compliance artifacts without adding new schema columns
+- Compliance/applicant detail views read selected form bindings from DB configuration rather than hardcoded `tenant_settings` form slots
+- Status: [ ] Not started
+- Plan: `docs/plans/2026-03-15-pre-epic6-restructure-plan.md`
+
+### Story 5.19 - Applicant source policy + ATS sync restructure
+**AC:**
+- Applicants page reflects the tenant's configured applicant source strategy instead of ATS hire shadow rows only
+- BambooHR and JazzHR paths are explicitly supported or constrained according to connector capabilities
+- `applicants` remains the unified UI table while source freshness and statuses improve
+- Status: [ ] Not started
+- Plan: `docs/plans/2026-03-15-pre-epic6-restructure-plan.md`
+
+### Story 5.20 - Offer flow source-agnostic audit
+**AC:**
+- Offers can be created, sent, and onboarded for applicants from the supported source paths
+- No JotForm-only assumptions remain in the offer flow
+- Status: [ ] Not started
+- Plan: `docs/plans/2026-03-15-pre-epic6-restructure-plan.md`
+
+### Story 5.21 - AI intelligence post-restructure audit
+**AC:**
+- Applicant ranking, summarization, and offer drafting work for supported non-JotForm applicants
+- AI prompts and fallbacks tolerate sparse ATS applicant data
+- Status: [ ] Not started
+- Plan: `docs/plans/2026-03-15-pre-epic6-restructure-plan.md`
+
 **Epic 5 Gate:** Stories 5.1-5.10 are functionally complete on the linked project. Remote DB matches the post-migration model, active EF/runtime paths no longer depend on `employees`, `settings`, or `profiles`, and public request-access intake now hands off cleanly into the manual onboarding flow. Tenant provisioning itself is still manual and remains the next obvious platform-admin workflow gap.
 
 ### Epic 5 UI consistency note
@@ -410,8 +440,12 @@
 
 1. Story 5.11 - Training sync group change reconciliation closeout and re-entry QA
 2. Story 5.12 - Recurring compliance supersession policy completion
-3. Recurring compliance reminder notification flow
-4. Epic 6 - Compliance exports
+3. Story 5.18 - JotForm compliance catalog restructure
+4. Story 5.19 - Applicant source policy + ATS sync restructure
+5. Story 5.20 - Offer flow source-agnostic audit
+6. Story 5.21 - AI intelligence post-restructure audit
+7. Recurring compliance reminder notification flow
+8. Epic 6 - Compliance exports
 
 ---
 

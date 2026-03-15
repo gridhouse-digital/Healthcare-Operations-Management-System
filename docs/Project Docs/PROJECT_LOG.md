@@ -3,6 +3,26 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-03-15 - Pre-Epic 6 restructure planning
+
+### What shipped
+
+- Added a pre-Epic 6 restructuring plan covering dynamic JotForm compliance forms, ATS applicant-source restructuring, offer flow audit, and AI intelligence audit
+- Split the work into proposed stories 5.18 through 5.21 so Epic 6 exports are not started on top of unstable upstream assumptions
+- Updated sprint follow-up order to gate Epic 6 behind the restructure tranche
+
+### Files changed
+
+- `docs/plans/2026-03-15-pre-epic6-restructure-plan.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- Planning/doc review against current JotForm, applicant, offer, and AI implementation paths
+- No runtime code changed in this slice
+
+---
 ## 2026-03-15 - Recurring compliance manual cycle actions
 
 ### What shipped
