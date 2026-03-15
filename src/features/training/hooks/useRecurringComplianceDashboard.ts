@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type {
+  RecurringComplianceAction,
   RecurringComplianceDashboardData,
   RecurringComplianceEmployeeRow,
   RecurringComplianceInstance,
@@ -138,6 +139,7 @@ async function fetchRecurringComplianceDashboard(): Promise<RecurringComplianceD
     if (!person) continue;
 
     const row: RecurringComplianceEmployeeRow = {
+      instance_id: instance.instance_id,
       person_id: instance.person_id,
       employee_name: person.employee_name,
       email: person.email,
@@ -179,5 +181,40 @@ export function useRecurringComplianceDashboard() {
     queryKey: ["recurring-compliance-dashboard"],
     queryFn: fetchRecurringComplianceDashboard,
     staleTime: 60_000,
+  });
+}
+
+interface ManageRecurringCompliancePayload {
+  instance_id: string;
+  action: RecurringComplianceAction;
+  completed_at?: string;
+  completion_note?: string;
+  reminder_suppressed?: boolean;
+  anchor_date?: string;
+  reason?: string;
+}
+
+export function useManageRecurringCompliance() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: ManageRecurringCompliancePayload) => {
+      const { data, error } = await supabase.functions.invoke("manage-recurring-compliance-instance", {
+        body: payload,
+      });
+
+      if (error) {
+        throw new Error(error.message || "Failed to update recurring compliance");
+      }
+
+      if (!data?.ok || !data?.row) {
+        throw new Error("Recurring compliance update did not return a refreshed row");
+      }
+
+      return data.row as RecurringComplianceInstance;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recurring-compliance-dashboard"] });
+    },
   });
 }

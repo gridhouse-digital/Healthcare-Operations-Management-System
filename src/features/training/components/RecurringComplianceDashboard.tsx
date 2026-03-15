@@ -1,9 +1,13 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, Search } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { AppSelect } from "@/components/ui/AppSelect";
-import { useRecurringComplianceDashboard } from "../hooks/useRecurringComplianceDashboard";
+import {
+  useManageRecurringCompliance,
+  useRecurringComplianceDashboard,
+} from "../hooks/useRecurringComplianceDashboard";
 import type {
   RecurringComplianceEmployeeRow,
   RecurringComplianceStatus,
@@ -66,10 +70,19 @@ function SummaryCard({
 
 export function RecurringComplianceDashboard() {
   const { data, isLoading, error } = useRecurringComplianceDashboard();
+  const manageRecurring = useManageRecurringCompliance();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | RecurringComplianceStatus>("all");
   const [ruleFilter, setRuleFilter] = useState("all");
   const [selectedRow, setSelectedRow] = useState<RecurringComplianceEmployeeRow | null>(null);
+  const [completionNote, setCompletionNote] = useState("");
+  const [anchorDate, setAnchorDate] = useState("");
+
+  useEffect(() => {
+    if (!selectedRow) return;
+    setCompletionNote(selectedRow.completion_note ?? "");
+    setAnchorDate(selectedRow.anchor_date ? selectedRow.anchor_date.slice(0, 10) : "");
+  }, [selectedRow]);
 
   const rows = useMemo(() => {
     return (data?.rows ?? []).filter((row) => {
@@ -109,6 +122,62 @@ export function RecurringComplianceDashboard() {
         </p>
       </div>
     );
+  }
+
+  async function runAction(
+    action: "manual_complete" | "reopen_cycle" | "suppress_reminders" | "override_anchor",
+  ) {
+    if (!selectedRow) return;
+
+    try {
+      if (action === "manual_complete") {
+        await manageRecurring.mutateAsync({
+          instance_id: selectedRow.instance_id,
+          action,
+          completion_note: completionNote.trim() || undefined,
+        });
+        toast.success("Recurring compliance cycle marked complete");
+      }
+
+      if (action === "reopen_cycle") {
+        await manageRecurring.mutateAsync({
+          instance_id: selectedRow.instance_id,
+          action,
+        });
+        toast.success("Recurring compliance cycle reopened");
+      }
+
+      if (action === "suppress_reminders") {
+        const suppressed = !selectedRow.reminder_suppressed;
+        await manageRecurring.mutateAsync({
+          instance_id: selectedRow.instance_id,
+          action,
+          reminder_suppressed: suppressed,
+        });
+        toast.success(suppressed ? "Reminders suppressed" : "Reminders re-enabled");
+      }
+
+      if (action === "override_anchor") {
+        if (!anchorDate) {
+          toast.error("Choose a valid anchor date first");
+          return;
+        }
+        await manageRecurring.mutateAsync({
+          instance_id: selectedRow.instance_id,
+          action,
+          anchor_date: anchorDate,
+        });
+        toast.success("Anchor date updated");
+      }
+
+      setSelectedRow(null);
+    } catch (mutationError) {
+      toast.error(
+        mutationError instanceof Error
+          ? mutationError.message
+          : "Failed to update recurring compliance",
+      );
+    }
   }
 
   return (
@@ -268,6 +337,77 @@ export function RecurringComplianceDashboard() {
                 <span className="text-[13px] text-foreground">
                   {selectedRow.reminder_suppressed ? "Suppressed" : "Active"}
                 </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-border p-4">
+              <div>
+                <p className="zone-label mb-2">Manual actions</p>
+                {!selectedRow.completed_at ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={completionNote}
+                      onChange={(event) => setCompletionNote(event.target.value)}
+                      placeholder="Optional completion note"
+                      className="min-h-[92px] w-full rounded-md border border-border bg-card px-3 py-2 text-[13px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/35"
+                    />
+                    <button
+                      type="button"
+                      disabled={manageRecurring.isPending}
+                      onClick={() => void runAction("manual_complete")}
+                      className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {manageRecurring.isPending ? "Saving..." : "Mark Complete"}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={manageRecurring.isPending}
+                    onClick={() => void runAction("reopen_cycle")}
+                    className="inline-flex h-9 items-center justify-center rounded-md border border-border px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {manageRecurring.isPending ? "Saving..." : "Reopen Cycle"}
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  disabled={manageRecurring.isPending}
+                  onClick={() => void runAction("suppress_reminders")}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-border px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {manageRecurring.isPending
+                    ? "Saving..."
+                    : selectedRow.reminder_suppressed
+                      ? "Resume Reminders"
+                      : "Suppress Reminders"}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-3 rounded-lg border border-border p-4">
+              <p className="zone-label">Anchor override</p>
+              <p className="text-[12px] text-muted-foreground">
+                Changing the anchor date recalculates due dates for this group-enrollment series.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  type="date"
+                  value={anchorDate}
+                  onChange={(event) => setAnchorDate(event.target.value)}
+                  className="h-9 rounded-md border border-border bg-card px-3 text-[13px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/35"
+                />
+                <button
+                  type="button"
+                  disabled={manageRecurring.isPending || !anchorDate}
+                  onClick={() => void runAction("override_anchor")}
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-border px-4 text-[13px] font-semibold text-foreground transition-colors hover:bg-muted/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {manageRecurring.isPending ? "Saving..." : "Update Anchor Date"}
+                </button>
               </div>
             </div>
           </div>

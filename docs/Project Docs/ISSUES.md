@@ -26,7 +26,7 @@ This document tracks active product and engineering issues that require follow-u
 | # | Issue | Priority | Severity | Owner | Next Action | Target Sprint |
 |---|---|---|---|---|---|---|
 | 1 | WordPress group change does not fully resync HR app training assignments | `P1` | `High` | Engineering + Architecture | Close out re-entry validation and finalize superseded-state behavior for multi-group edge cases | Current sprint |
-| 2 | Second recurring compliance rule not visible or generating compliance records | `P1` | `High` | Engineering | Keep regression coverage only; issue validated on production data | Current sprint |
+| 2 | Second recurring compliance rule not visible or generating compliance records | `P1` | `High` | Engineering | Keep regression coverage only; manual cycle controls are shipped and reminder automation remains separate feature work | Current sprint |
 | 3 | Platform admin applicant visibility lacks tenant filter | `P2` | `Medium` | Product + UX, then Engineering | Monitor after rollout; keep behavior unchanged for tenant-admin and HR-admin roles | Current sprint |
 
 ---
@@ -123,7 +123,7 @@ This leaves stale course assignments and can cause the HR app to show a user as 
 | Area | Settings -> Training Compliance Rules UI, anchor generation, recurring compliance pipeline |
 | Status | Resolved / Monitoring |
 | Owner | Engineering |
-| Next Action | Keep regression coverage in place and verify no regression after future sync / recurring changes |
+| Next Action | Keep regression coverage in place and verify no regression after future sync / recurring changes; reminder automation remains separate feature work |
 | Target Sprint | Current sprint |
 | Date discovered | 2026-03-11 |
 | Reported by | Oyiny |
@@ -196,6 +196,7 @@ Observed symptoms:
 - Production backfill inserted anchors from `training_record` evidence for the correct employees.
 - Production rebuild generated cycle rows for that rule.
 - UI rule filter and employee recurring views showed the second rule for the right employees only.
+- Manual cycle operations shipped on 2026-03-15 so admins can complete, reopen, suppress reminders, and override anchors directly from the recurring dashboard.
 
 ### Linked stories
 
