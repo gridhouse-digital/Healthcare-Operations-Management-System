@@ -30,6 +30,7 @@ export interface RecurringComplianceInstance {
 }
 
 export interface RecurringComplianceEmployeeRow {
+  instance_id: string;
   person_id: string;
   employee_name: string;
   email: string;
@@ -47,6 +48,12 @@ export interface RecurringComplianceEmployeeRow {
   cycle_number: number;
   reminder_suppressed: boolean;
 }
+
+export type RecurringComplianceAction =
+  | "manual_complete"
+  | "reopen_cycle"
+  | "suppress_reminders"
+  | "override_anchor";
 
 export interface RecurringComplianceSummary {
   not_yet_due: number;

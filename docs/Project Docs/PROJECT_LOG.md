@@ -3,7 +3,54 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
-## 2026-03-12 â€” Shared dropdown standardization + design-system green hover state
+## 2026-03-15 - Recurring compliance manual cycle actions
+
+### What shipped
+
+- Added recurring compliance operator actions so HR can mark a cycle complete, reopen a cycle, suppress or resume reminders, and override anchor dates without manual SQL
+- Added the `manage-recurring-compliance-instance` Edge Function to validate actions, persist updates, recalculate linked due dates after anchor overrides, and write audit rows
+- Extended recurring dashboard hooks and types so action results invalidate and refresh the dashboard cleanly after each change
+
+### Files changed
+
+- `supabase/functions/manage-recurring-compliance-instance/index.ts`
+- `src/features/training/hooks/useRecurringComplianceDashboard.ts`
+- `src/features/training/components/RecurringComplianceDashboard.tsx`
+- `src/features/training/types/recurring-compliance.ts`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/ISSUES.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `npx tsc --noEmit`
+- `deno check supabase/functions/manage-recurring-compliance-instance/index.ts`
+- `npm run build`
+
+---
+## 2026-03-12 - Platform-admin applicant tenant filter
+
+### What shipped
+
+- Added a platform-admin-only tenant filter to the applicants page
+- Updated the applicant read hook to support tenant-scoped queries while preserving tenant-admin and HR-admin behavior
+- Added tenant option loading from `public.tenants` for the platform-admin filter control
+
+### Files changed
+
+- `src/hooks/useApplicants.ts`
+- `src/features/applicants/ApplicantList.tsx`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/ISSUES.md`
+
+### Verified
+
+- `npx tsc --noEmit`
+- `npm run build`
+
+---
+
+## 2026-03-12 - Shared dropdown standardization + design-system green hover state
 
 ### What shipped
 
@@ -33,7 +80,7 @@
 
 ---
 
-## 2026-03-12 — Primary compliance group override
+## 2026-03-12 - Primary compliance group override
 
 ### What shipped
 
@@ -698,4 +745,3 @@
 - Migration 20260304000004 added SET search_path = public to handle_new_user() (GoTrue fix)
 - cors.ts moved ALLOWED_ORIGINS to function (env var timing fix)
 - audit-logger tests used Deno.serve mock for lines 51-52 coverage
-

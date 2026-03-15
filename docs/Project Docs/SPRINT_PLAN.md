@@ -1,6 +1,6 @@
 # SPRINT PLAN - HOMS MVP
 
-> Updated: 2026-03-12
+> Updated: 2026-03-15
 > Sprint window: 60-90 days from 2026-03-04
 > Methodology: Epic-gated. Each epic has a CI gate. Next epic only starts after gate passes.
 
@@ -387,6 +387,19 @@
 - Status: [x] Complete - 2026-03-12
 - Plan: `docs/plans/2026-03-12-epic5-story516-plan.md`
 
+### Story 5.17 - Recurring compliance manual cycle actions
+**AC:**
+- HR can mark a recurring cycle complete from the recurring compliance dashboard
+- HR can reopen a completed cycle without manual SQL or direct table edits
+- HR can suppress or resume reminders for a cycle
+- HR can override an anchor date and have linked cycle dates recalculate
+- All manual actions write audit rows and refresh recurring dashboard state
+- Status: [x] Complete - 2026-03-15
+- Delivery notes:
+  - New Edge Function: `manage-recurring-compliance-instance`
+  - Dashboard actions shipped: `Mark Complete`, `Reopen Cycle`, `Suppress/Resume Reminders`, `Update Anchor Date`
+  - Reminder notification automation remains follow-up work; this slice ships the operator controls first
+
 **Epic 5 Gate:** Stories 5.1-5.10 are functionally complete on the linked project. Remote DB matches the post-migration model, active EF/runtime paths no longer depend on `employees`, `settings`, or `profiles`, and public request-access intake now hands off cleanly into the manual onboarding flow. Tenant provisioning itself is still manual and remains the next obvious platform-admin workflow gap.
 
 ### Epic 5 UI consistency note
@@ -397,7 +410,7 @@
 
 1. Story 5.11 - Training sync group change reconciliation closeout and re-entry QA
 2. Story 5.12 - Recurring compliance supersession policy completion
-3. Recurring compliance reminder / manual cycle action slice
+3. Recurring compliance reminder notification flow
 4. Epic 6 - Compliance exports
 
 ---
