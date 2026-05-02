@@ -66,6 +66,24 @@ function isMissingSchema(error: unknown) {
         /schema cache/i.test(message);
 }
 
+function formatCalendarDate(value: string | null): string {
+    if (!value) return '—';
+
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (dateOnlyMatch) {
+        return format(
+            new Date(
+                Number(dateOnlyMatch[1]),
+                Number(dateOnlyMatch[2]) - 1,
+                Number(dateOnlyMatch[3]),
+            ),
+            'MMMM d, yyyy'
+        );
+    }
+
+    return format(new Date(value), 'MMMM d, yyyy');
+}
+
 export function EmployeeList() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
@@ -507,7 +525,7 @@ export function EmployeeList() {
                                                 <div>
                                                     <p className="text-[13px] font-medium text-foreground">{record.rule_name}</p>
                                                     <p className="mt-1 text-[11px] text-muted-foreground">
-                                                        Due {record.due_at ? format(new Date(record.due_at), 'MMMM d, yyyy') : '—'}
+                                                        Due {formatCalendarDate(record.due_at)}
                                                     </p>
                                                     {record.completed_at && (
                                                         <p className="mt-1 text-[11px] text-muted-foreground">

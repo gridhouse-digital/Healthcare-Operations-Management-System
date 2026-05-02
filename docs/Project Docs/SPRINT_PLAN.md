@@ -471,6 +471,7 @@
   - New Edge Function: `manage-recurring-compliance-instance`
   - Dashboard actions shipped: `Mark Complete`, `Reopen Cycle`, `Suppress/Resume Reminders`, `Update Anchor Date`
   - Reminder notification automation remains follow-up work; this slice ships the operator controls first
+  - 2026-03-26 hardening: recurring compliance business dates now use calendar-date semantics (`DATE`) for `anchor_date`, `cycle_start_at`, and `due_at` to eliminate timezone drift in anchor overrides and due-date displays
 
 ### Story 5.18 - JotForm compliance catalog restructure
 
@@ -549,4 +550,3 @@
 - WordPress multisite provisioning
 - BambooHR webhooks (polling only in MVP)
 - BambooHR/JazzHR applicant API sync (Epic 5 preps the schema; actual API polling is post-MVP)
-

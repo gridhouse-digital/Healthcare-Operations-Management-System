@@ -64,10 +64,26 @@ function normalizeIso(value: string, fieldName: string): string {
   return date.toISOString();
 }
 
-function addMonths(isoDate: string, months: number): string {
-  const date = new Date(isoDate);
+function toDateOnly(value: string, fieldName: string): string {
+  const trimmed = value.trim();
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (dateOnlyMatch) {
+    return trimmed;
+  }
+
+  const date = new Date(trimmed);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${fieldName} must be a valid date`);
+  }
+
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function addMonths(dateOnly: string, months: number): string {
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCMonth(date.getUTCMonth() + months);
-  return date.toISOString();
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
 function readNumber(snapshot: Record<string, unknown> | null, key: string, fallback: number): number {
@@ -189,7 +205,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const anchorDate = normalizeIso(body.anchor_date, "anchor_date");
+      const anchorDate = toDateOnly(body.anchor_date, "anchor_date");
       const { data: enrollment, error: enrollmentErr } = await admin
         .from("employee_group_enrollments")
         .select("id, tenant_id, anchor_date")

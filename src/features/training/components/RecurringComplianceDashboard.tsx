@@ -16,9 +16,32 @@ import type {
 const inputCls =
   "w-full px-3 h-9 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60 [&_option]:bg-card [&_option]:text-foreground";
 
+function parseDisplayDate(value: string): Date {
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnlyMatch) {
+    return new Date(
+      Number(dateOnlyMatch[1]),
+      Number(dateOnlyMatch[2]) - 1,
+      Number(dateOnlyMatch[3]),
+    );
+  }
+
+  return new Date(value);
+}
+
+function toDateInputValue(value: string | null): string {
+  if (!value) return "";
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnlyMatch) return value;
+
+  const date = new Date(value);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
 function formatDate(value: string | null): string {
   if (!value) return "—";
-  return format(new Date(value), "MMM d, yyyy");
+  return format(parseDisplayDate(value), "MMM d, yyyy");
 }
 
 function statusStyles(status: RecurringComplianceStatus): string {
@@ -81,7 +104,7 @@ export function RecurringComplianceDashboard() {
   useEffect(() => {
     if (!selectedRow) return;
     setCompletionNote(selectedRow.completion_note ?? "");
-    setAnchorDate(selectedRow.anchor_date ? selectedRow.anchor_date.slice(0, 10) : "");
+    setAnchorDate(toDateInputValue(selectedRow.anchor_date));
   }, [selectedRow]);
 
   const rows = useMemo(() => {

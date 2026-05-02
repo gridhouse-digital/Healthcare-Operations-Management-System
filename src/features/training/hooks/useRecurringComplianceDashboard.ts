@@ -44,6 +44,14 @@ function statusRank(status: RecurringComplianceStatus): number {
   }
 }
 
+function toSortKey(value: string): string {
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnlyMatch) return value;
+
+  const date = new Date(value);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
 async function fetchRecurringComplianceDashboard(): Promise<RecurringComplianceDashboardData> {
   const [{ data: people, error: peopleErr }, { data: instances, error: instancesErr }, { data: anchors, error: anchorsErr }, { data: rules, error: rulesErr }] =
     await Promise.all([
@@ -165,7 +173,7 @@ async function fetchRecurringComplianceDashboard(): Promise<RecurringComplianceD
   rows.sort((a, b) => {
     const statusDelta = statusRank(a.status) - statusRank(b.status);
     if (statusDelta !== 0) return statusDelta;
-    return new Date(a.due_at).getTime() - new Date(b.due_at).getTime();
+    return toSortKey(a.due_at).localeCompare(toSortKey(b.due_at));
   });
 
   return {

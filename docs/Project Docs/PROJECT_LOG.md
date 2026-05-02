@@ -3,6 +3,49 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-03-26 - Recurring compliance calendar-date hardening
+
+### What shipped
+
+- Standardized recurring compliance business dates on calendar-date semantics instead of timestamp semantics
+- Added migration `20260326000001_recurring_compliance_calendar_dates.sql` to convert:
+  - `employee_group_enrollments.anchor_date` -> `DATE`
+  - `employee_compliance_instances.cycle_start_at` -> `DATE`
+  - `employee_compliance_instances.due_at` -> `DATE`
+- Recreated `v_recurring_compliance_status` so status comparisons use `current_date` instead of `now()`
+- Updated recurring compliance write paths (`process-hire`, `sync-training`, `backfill-recurring-compliance-anchors`, `manage-recurring-compliance-instance`, `rebuild-compliance-instances`) to write and compute date-only values consistently
+- Updated recurring compliance UI paths to render and sort date-only values without local-time backshifts
+
+### Why
+
+- Anchor dates and due dates are business calendar values, not event timestamps
+- The previous `timestamptz` model caused the recurring compliance drawer to display one day earlier after manual anchor overrides in timezones behind UTC
+
+### Files changed
+
+- `supabase/migrations/20260326000001_recurring_compliance_calendar_dates.sql`
+- `supabase/functions/process-hire/index.ts`
+- `supabase/functions/sync-training/index.ts`
+- `supabase/functions/backfill-recurring-compliance-anchors/index.ts`
+- `supabase/functions/manage-recurring-compliance-instance/index.ts`
+- `supabase/functions/rebuild-compliance-instances/index.ts`
+- `src/features/training/components/RecurringComplianceDashboard.tsx`
+- `src/features/training/hooks/useRecurringComplianceDashboard.ts`
+- `src/features/employees/EmployeeList.tsx`
+- `docs/Project Docs/DECISIONS.md`
+- `docs/Project Docs/SCHEMA.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `deno check supabase/functions/manage-recurring-compliance-instance/index.ts`
+- `deno check supabase/functions/rebuild-compliance-instances/index.ts`
+- `deno check supabase/functions/backfill-recurring-compliance-anchors/index.ts`
+- `deno check supabase/functions/sync-training/index.ts`
+- `npm run build`
+
+---
 ## 2026-03-15 - Pre-Epic 6 restructure planning
 
 ### What shipped

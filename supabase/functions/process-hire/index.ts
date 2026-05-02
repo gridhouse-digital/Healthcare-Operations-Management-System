@@ -49,6 +49,11 @@ function wpAuth(username: string, appPassword: string): string {
   return `Basic ${btoa(`${username}:${appPassword}`)}`;
 }
 
+function toDateOnly(value: string): string {
+  const date = new Date(value);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
 async function lookupWpUser(
   siteUrl: string,
   auth: string,
@@ -138,7 +143,7 @@ async function upsertGroupEnrollmentAnchor(
         person_id: params.personId,
         group_id: params.groupId,
         enrolled_at: params.enrolledAt,
-        anchor_date: params.enrolledAt,
+        anchor_date: toDateOnly(params.enrolledAt),
         anchor_source: "process_hire",
         active: true,
         ended_at: null,

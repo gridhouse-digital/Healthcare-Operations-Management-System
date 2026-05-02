@@ -85,7 +85,7 @@ async function fetchTrainingCompliance(): Promise<TrainingEmployee[]> {
     const complianceStatus = computeComplianceStatus(personRecords);
 
     const dates = personRecords
-      .flatMap(r => [r.effective_completed_at, r.last_synced_at, r.last_adjusted_at])
+      .flatMap(r => [r.raw_completed_at, r.enrolled_at])
       .filter(Boolean)
       .sort()
       .reverse();

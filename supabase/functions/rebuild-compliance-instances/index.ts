@@ -56,10 +56,16 @@ interface PersonCompliancePreference {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function addMonths(isoDate: string, months: number): string {
-  const date = new Date(isoDate);
+function currentDateKey(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+}
+
+function addMonths(dateOnly: string, months: number): string {
+  const [year, month, day] = dateOnly.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCMonth(date.getUTCMonth() + months);
-  return date.toISOString();
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
 }
 
 function buildPolicySnapshot(rule: ComplianceRule) {
@@ -188,7 +194,7 @@ async function rebuildTenant(
     );
   }
 
-  const now = new Date();
+  const today = currentDateKey();
 
   function groupCountsForCompliance(personId: string, groupId: string): boolean {
     const primaryGroupId = primaryComplianceGroupByPerson.get(personId) ?? null;
@@ -219,7 +225,7 @@ async function rebuildTenant(
         let cycleNumber = 1;
         let cycleStartAt = enrollment.anchor_date;
 
-        while (new Date(cycleStartAt) <= now) {
+        while (cycleStartAt <= today) {
           const dueAt = addMonths(
             enrollment.anchor_date,
             rule.initial_due_offset_months + ((cycleNumber - 1) * rule.recurrence_interval_months),

@@ -266,6 +266,119 @@ Joins `training_records` with latest `training_adjustments` per (person_id, cour
 
 ---
 
+## training_courses (recurring compliance catalog)
+
+```
+id            UUID PK
+tenant_id     UUID NOT NULL FK tenants(id)
+course_id     TEXT NOT NULL
+course_name   TEXT
+active        BOOLEAN NOT NULL DEFAULT true
+wp_meta       JSONB NOT NULL DEFAULT '{}'
+first_seen_at TIMESTAMPTZ
+last_seen_at  TIMESTAMPTZ
+created_at    TIMESTAMPTZ
+updated_at    TIMESTAMPTZ
+UNIQUE (tenant_id, course_id)
+```
+
+**RLS:** Own tenant only.
+**Purpose:** Stable tenant-scoped LearnDash course catalog for recurring compliance settings and rebuild logic.
+
+---
+
+## training_compliance_rules
+
+```
+id                          UUID PK
+tenant_id                   UUID NOT NULL FK tenants(id)
+rule_name                   TEXT NOT NULL
+rule_type                   TEXT NOT NULL
+rule_template               TEXT
+compliance_track            TEXT NOT NULL
+applies_to_type             TEXT NOT NULL
+course_id                   TEXT NOT NULL
+group_id                    TEXT NOT NULL
+anchor_type                 TEXT NOT NULL
+initial_due_offset_months   INTEGER NOT NULL DEFAULT 12
+recurrence_interval_months  INTEGER NOT NULL DEFAULT 12
+reminder_days               INTEGER[] NOT NULL DEFAULT '{60,30}'
+notify_employee             BOOLEAN NOT NULL DEFAULT true
+notify_admin                BOOLEAN NOT NULL DEFAULT true
+accept_learndash_completion BOOLEAN NOT NULL DEFAULT true
+allow_manual_completion     BOOLEAN NOT NULL DEFAULT true
+allow_early_completion      BOOLEAN NOT NULL DEFAULT true
+active                      BOOLEAN NOT NULL DEFAULT true
+created_at                  TIMESTAMPTZ
+updated_at                  TIMESTAMPTZ
+UNIQUE (tenant_id, course_id, group_id)
+```
+
+**RLS:** SELECT / INSERT / UPDATE for own tenant.
+**Purpose:** Tenant-defined recurring compliance policy keyed to LearnDash course and group context.
+
+---
+
+## employee_group_enrollments
+
+```
+id            UUID PK
+tenant_id     UUID NOT NULL FK tenants(id)
+person_id     UUID NOT NULL FK people(id)
+group_id      TEXT NOT NULL
+enrolled_at   TIMESTAMPTZ NOT NULL         -- source evidence timestamp when available
+anchor_date   DATE NOT NULL                -- business calendar date for recurring compliance
+anchor_source TEXT NOT NULL
+active        BOOLEAN NOT NULL DEFAULT true
+ended_at      TIMESTAMPTZ
+created_at    TIMESTAMPTZ
+updated_at    TIMESTAMPTZ
+UNIQUE (tenant_id, person_id, group_id)
+```
+
+**RLS:** SELECT / INSERT / UPDATE for own tenant.
+**Critical:** `anchor_date` is intentionally `DATE`. It must be treated as a business calendar value, not rendered as a timezone-shifted instant.
+
+---
+
+## employee_compliance_instances
+
+```
+id                   UUID PK
+tenant_id            UUID NOT NULL FK tenants(id)
+person_id            UUID NOT NULL FK people(id)
+rule_id              UUID NOT NULL FK training_compliance_rules(id)
+group_enrollment_id  UUID FK employee_group_enrollments(id)
+cycle_number         INTEGER NOT NULL
+cycle_start_at       DATE NOT NULL
+due_at               DATE NOT NULL
+completed_at         TIMESTAMPTZ
+completion_source    TEXT
+completion_course_id TEXT
+completion_note      TEXT
+reminder_suppressed  BOOLEAN NOT NULL DEFAULT false
+status_override      TEXT
+policy_snapshot      JSONB NOT NULL
+created_at           TIMESTAMPTZ
+updated_at           TIMESTAMPTZ
+UNIQUE (tenant_id, person_id, rule_id, cycle_number)
+```
+
+**RLS:** SELECT for own tenant.
+**Critical:** `cycle_start_at` and `due_at` are `DATE` fields because recurring compliance deadlines are calendar dates.
+
+---
+
+## v_recurring_compliance_status
+
+Derived recurring compliance view over `employee_compliance_instances`, `training_compliance_rules`, and active group-enrollment context.
+
+**Key columns:** `rule_name`, `group_id`, `cycle_number`, `cycle_start_at`, `due_at`, `completed_at`, `completion_source`, `reminder_suppressed`, `compliance_status`.
+
+**Status logic:** compares `due_at` to `current_date` rather than `now()` so due/overdue behavior is timezone-safe.
+
+---
+
 ## applicants (Epic 5: now multi-tenant)
 
 ```

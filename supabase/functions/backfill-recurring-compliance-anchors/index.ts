@@ -25,6 +25,14 @@ interface IntegrationLogRow {
   payload: Record<string, unknown> | null;
 }
 
+interface ExistingEnrollmentRow {
+  id: string;
+  person_id: string;
+  group_id: string;
+  anchor_date: string;
+  anchor_source: AnchorSource | "process_hire" | "manual";
+}
+
 interface ComplianceRuleRow {
   course_id: string;
   group_id: string;
@@ -50,9 +58,41 @@ function normalizeJobTitle(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase().replace(/\r\n?|\n/g, "");
 }
 
+function bestPersonAnchorDate(person: PersonRow | undefined, fallbackIso: string): string {
+  return person?.hired_at ?? person?.created_at ?? fallbackIso;
+}
+
+function toDateOnly(value: string): string {
+  const trimmed = value.trim();
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (dateOnlyMatch) {
+    return trimmed;
+  }
+
+  const date = new Date(trimmed);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function anchorSourceRank(source: ExistingEnrollmentRow["anchor_source"]): number {
+  switch (source) {
+    case "training_record":
+      return 5;
+    case "process_hire":
+      return 4;
+    case "backfill":
+      return 3;
+    case "hired_at_fallback":
+      return 2;
+    case "job_title_legacy":
+      return 1;
+    case "manual":
+      return 99;
+  }
+}
+
 async function insertAnchorIfMissing(
   admin: any,
-  existingKeys: Set<string>,
+  existingEnrollments: Map<string, ExistingEnrollmentRow>,
   seen: Set<string>,
   params: {
     tenantId: string;
@@ -63,7 +103,47 @@ async function insertAnchorIfMissing(
   },
 ): Promise<boolean> {
   const key = `${params.personId}:${params.groupId}`;
-  if (existingKeys.has(key) || seen.has(key)) return false;
+  const existing = existingEnrollments.get(key);
+  if (existing) {
+    if (existing.anchor_source === "manual") return false;
+
+    const candidateDate = toDateOnly(params.enrolledAt);
+    const existingDate = toDateOnly(existing.anchor_date);
+    const shouldRefresh =
+      anchorSourceRank(params.anchorSource) > anchorSourceRank(existing.anchor_source) ||
+      candidateDate < existingDate;
+
+    if (!shouldRefresh) return false;
+
+    const { error: updateErr } = await admin
+      .from("employee_group_enrollments")
+      .update({
+        enrolled_at: params.enrolledAt,
+        anchor_date: candidateDate,
+        anchor_source: params.anchorSource,
+        active: true,
+        ended_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id)
+      .eq("tenant_id", params.tenantId);
+
+    if (updateErr) {
+      throw new Error(
+        `Failed to refresh anchor for person ${params.personId}, group ${params.groupId}: ${updateErr.message}`,
+      );
+    }
+
+    existingEnrollments.set(key, {
+      ...existing,
+      anchor_date: candidateDate,
+      anchor_source: params.anchorSource,
+    });
+    seen.add(key);
+    return true;
+  }
+
+  if (seen.has(key)) return false;
 
   const { error } = await admin
     .from("employee_group_enrollments")
@@ -72,7 +152,7 @@ async function insertAnchorIfMissing(
       person_id: params.personId,
       group_id: params.groupId,
       enrolled_at: params.enrolledAt,
-      anchor_date: params.enrolledAt,
+      anchor_date: toDateOnly(params.enrolledAt),
       anchor_source: params.anchorSource,
       active: true,
       updated_at: new Date().toISOString(),
@@ -80,7 +160,6 @@ async function insertAnchorIfMissing(
 
   if (error) {
     if (error.code === "23505") {
-      existingKeys.add(key);
       return false;
     }
     throw new Error(
@@ -89,7 +168,13 @@ async function insertAnchorIfMissing(
   }
 
   seen.add(key);
-  existingKeys.add(key);
+  existingEnrollments.set(key, {
+    id: "",
+    person_id: params.personId,
+    group_id: params.groupId,
+    anchor_date: toDateOnly(params.enrolledAt),
+    anchor_source: params.anchorSource,
+  });
   return true;
 }
 
@@ -121,7 +206,7 @@ async function backfillTenant(
       .eq("type", "employee"),
     admin
       .from("employee_group_enrollments")
-      .select("person_id, group_id")
+      .select("id, person_id, group_id, anchor_date, anchor_source")
       .eq("tenant_id", settings.tenant_id),
     admin
       .from("integration_log")
@@ -147,19 +232,21 @@ async function backfillTenant(
   if (trErr) throw trErr;
 
   const employees = (people ?? []) as PersonRow[];
-  const existingRows = (existing ?? []) as Array<{ person_id: string; group_id: string }>;
+  const existingRows = (existing ?? []) as ExistingEnrollmentRow[];
   const integrationRows = (logs ?? []) as IntegrationLogRow[];
   const activeRules = (rules ?? []) as ComplianceRuleRow[];
   const trRows = (trainingRecords ?? []) as TrainingRecordRow[];
 
-  const existingKeys = new Set(
-    existingRows.map((r) => `${r.person_id}:${r.group_id}`),
+  const existingEnrollments = new Map(
+    existingRows.map((r) => [`${r.person_id}:${r.group_id}`, r] as const),
   );
   const seen = new Set<string>();
 
   const employeesByEmail = new Map<string, PersonRow>();
+  const employeesById = new Map<string, PersonRow>();
   for (const p of employees) {
     employeesByEmail.set(p.email.toLowerCase(), p);
+    employeesById.set(p.id, p);
   }
 
   const mappingByJobTitle = new Map<string, string[]>();
@@ -186,10 +273,11 @@ async function backfillTenant(
 
   for (const tr of trRows) {
     const groupIds = courseToGroups.get(tr.course_id) ?? [];
-    const anchorAt = tr.enrolled_at ?? tr.completed_at ?? nowIso;
+    const person = employeesById.get(tr.person_id);
+    const anchorAt = tr.enrolled_at ?? tr.completed_at ?? bestPersonAnchorDate(person, nowIso);
     for (const groupId of groupIds) {
       try {
-        const changed = await insertAnchorIfMissing(admin, existingKeys, seen, {
+        const changed = await insertAnchorIfMissing(admin, existingEnrollments, seen, {
           tenantId: settings.tenant_id,
           personId: tr.person_id,
           groupId,
@@ -225,7 +313,7 @@ async function backfillTenant(
     const enrolledAt = log.completed_at ?? nowIso;
     for (const groupId of groups) {
       try {
-        const changed = await insertAnchorIfMissing(admin, existingKeys, seen, {
+        const changed = await insertAnchorIfMissing(admin, existingEnrollments, seen, {
           tenantId: settings.tenant_id,
           personId: employee.id,
           groupId,
@@ -249,7 +337,7 @@ async function backfillTenant(
     const mappedGroups = mappingByJobTitle.get(normalized) ?? [];
     for (const groupId of mappedGroups) {
       try {
-        const changed = await insertAnchorIfMissing(admin, existingKeys, seen, {
+        const changed = await insertAnchorIfMissing(admin, existingEnrollments, seen, {
           tenantId: settings.tenant_id,
           personId: employee.id,
           groupId,
@@ -273,7 +361,7 @@ async function backfillTenant(
     const anchorAt = employee.created_at ?? nowIso;
     for (const groupId of mappedGroups) {
       try {
-        const changed = await insertAnchorIfMissing(admin, existingKeys, seen, {
+        const changed = await insertAnchorIfMissing(admin, existingEnrollments, seen, {
           tenantId: settings.tenant_id,
           personId: employee.id,
           groupId,

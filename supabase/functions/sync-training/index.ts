@@ -49,10 +49,15 @@ interface PersonWithWp {
   tenant_id: string;
   email: string;
   wp_user_id: number;
+  hired_at: string | null;
+  created_at: string;
 }
 
 interface GroupEnrollmentRow {
+  id: string;
   group_id: string;
+  anchor_date: string;
+  anchor_source: string;
   active: boolean;
   ended_at: string | null;
 }
@@ -60,6 +65,46 @@ interface GroupEnrollmentRow {
 interface GroupCourseRecord {
   courseId: string;
   courseName: string;
+}
+
+function toDateOnly(value: string): string {
+  const trimmed = value.trim();
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
+  if (dateOnlyMatch) {
+    return trimmed;
+  }
+
+  const date = new Date(trimmed);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function bestPersonAnchorDate(person: Pick<PersonWithWp, "hired_at" | "created_at">): string {
+  return person.hired_at ?? person.created_at;
+}
+
+function deriveGroupAnchorDate(
+  params: {
+    groupCourses: GroupCourseRecord[];
+    progress: LdCourseProgress[];
+    person: Pick<PersonWithWp, "hired_at" | "created_at">;
+  },
+): string {
+  const courseIds = new Set(params.groupCourses.map((course) => Number(course.courseId)));
+  const activityDates = params.progress
+    .filter((course) => courseIds.has(course.course))
+    .flatMap((course) => [course.date_started, course.date_completed])
+    .filter((value): value is string => Boolean(value))
+    .sort();
+
+  return activityDates[0] ?? bestPersonAnchorDate(params.person);
+}
+
+function shouldRefreshAnchor(
+  existing: Pick<GroupEnrollmentRow, "anchor_date" | "anchor_source">,
+  candidateAnchorDate: string,
+): boolean {
+  if (existing.anchor_source === "manual") return false;
+  return toDateOnly(candidateAnchorDate) < toDateOnly(existing.anchor_date);
 }
 
 // ── Environment ─────────────────────────────────────────────────────
@@ -354,11 +399,13 @@ async function reconcileEmployeeGroupEnrollments(
     tenantId: string;
     personId: string;
     currentGroupIds: string[];
+    anchorDatesByGroupId: Map<string, string>;
+    fallbackAnchorDate: string;
   },
 ): Promise<void> {
   const { data, error } = await admin
     .from("employee_group_enrollments")
-    .select("group_id, active, ended_at")
+    .select("id, group_id, anchor_date, anchor_source, active, ended_at")
     .eq("tenant_id", params.tenantId)
     .eq("person_id", params.personId);
 
@@ -413,6 +460,30 @@ async function reconcileEmployeeGroupEnrollments(
     }
   }
 
+  for (const row of rows) {
+    if (!currentGroupSet.has(row.group_id)) continue;
+
+    const candidateAnchorDate = params.anchorDatesByGroupId.get(row.group_id) ?? params.fallbackAnchorDate;
+    if (!shouldRefreshAnchor(row, candidateAnchorDate)) continue;
+
+    const { error: refreshErr } = await admin
+      .from("employee_group_enrollments")
+      .update({
+        enrolled_at: candidateAnchorDate,
+        anchor_date: toDateOnly(candidateAnchorDate),
+        anchor_source: "training_record",
+        active: true,
+        ended_at: null,
+        updated_at: now,
+      })
+      .eq("id", row.id)
+      .eq("tenant_id", params.tenantId);
+
+    if (refreshErr) {
+      throw new Error(`Failed to refresh group anchor: ${refreshErr.message}`);
+    }
+  }
+
   const existingGroupIds = new Set(rows.map((row) => row.group_id));
   const rowsToInsert = currentGroupIds.filter((groupId) => !existingGroupIds.has(groupId));
 
@@ -424,9 +495,9 @@ async function reconcileEmployeeGroupEnrollments(
           tenant_id: params.tenantId,
           person_id: params.personId,
           group_id: groupId,
-          enrolled_at: now,
-          anchor_date: now,
-          anchor_source: "backfill",
+          enrolled_at: params.anchorDatesByGroupId.get(groupId) ?? params.fallbackAnchorDate,
+          anchor_date: toDateOnly(params.anchorDatesByGroupId.get(groupId) ?? params.fallbackAnchorDate),
+          anchor_source: "training_record",
           active: true,
           ended_at: null,
           updated_at: now,
@@ -649,7 +720,7 @@ async function processTenant(
     // Fetch employees with wp_user_id
     const { data: employees, error: empErr } = await admin
       .from("people")
-      .select("id, tenant_id, email, wp_user_id")
+      .select("id, tenant_id, email, wp_user_id, hired_at, created_at")
       .eq("tenant_id", config.tenant_id)
       .not("wp_user_id", "is", null);
 
@@ -684,14 +755,9 @@ async function processTenant(
 
       try {
         const currentGroupIds = await fetchUserGroupIds(siteUrl, auth, emp.wp_user_id);
+        const groupCoursesById = new Map<string, GroupCourseRecord[]>();
 
         if (currentGroupIds !== null) {
-          await reconcileEmployeeGroupEnrollments(admin, {
-            tenantId: config.tenant_id,
-            personId: emp.id,
-            currentGroupIds,
-          });
-
           for (const groupId of currentGroupIds) {
             if (syncedGroups.has(groupId)) continue;
 
@@ -728,6 +794,21 @@ async function processTenant(
 
             syncedGroups.add(groupId);
           }
+
+          for (const groupId of currentGroupIds) {
+            if (groupCoursesById.has(groupId)) continue;
+
+            const groupCourses = await fetchGroupCourses(
+              siteUrl,
+              auth,
+              groupId,
+              courseNameCache,
+            );
+
+            if (groupCourses !== null) {
+              groupCoursesById.set(groupId, groupCourses);
+            }
+          }
         }
 
         const progress = await fetchAllCourseProgress(
@@ -735,6 +816,30 @@ async function processTenant(
           auth,
           emp.wp_user_id,
         );
+
+        if (currentGroupIds !== null) {
+          const anchorDatesByGroupId = new Map<string, string>();
+
+          for (const groupId of currentGroupIds) {
+            const groupCourses = groupCoursesById.get(groupId) ?? [];
+            anchorDatesByGroupId.set(
+              groupId,
+              deriveGroupAnchorDate({
+                groupCourses,
+                progress,
+                person: emp,
+              }),
+            );
+          }
+
+          await reconcileEmployeeGroupEnrollments(admin, {
+            tenantId: config.tenant_id,
+            personId: emp.id,
+            currentGroupIds,
+            anchorDatesByGroupId,
+            fallbackAnchorDate: bestPersonAnchorDate(emp),
+          });
+        }
 
         if (progress.length === 0) {
           skipped++;

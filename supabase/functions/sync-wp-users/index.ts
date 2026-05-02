@@ -26,6 +26,7 @@ interface WpUser {
   last_name: string;
   name: string;
   roles: string[];
+  registered_date?: string | null;
 }
 
 interface TenantWpConfig {
@@ -220,6 +221,7 @@ async function processTenant(
             first_name: wpUser.first_name || null,
             last_name: wpUser.last_name || null,
             wp_user_id: wpUser.id,
+            hired_at: wpUser.registered_date || null,
             type: "employee",
             profile_source: "wordpress",
           },
@@ -242,6 +244,21 @@ async function processTenant(
           console.error(`Update failed for ${email}: ${updateErr.message}`);
           errors++;
         } else {
+          if (wpUser.registered_date) {
+            const { error: hiredAtErr } = await admin
+              .from("people")
+              .update({
+                hired_at: wpUser.registered_date,
+              })
+              .eq("tenant_id", config.tenant_id)
+              .eq("email", email)
+              .is("hired_at", null);
+
+            if (hiredAtErr) {
+              console.warn(`hired_at backfill failed for ${email}: ${hiredAtErr.message}`);
+            }
+          }
+
           synced++;
         }
       } catch (userErr) {
