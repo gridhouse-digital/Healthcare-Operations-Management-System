@@ -9,6 +9,7 @@ function getAllowedOrigins(): Set<string> {
   return new Set([
     Deno.env.get("ALLOWED_ORIGIN_1") ?? "http://localhost:5173",
     Deno.env.get("ALLOWED_ORIGIN_2") ?? "",
+    Deno.env.get("ALLOWED_ORIGIN_3") ?? "",
   ].filter(Boolean));
 }
 
