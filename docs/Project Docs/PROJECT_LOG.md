@@ -3,6 +3,130 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-05-29 - Phase 0 remediation: tenant-guard hardening of 5 Edge Functions
+
+Remediated the 5 non-compliant Edge Functions from the Phase 0 audit. Source of truth:
+`docs/architecture/homs-platform-expansion-implementation-spec.md` and
+`docs/audits/phase-0-edge-function-tenant-guard-audit.md`. Scope limited to tenant-guard
+hardening — no folder refactor, no RBAC change, no Care Ops, no Staff App.
+
+### What shipped
+
+- **4 AI functions** (`ai-rank-applicants`, `ai-draft-offer-letter`, `ai-onboarding-logic`,
+  `ai-wp-validation`): replaced `getContext(req)` (which read `tenant_id` from the `x-tenant-id`
+  header) with `tenantGuard(req)` as the first statement after `OPTIONS`; removed `x-tenant-id`
+  from CORS allow-headers; `tenantId`/`userId` now come from the JWT context; `catch` returns the
+  guard's status (401) for auth failures. AI behavior, prompts, and response shape unchanged.
+  These functions now require an authenticated tenant JWT (previously allowed anonymous).
+- **`onboard-employee`**: added `cronOrTenantGuard(req)` as the first statement after `OPTIONS`.
+  Tenant is now derived from the server-trusted `applicant.tenant_id` (looked up by
+  `record.applicant_id`); `record.tenant_id` is validated to match (reject on mismatch);
+  user-mode caller tenant is validated; the hardcoded `'11111111-…'` fallback is removed.
+  Conversion behavior (WP user, LearnDash, `people.wp_user_id`, Brevo email) unchanged.
+- **Migration** `20260529000000_onboard_trigger_service_role_auth.sql`: recreates the
+  `on_offer_accepted` trigger so the webhook sends `Authorization: Bearer <service_role_key>`
+  read from `vault.decrypted_secrets` at execution time. No secret value is written into the
+  migration. Required because the function now rejects unauthenticated calls; the legacy no-auth
+  trigger would otherwise break onboarding. **Design note:** a `CREATE TRIGGER ... EXECUTE
+  FUNCTION` clause only accepts literal constant args, so `supabase_functions.http_request(...)`
+  cannot take a Vault lookup (confirmed: raises a syntax error). The migration therefore uses a
+  `security definer` wrapper function `public.notify_onboard_employee()` that builds the headers
+  from Vault and calls `net.http_post` with body `{ record: to_jsonb(new) }`, returning `NEW`.
+
+### Files changed
+
+- `supabase/functions/ai-rank-applicants/index.ts`
+- `supabase/functions/ai-draft-offer-letter/index.ts`
+- `supabase/functions/ai-onboarding-logic/index.ts`
+- `supabase/functions/ai-wp-validation/index.ts`
+- `supabase/functions/onboard-employee/index.ts`
+- `supabase/migrations/20260529000000_onboard_trigger_service_role_auth.sql` (new)
+- `docs/audits/phase-0-edge-function-tenant-guard-audit.md` (tallies → 26/0/2/28)
+- `docs/Project Docs/PROJECT_LOG.md`, `docs/Project Docs/SPRINT_PLAN.md`
+
+### Verified (static)
+
+- All 5 call a guard as the first statement after `OPTIONS`; no function references `x-tenant-id`
+  or imports `getContext`; `onboard-employee` has no `11111111-…` literal; migration uses Vault
+  with no literal secret. (grep assertions)
+- `deno lint`: 18 problems before = 18 after — zero new lint issues (all pre-existing legacy
+  rules). `deno check` blocked by environment TLS interception on remote imports (`zod`/esm.sh);
+  shared `cron-or-tenant-guard.ts` type-checks clean, confirming the new `auth.mode`/`auth.tenantId`
+  usage is type-correct.
+
+### Verified (DB) — migration validated against local Supabase
+
+- Migration applies cleanly; `notify_onboard_employee()` returns `trigger` (`security definer`);
+  `on_offer_accepted` recreated with the original `WHEN` condition. Idempotent (re-apply leaves
+  one trigger).
+- End-to-end fire (rolled-back tx, throwaway local Vault secrets): flipping an offer to
+  `Accepted` enqueued a pg_net POST to `/functions/v1/onboard-employee` with
+  `Authorization: Bearer <key from Vault>` present and body
+  `{ record: { id, status: "Accepted", applicant_id, tenant_id, … } }`. No test data/secrets
+  persisted.
+
+### Phase 0 gate: MET. Outstanding = deployment-only
+
+- **Deploy ordering:** deploy the migration and `onboard-employee` together; the `service_role_key`
+  Vault secret must exist in the target project (already used by `process-hire`). Redeploy all 5
+  functions.
+- **Cleanup (separate task):** `_shared/context.ts` is now unused by these 5; delete after
+  confirming no other callers.
+- **Minor observation (not in scope):** `onboard-employee` reads `record.position`, but the
+  `offers` table column is `position_title`. The webhook body now carries `position_title` (not
+  `position`), so LearnDash group mapping by position may not resolve. Pre-existing behavior
+  (the legacy webhook also forwarded the raw row) — flag for Phase 1 lifecycle review.
+
+---
+## 2026-05-29 - Phase 0: RLS test suite + Edge Function tenant-guard audit
+
+Platform expansion Phase 0 (Preserve and Audit). Source of truth:
+`docs/architecture/homs-platform-expansion-implementation-spec.md` §10, §20.
+**No business logic, folder structure, RBAC, or Staff App code was modified — audit + tests only.**
+
+### What shipped
+
+- **RLS integration test suite** (spec §10, Option B). Two test tenants with distinct
+  `app_metadata.tenant_id`, seeded via service-role, asserted through RLS-active clients.
+  Covers the full §10 matrix across `people`, `applicants`, `offers`, `training_records`,
+  `employee_compliance_instances`, `audit_log`: cross-tenant reads (both directions) → 0 rows,
+  anonymous reads → 0 rows, plus positive controls (own row visible) to catch deny-all false greens.
+  Skips cleanly when DB env vars are absent. Runnable via `npm run test:rls` / `deno task test:rls`.
+- **Edge Function tenant-guard audit** of all 28 deployable functions. Result: **21 compliant**,
+  **5 non-compliant**, **2 intentionally unauthenticated**, 0 unclear. Report at
+  `docs/audits/phase-0-edge-function-tenant-guard-audit.md`.
+
+### Key finding (Phase 0 gate BLOCKED)
+
+5 functions do not use a tenant guard and trust client-supplied tenant identity:
+- `ai-rank-applicants`, `ai-draft-offer-letter`, `ai-onboarding-logic`, `ai-wp-validation` —
+  all use `_shared/context.ts` `getContext()`, which reads `tenant_id` from the **`x-tenant-id`
+  header** (direct violation of the non-negotiable JWT-only rule).
+- `onboard-employee` — no guard, service-role client, derives tenant from request **body**
+  (`record.tenant_id`) with a **hardcoded fallback UUID**.
+
+Remediation is deferred to Phase 1 (lifecycle stabilization already owns `onboard-employee`)
+and a follow-up AI-functions hardening item. Not fixed here per task scope.
+
+### Files changed
+
+- `supabase/tests/rls/rls.test.ts` (new)
+- `supabase/tests/rls/_harness.ts` (new)
+- `supabase/tests/rls/_seed.ts` (new)
+- `supabase/tests/rls/deno.json` (new)
+- `supabase/tests/rls/README.md` (new)
+- `package.json` — added `test:rls` script
+- `docs/audits/phase-0-edge-function-tenant-guard-audit.md` (new)
+- `docs/Project Docs/PROJECT_LOG.md`, `docs/Project Docs/SPRINT_PLAN.md`
+
+### Verified
+
+- `deno check` passes on all three RLS test files.
+- `npm run test:rls` runs end-to-end; with no DB env it correctly skips (1 passed, 25 ignored, 0 failed).
+- Live green run against a DB is gated on a local/disposable Supabase stack (not run against
+  production — the suite creates/deletes users and tenants). Instructions in the suite README.
+
+---
 ## 2026-05-28 - JotForm applicant sync fix
 
 ### What shipped

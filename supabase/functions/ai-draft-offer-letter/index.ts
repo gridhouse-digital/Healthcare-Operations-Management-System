@@ -1,11 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts"
 import { aiRequest } from "../_shared/aiClient.ts"
-import { getContext } from "../_shared/context.ts"
+import { tenantGuard, TenantGuardError } from "../_shared/tenant-guard.ts"
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-tenant-id",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
 const schema = z.union([
@@ -27,6 +27,9 @@ serve(async (req) => {
     }
 
     try {
+        // tenant_id + user id come ONLY from the JWT app_metadata (never headers/body)
+        const ctx = tenantGuard(req)
+
         const body = await req.json()
         const validation = schema.safeParse(body)
 
@@ -39,13 +42,11 @@ serve(async (req) => {
             ? { messages: validation.data.messages }
             : validation.data;
 
-        const context = await getContext(req)
-
         const result = await aiRequest({
             task: "offer_letter",
             input: input,
-            tenantId: context.tenantId,
-            userId: context.userId,
+            tenantId: ctx.tenantId,
+            userId: ctx.userId,
             feature: "ai-draft-offer-letter"
         })
 
@@ -54,9 +55,10 @@ serve(async (req) => {
         })
 
     } catch (e: any) {
+        const status = e instanceof TenantGuardError ? e.status : 400
         return new Response(JSON.stringify({ error: e.message }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 400
+            status
         })
     }
 })
