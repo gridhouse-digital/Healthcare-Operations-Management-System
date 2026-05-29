@@ -547,3 +547,36 @@
 - WordPress multisite provisioning
 - BambooHR webhooks (polling only in MVP)
 - BambooHR/JazzHR applicant API sync (Epic 5 preps the schema; actual API polling is post-MVP)
+
+---
+
+## PLATFORM EXPANSION — Phase 0: Preserve and Audit [COMPLETE — gate MET]
+
+> Roadmap source of truth: `docs/architecture/homs-platform-expansion-implementation-spec.md` §20.
+> Tracks the evolution of HOMS into a modular care-ops platform. Phases 1+ not started.
+
+### Phase 0 — RLS test suite + Edge Function audit
+
+**AC (spec §20 Phase 0):**
+
+- RLS test suite proving cross-tenant isolation — **DONE** (`supabase/tests/rls/`, runnable via
+  `npm run test:rls`). All §10 matrix tables covered; live green run gated on a local/disposable
+  Supabase stack (never production).
+- Every Edge Function uses `tenantGuard()` or `cronOrTenantGuard()` as first call — **MET.**
+  Now 26/28 compliant, 0 non-compliant, 2 intentionally unauthenticated (`jotform-webhook`,
+  `request-access`). The 5 previously-flagged functions (`ai-rank-applicants`,
+  `ai-draft-offer-letter`, `ai-onboarding-logic`, `ai-wp-validation`, `onboard-employee`) were
+  hardened on 2026-05-29: the 4 AI fns now use `tenantGuard` (JWT only, `x-tenant-id` removed);
+  `onboard-employee` uses `cronOrTenantGuard`, derives tenant from the server-trusted applicant
+  record, validates `record.tenant_id`, and dropped the hardcoded fallback. Supporting migration
+  `20260529000000_onboard_trigger_service_role_auth.sql` authenticates the `on_offer_accepted`
+  webhook via a `security definer` wrapper (`notify_onboard_employee()`) that reads the
+  service-role key from Vault — applied and validated against the local DB (clean, idempotent,
+  end-to-end fire confirmed auth header + preserved `record` body). Report:
+  `docs/audits/phase-0-edge-function-tenant-guard-audit.md`.
+- No known data leakage paths between tenants — **MET.** All EFs source tenant only from the JWT
+  (or the server-trusted applicant record for `onboard-employee`); RLS suite covers the §10 matrix.
+- Status: [x] **COMPLETE — Phase 0 gate MET.** RLS suite delivered; audit delivered; tenant-guard
+  remediation code-complete, statically validated, and DB-validated. Remaining work is
+  deployment-only: deploy the migration + redeploy the 5 functions; ensure the `service_role_key`
+  Vault secret exists in the target project. **Phase 1 NOT started** (awaiting go-ahead).
