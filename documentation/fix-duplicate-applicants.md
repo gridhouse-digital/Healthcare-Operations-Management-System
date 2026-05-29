@@ -5,8 +5,8 @@
 The applicants table has duplicate records when applicant information (especially email) is updated. Instead of updating the existing record, the system creates a new record with the same name but different email, treating it as a new applicant.
 
 **Example Duplicate:**
-- **Record 1 (Old)**: Savanna Mock - `bandymock@gmail.com` - Status: "Hired" - ID: `4ecdd9dd-946c-40eb-836d-3310d3839716`
-- **Record 2 (New)**: Savanna Mock - `savanna.mock0717@gmail.com` - Status: "New" - ID: `8a35764c-10ad-4da8-b95e-d3139da3a039`
+- **Record 1 (Old)**: [Applicant A] - `old.email@example.com` - Status: "Hired" - ID: `[uuid-old]`
+- **Record 2 (New)**: [Applicant A] - `new.email@example.com` - Status: "New" - ID: `[uuid-new]`
 
 The correct record should be the "Hired" one since that person is already an employee, but the new email should be reflected.
 
@@ -80,20 +80,20 @@ Before deleting duplicate records, ensure related data is preserved:
 -- 1. Update the "Hired" record with the new email
 UPDATE applicants
 SET
-    email = 'savanna.mock0717@gmail.com',
+    email = 'new.email@example.com',
     updated_at = NOW()
-WHERE id = '4ecdd9dd-946c-40eb-836d-3310d3839716';
+WHERE id = '[uuid-old]';
 
 -- 2. Verify no related records point to the duplicate
 -- Check employees
-SELECT * FROM employees WHERE applicant_id = '8a35764c-10ad-4da8-b95e-d3139da3a039';
+SELECT * FROM employees WHERE applicant_id = '[uuid-new]';
 
 -- Check offers
-SELECT * FROM offers WHERE applicant_id = '8a35764c-10ad-4da8-b95e-d3139da3a039';
+SELECT * FROM offers WHERE applicant_id = '[uuid-new]';
 
 -- 3. If no related records exist, delete the duplicate
 DELETE FROM applicants
-WHERE id = '8a35764c-10ad-4da8-b95e-d3139da3a039';
+WHERE id = '[uuid-new]';
 ```
 
 ### Step 5: Automated Script for All Duplicates
