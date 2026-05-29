@@ -3,6 +3,10 @@ import { handleCors, withCors } from "../_shared/cors.ts";
 import { errorResponse, handleError } from "../_shared/error-response.ts";
 import { tenantGuard } from "../_shared/tenant-guard.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
+import {
+  addMonthsDateOnly,
+  toDateOnly,
+} from "../_shared/recurring-compliance-series.ts";
 
 type SupportedAction =
   | "manual_complete"
@@ -64,10 +68,12 @@ function normalizeIso(value: string, fieldName: string): string {
   return date.toISOString();
 }
 
-function addMonths(isoDate: string, months: number): string {
-  const date = new Date(isoDate);
-  date.setUTCMonth(date.getUTCMonth() + months);
-  return date.toISOString();
+function normalizeDateOnly(value: string, fieldName: string): string {
+  try {
+    return toDateOnly(value);
+  } catch {
+    throw new Error(`${fieldName} must be a valid date`);
+  }
 }
 
 function readNumber(snapshot: Record<string, unknown> | null, key: string, fallback: number): number {
@@ -189,7 +195,7 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      const anchorDate = normalizeIso(body.anchor_date, "anchor_date");
+      const anchorDate = normalizeDateOnly(body.anchor_date, "anchor_date");
       const { data: enrollment, error: enrollmentErr } = await admin
         .from("employee_group_enrollments")
         .select("id, tenant_id, anchor_date")
@@ -218,23 +224,27 @@ Deno.serve(async (req: Request) => {
 
       const { data: relatedInstances, error: relatedErr } = await admin
         .from("employee_compliance_instances")
-        .select("id, cycle_number, policy_snapshot")
+        .select("id, cycle_number, cycle_start_at, policy_snapshot")
         .eq("tenant_id", ctx.tenantId)
         .eq("group_enrollment_id", enrollment.id);
 
       if (relatedErr) throw relatedErr;
 
-      for (const related of (relatedInstances ?? []) as Array<{
+      const activeSeriesInstances = ((relatedInstances ?? []) as Array<{
         id: string;
         cycle_number: number;
+        cycle_start_at: string;
         policy_snapshot: Record<string, unknown> | null;
-      }>) {
+      }>).filter((related) => related.cycle_start_at >= enrollment.anchor_date)
+        .sort((a, b) => a.cycle_start_at.localeCompare(b.cycle_start_at));
+
+      for (const [seriesIndex, related] of activeSeriesInstances.entries()) {
         const initialOffset = readNumber(related.policy_snapshot, "initial_due_offset_months", 12);
         const recurrenceInterval = readNumber(related.policy_snapshot, "recurrence_interval_months", 12);
-        const cycleStartAt = addMonths(anchorDate, (related.cycle_number - 1) * recurrenceInterval);
-        const dueAt = addMonths(
+        const cycleStartAt = addMonthsDateOnly(anchorDate, seriesIndex * recurrenceInterval);
+        const dueAt = addMonthsDateOnly(
           anchorDate,
-          initialOffset + ((related.cycle_number - 1) * recurrenceInterval),
+          initialOffset + (seriesIndex * recurrenceInterval),
         );
 
         const { error } = await admin

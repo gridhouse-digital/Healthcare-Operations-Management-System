@@ -26,6 +26,7 @@ interface WpUser {
   last_name: string;
   name: string;
   roles: string[];
+  registered_date?: string | null;
 }
 
 interface TenantWpConfig {
@@ -33,6 +34,15 @@ interface TenantWpConfig {
   wp_site_url: string;
   wp_username_encrypted: string;
   wp_app_password_encrypted: string;
+}
+
+interface ApplicantMatch {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  position_applied: string | null;
+  status: string;
 }
 
 // ── Environment ─────────────────────────────────────────────────────
@@ -44,7 +54,7 @@ const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY") ?? "";
 // ── Helpers ─────────────────────────────────────────────────────────
 
 async function decryptKey(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   encrypted: string,
 ): Promise<string> {
   const { data, error } = await admin.rpc("pgp_sym_decrypt_text", {
@@ -57,6 +67,67 @@ async function decryptKey(
 
 function wpAuth(username: string, appPassword: string): string {
   return `Basic ${btoa(`${username}:${appPassword}`)}`;
+}
+
+async function findApplicantByEmail(
+  admin: any,
+  tenantId: string,
+  email: string,
+): Promise<ApplicantMatch | null> {
+  const { data, error } = await admin
+    .from("applicants")
+    .select("id, first_name, last_name, phone, position_applied, status")
+    .eq("tenant_id", tenantId)
+    .eq("email", email)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Applicant lookup failed for ${email}: ${error.message}`);
+  }
+
+  return (data as ApplicantMatch | null) ?? null;
+}
+
+async function linkApplicantToEmployee(
+  admin: any,
+  params: {
+    tenantId: string;
+    email: string;
+    applicant: ApplicantMatch;
+  },
+): Promise<void> {
+  const { error: peopleUpdateError } = await admin
+    .from("people")
+    .update({
+      applicant_id: params.applicant.id,
+      first_name: params.applicant.first_name,
+      last_name: params.applicant.last_name,
+      phone: params.applicant.phone,
+      job_title: params.applicant.position_applied,
+      type: "employee",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", params.tenantId)
+    .eq("email", params.email)
+    .or("applicant_id.is.null,applicant_id.eq." + params.applicant.id);
+
+  if (peopleUpdateError) {
+    throw new Error(`Failed to link applicant to employee for ${params.email}: ${peopleUpdateError.message}`);
+  }
+
+  if (params.applicant.status !== "Hired") {
+    const { error: applicantUpdateError } = await admin
+      .from("applicants")
+      .update({
+        status: "Hired",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.applicant.id);
+
+    if (applicantUpdateError) {
+      throw new Error(`Failed to update applicant status for ${params.email}: ${applicantUpdateError.message}`);
+    }
+  }
 }
 
 // ── fetchAllWpUsers (paginated) ─────────────────────────────────────
@@ -104,7 +175,7 @@ async function fetchAllWpUsers(
 // ── checkRunDedup ───────────────────────────────────────────────────
 
 async function checkRunDedup(
-  admin: ReturnType<typeof createClient>,
+  admin: any,
   tenantId: string,
   force: boolean,
 ): Promise<"proceed" | "skip" | { staleRunId: string }> {
@@ -121,7 +192,7 @@ async function checkRunDedup(
 
   if (!runs || runs.length === 0) return "proceed";
 
-  const run = runs[0];
+  const run = runs[0] as { id: string; started_at: string };
   const startedAt = new Date(run.started_at as string).getTime();
   const age = Date.now() - startedAt;
   const ONE_HOUR = 60 * 60 * 1000;
@@ -143,7 +214,7 @@ async function processTenant(
 }> {
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false },
-  });
+  }) as any;
 
   const runId = crypto.randomUUID();
   let synced = 0;
@@ -213,16 +284,20 @@ async function processTenant(
 
       try {
         // Insert-ignore: profile_source='wordpress' only on first insert
-        await admin.from("people").insert(
-          {
-            tenant_id: config.tenant_id,
-            email,
-            first_name: wpUser.first_name || null,
-            last_name: wpUser.last_name || null,
-            wp_user_id: wpUser.id,
-            type: "employee",
-            profile_source: "wordpress",
-          },
+        await admin.from("people").upsert(
+          [
+            {
+              tenant_id: config.tenant_id,
+              email,
+              first_name: wpUser.first_name || null,
+              last_name: wpUser.last_name || null,
+              wp_user_id: wpUser.id,
+              hired_at: wpUser.registered_date || null,
+              type: "employee",
+              employee_status: "Onboarding",
+              profile_source: "wordpress",
+            },
+          ],
           { onConflict: "tenant_id,email", ignoreDuplicates: true },
         );
 
@@ -242,6 +317,30 @@ async function processTenant(
           console.error(`Update failed for ${email}: ${updateErr.message}`);
           errors++;
         } else {
+          const applicant = await findApplicantByEmail(admin, config.tenant_id, email);
+          if (applicant) {
+            await linkApplicantToEmployee(admin, {
+              tenantId: config.tenant_id,
+              email,
+              applicant,
+            });
+          }
+
+          if (wpUser.registered_date) {
+            const { error: hiredAtErr } = await admin
+              .from("people")
+              .update({
+                hired_at: wpUser.registered_date,
+              })
+              .eq("tenant_id", config.tenant_id)
+              .eq("email", email)
+              .is("hired_at", null);
+
+            if (hiredAtErr) {
+              console.warn(`hired_at backfill failed for ${email}: ${hiredAtErr.message}`);
+            }
+          }
+
           synced++;
         }
       } catch (userErr) {
@@ -303,7 +402,7 @@ Deno.serve(async (req: Request) => {
   try {
     const ctx = cronOrTenantGuard(req);
 
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+    const admin: any = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false },
     });
 

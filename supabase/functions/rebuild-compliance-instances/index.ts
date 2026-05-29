@@ -3,6 +3,12 @@ import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
+import {
+  addMonthsDateOnly,
+  buildComplianceSeries,
+  currentDateOnly,
+  findCompletionCycleNumber,
+} from "../_shared/recurring-compliance-series.ts";
 
 interface ComplianceRule {
   id: string;
@@ -36,9 +42,12 @@ interface ExistingInstance {
   tenant_id: string;
   person_id: string;
   rule_id: string;
+  group_enrollment_id: string | null;
   cycle_number: number;
+  cycle_start_at: string;
   completed_at: string | null;
   completion_source: string | null;
+  status_override: string | null;
 }
 
 interface TrainingCompletion {
@@ -56,12 +65,6 @@ interface PersonCompliancePreference {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function addMonths(isoDate: string, months: number): string {
-  const date = new Date(isoDate);
-  date.setUTCMonth(date.getUTCMonth() + months);
-  return date.toISOString();
-}
-
 function buildPolicySnapshot(rule: ComplianceRule) {
   return {
     rule_name: rule.rule_name,
@@ -77,22 +80,6 @@ function buildPolicySnapshot(rule: ComplianceRule) {
     accept_learndash_completion: rule.accept_learndash_completion,
     allow_manual_completion: rule.allow_manual_completion,
   };
-}
-
-function findCompletionCycleNumber(
-  cycles: Array<{ cycleNumber: number; cycleStartAt: string }>,
-  completedAt: string,
-): number | null {
-  const completionTime = new Date(completedAt).getTime();
-  let matched: number | null = null;
-
-  for (const cycle of cycles) {
-    if (new Date(cycle.cycleStartAt).getTime() <= completionTime) {
-      matched = cycle.cycleNumber;
-    }
-  }
-
-  return matched;
 }
 
 async function rebuildTenant(
@@ -134,7 +121,7 @@ async function rebuildTenant(
         .eq("active", true),
       admin
         .from("employee_compliance_instances")
-        .select("id, tenant_id, person_id, rule_id, cycle_number, completed_at, completion_source")
+        .select("id, tenant_id, person_id, rule_id, group_enrollment_id, cycle_number, cycle_start_at, completed_at, completion_source, status_override")
         .eq("tenant_id", tenantId),
       admin
         .from("training_records")
@@ -188,7 +175,7 @@ async function rebuildTenant(
     );
   }
 
-  const now = new Date();
+  const today = currentDateOnly();
 
   function groupCountsForCompliance(personId: string, groupId: string): boolean {
     const primaryGroupId = primaryComplianceGroupByPerson.get(personId) ?? null;
@@ -209,35 +196,25 @@ async function rebuildTenant(
 
     for (const enrollment of matchingEnrollments) {
       try {
-        const cycles: Array<{
-          cycleNumber: number;
-          cycleStartAt: string;
-          dueAt: string;
-          groupEnrollmentId: string;
-        }> = [];
+        const existingForPersonRule = existingInstances.filter(
+          (instance) =>
+            instance.person_id === enrollment.person_id &&
+            instance.rule_id === rule.id,
+        );
 
-        let cycleNumber = 1;
-        let cycleStartAt = enrollment.anchor_date;
-
-        while (new Date(cycleStartAt) <= now) {
-          const dueAt = addMonths(
-            enrollment.anchor_date,
-            rule.initial_due_offset_months + ((cycleNumber - 1) * rule.recurrence_interval_months),
-          );
-
-          cycles.push({
-            cycleNumber,
-            cycleStartAt,
-            dueAt,
-            groupEnrollmentId: enrollment.id,
-          });
-
-          cycleNumber++;
-          cycleStartAt = addMonths(
-            enrollment.anchor_date,
-            (cycleNumber - 1) * rule.recurrence_interval_months,
-          );
-        }
+        const cycles = buildComplianceSeries({
+          anchorDate: enrollment.anchor_date,
+          today,
+          initialDueOffsetMonths: rule.initial_due_offset_months,
+          recurrenceIntervalMonths: rule.recurrence_interval_months,
+          existingCycles: existingForPersonRule.map((instance) => ({
+            cycleNumber: instance.cycle_number,
+            cycleStartAt: instance.cycle_start_at,
+          })),
+        }).map((cycle) => ({
+          ...cycle,
+          groupEnrollmentId: enrollment.id,
+        }));
 
         if (cycles.length === 0) {
           skipped++;
@@ -290,6 +267,28 @@ async function rebuildTenant(
                 completed_at: completion!.completed_at,
                 completion_source: "learndash",
                 completion_course_id: rule.course_id,
+                status_override: existing.status_override === "superseded" ? null : existing.status_override,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", existing.id);
+
+            if (error) {
+              errors++;
+            } else {
+              updated++;
+            }
+          } else if (
+            existing.group_enrollment_id !== cycle.groupEnrollmentId ||
+            existing.cycle_start_at !== cycle.cycleStartAt ||
+            existing.status_override === "superseded"
+          ) {
+            const { error } = await admin
+              .from("employee_compliance_instances")
+              .update({
+                group_enrollment_id: cycle.groupEnrollmentId,
+                cycle_start_at: cycle.cycleStartAt,
+                due_at: cycle.dueAt,
+                status_override: existing.status_override === "superseded" ? null : existing.status_override,
                 updated_at: new Date().toISOString(),
               })
               .eq("id", existing.id);

@@ -3,6 +3,11 @@ import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
+import {
+  currentDateOnly,
+  resolveReentryAnchor,
+  toDateOnly,
+} from "../_shared/recurring-compliance-series.ts";
 
 // Story 4.2 — sync-training (LearnDash course progress sync)
 //
@@ -49,10 +54,15 @@ interface PersonWithWp {
   tenant_id: string;
   email: string;
   wp_user_id: number;
+  hired_at: string | null;
+  created_at: string;
 }
 
 interface GroupEnrollmentRow {
+  id: string;
   group_id: string;
+  anchor_date: string;
+  anchor_source: string;
   active: boolean;
   ended_at: string | null;
 }
@@ -60,6 +70,44 @@ interface GroupEnrollmentRow {
 interface GroupCourseRecord {
   courseId: string;
   courseName: string;
+}
+
+function isMissingSchema(error: { code?: string; message?: string } | null | undefined): boolean {
+  const code = error?.code;
+  const message = String(error?.message ?? "");
+  return code === "42P01" ||
+    code === "PGRST205" ||
+    /relation .* does not exist/i.test(message) ||
+    /schema cache/i.test(message);
+}
+
+function bestPersonAnchorDate(person: Pick<PersonWithWp, "hired_at" | "created_at">): string {
+  return person.hired_at ?? person.created_at;
+}
+
+function deriveGroupAnchorDate(
+  params: {
+    groupCourses: GroupCourseRecord[];
+    progress: LdCourseProgress[];
+    person: Pick<PersonWithWp, "hired_at" | "created_at">;
+  },
+): string {
+  const courseIds = new Set(params.groupCourses.map((course) => Number(course.courseId)));
+  const activityDates = params.progress
+    .filter((course) => courseIds.has(course.course))
+    .flatMap((course) => [course.date_started, course.date_completed])
+    .filter((value): value is string => Boolean(value))
+    .sort();
+
+  return activityDates[0] ?? bestPersonAnchorDate(params.person);
+}
+
+function shouldRefreshAnchor(
+  existing: Pick<GroupEnrollmentRow, "anchor_date" | "anchor_source">,
+  candidateAnchorDate: string,
+): boolean {
+  if (existing.anchor_source === "manual") return false;
+  return toDateOnly(candidateAnchorDate) < toDateOnly(existing.anchor_date);
 }
 
 // ── Environment ─────────────────────────────────────────────────────
@@ -354,11 +402,13 @@ async function reconcileEmployeeGroupEnrollments(
     tenantId: string;
     personId: string;
     currentGroupIds: string[];
+    anchorDatesByGroupId: Map<string, string>;
+    fallbackAnchorDate: string;
   },
 ): Promise<void> {
   const { data, error } = await admin
     .from("employee_group_enrollments")
-    .select("group_id, active, ended_at")
+    .select("id, group_id, anchor_date, anchor_source, active, ended_at")
     .eq("tenant_id", params.tenantId)
     .eq("person_id", params.personId);
 
@@ -368,12 +418,13 @@ async function reconcileEmployeeGroupEnrollments(
 
   const rows = (data ?? []) as GroupEnrollmentRow[];
   const now = new Date().toISOString();
+  const todayDateOnly = currentDateOnly();
   const currentGroupIds = Array.from(new Set(params.currentGroupIds));
   const currentGroupSet = new Set(currentGroupIds);
 
-  const rowsToDeactivate = rows
-    .filter((row) => row.active && !currentGroupSet.has(row.group_id))
-    .map((row) => row.group_id);
+  const rowsToDeactivate = rows.filter(
+    (row) => row.active && !currentGroupSet.has(row.group_id),
+  );
 
   if (rowsToDeactivate.length > 0) {
     const { error: deactivateError } = await admin
@@ -385,31 +436,81 @@ async function reconcileEmployeeGroupEnrollments(
       })
       .eq("tenant_id", params.tenantId)
       .eq("person_id", params.personId)
-      .in("group_id", rowsToDeactivate);
+      .in("group_id", rowsToDeactivate.map((row) => row.group_id));
 
     if (deactivateError) {
       throw new Error(`Failed to deactivate removed groups: ${deactivateError.message}`);
     }
+
+    const removedEnrollmentIds = rowsToDeactivate.map((row) => row.id);
+    const { error: supersedeError } = await admin
+      .from("employee_compliance_instances")
+      .update({
+        status_override: "superseded",
+        updated_at: now,
+      })
+      .eq("tenant_id", params.tenantId)
+      .in("group_enrollment_id", removedEnrollmentIds)
+      .is("completed_at", null);
+
+    if (supersedeError) {
+      throw new Error(`Failed to supersede removed-group compliance instances: ${supersedeError.message}`);
+    }
   }
 
-  const rowsToReactivate = rows
-    .filter((row) => currentGroupSet.has(row.group_id) && (!row.active || row.ended_at !== null))
-    .map((row) => row.group_id);
+  const rowsToReactivate = rows.filter(
+    (row) => currentGroupSet.has(row.group_id) && (!row.active || row.ended_at !== null),
+  );
 
-  if (rowsToReactivate.length > 0) {
+  for (const row of rowsToReactivate) {
+    const candidateAnchorDate =
+      params.anchorDatesByGroupId.get(row.group_id) ?? params.fallbackAnchorDate;
+    const reentryAnchor = resolveReentryAnchor({
+      existingAnchorDate: row.anchor_date,
+      candidateAnchorDate,
+      reactivatedAt: todayDateOnly,
+      anchorSource: row.anchor_source,
+    });
+
     const { error: reactivateError } = await admin
       .from("employee_group_enrollments")
       .update({
         active: true,
         ended_at: null,
+        enrolled_at: reentryAnchor.anchorDate,
+        anchor_date: reentryAnchor.anchorDate,
+        anchor_source: reentryAnchor.anchorSource,
         updated_at: now,
       })
-      .eq("tenant_id", params.tenantId)
-      .eq("person_id", params.personId)
-      .in("group_id", rowsToReactivate);
+      .eq("id", row.id)
+      .eq("tenant_id", params.tenantId);
 
     if (reactivateError) {
-      throw new Error(`Failed to reactivate current groups: ${reactivateError.message}`);
+      throw new Error(`Failed to reactivate current group ${row.group_id}: ${reactivateError.message}`);
+    }
+  }
+
+  for (const row of rows) {
+    if (!currentGroupSet.has(row.group_id)) continue;
+
+    const candidateAnchorDate = params.anchorDatesByGroupId.get(row.group_id) ?? params.fallbackAnchorDate;
+    if (!shouldRefreshAnchor(row, candidateAnchorDate)) continue;
+
+    const { error: refreshErr } = await admin
+      .from("employee_group_enrollments")
+      .update({
+        enrolled_at: candidateAnchorDate,
+        anchor_date: toDateOnly(candidateAnchorDate),
+        anchor_source: "training_record",
+        active: true,
+        ended_at: null,
+        updated_at: now,
+      })
+      .eq("id", row.id)
+      .eq("tenant_id", params.tenantId);
+
+    if (refreshErr) {
+      throw new Error(`Failed to refresh group anchor: ${refreshErr.message}`);
     }
   }
 
@@ -424,9 +525,9 @@ async function reconcileEmployeeGroupEnrollments(
           tenant_id: params.tenantId,
           person_id: params.personId,
           group_id: groupId,
-          enrolled_at: now,
-          anchor_date: now,
-          anchor_source: "backfill",
+          enrolled_at: params.anchorDatesByGroupId.get(groupId) ?? params.fallbackAnchorDate,
+          anchor_date: toDateOnly(params.anchorDatesByGroupId.get(groupId) ?? params.fallbackAnchorDate),
+          anchor_source: "training_record",
           active: true,
           ended_at: null,
           updated_at: now,
@@ -509,6 +610,66 @@ async function reconcileGroupCourseMappings(
     if (reactivateError) {
       throw new Error(`Failed to reactivate current group courses: ${reactivateError.message}`);
     }
+  }
+}
+
+async function resolveEmployeeStatus(
+  admin: any,
+  tenantId: string,
+  personId: string,
+): Promise<"Onboarding" | "Active" | null> {
+  const onboardingQuery = await admin
+    .from("v_onboarding_training_compliance")
+    .select("effective_status")
+    .eq("tenant_id", tenantId)
+    .eq("person_id", personId);
+
+  if (onboardingQuery.error && isMissingSchema(onboardingQuery.error)) {
+    const fallbackQuery = await admin
+      .from("training_records")
+      .select("status")
+      .eq("tenant_id", tenantId)
+      .eq("person_id", personId);
+
+    if (fallbackQuery.error) {
+      throw new Error(`Failed to load fallback onboarding records: ${fallbackQuery.error.message}`);
+    }
+
+    const rows = (fallbackQuery.data ?? []) as Array<{ status: string }>;
+    const allDone = rows.length > 0 && rows.every((row) => row.status === "completed");
+    return allDone ? "Active" : "Onboarding";
+  }
+
+  if (onboardingQuery.error) {
+    throw new Error(`Failed to load onboarding training view: ${onboardingQuery.error.message}`);
+  }
+
+  const rows = (onboardingQuery.data ?? []) as Array<{ effective_status: string }>;
+  const allDone = rows.length > 0 && rows.every((row) => row.effective_status === "completed");
+  return allDone ? "Active" : "Onboarding";
+}
+
+async function refreshEmployeeStatus(
+  admin: any,
+  tenantId: string,
+  personId: string,
+): Promise<void> {
+  const nextStatus = await resolveEmployeeStatus(admin, tenantId, personId);
+  if (!nextStatus) return;
+
+  const { error } = await admin
+    .from("people")
+    .update({
+      employee_status: nextStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("tenant_id", tenantId)
+    .eq("id", personId)
+    .eq("type", "employee")
+    .neq("employee_status", "Terminated");
+
+  if (error) {
+    throw new Error(`Failed to refresh employee status: ${error.message}`);
   }
 }
 
@@ -649,7 +810,7 @@ async function processTenant(
     // Fetch employees with wp_user_id
     const { data: employees, error: empErr } = await admin
       .from("people")
-      .select("id, tenant_id, email, wp_user_id")
+      .select("id, tenant_id, email, wp_user_id, hired_at, created_at")
       .eq("tenant_id", config.tenant_id)
       .not("wp_user_id", "is", null);
 
@@ -684,14 +845,9 @@ async function processTenant(
 
       try {
         const currentGroupIds = await fetchUserGroupIds(siteUrl, auth, emp.wp_user_id);
+        const groupCoursesById = new Map<string, GroupCourseRecord[]>();
 
         if (currentGroupIds !== null) {
-          await reconcileEmployeeGroupEnrollments(admin, {
-            tenantId: config.tenant_id,
-            personId: emp.id,
-            currentGroupIds,
-          });
-
           for (const groupId of currentGroupIds) {
             if (syncedGroups.has(groupId)) continue;
 
@@ -728,6 +884,21 @@ async function processTenant(
 
             syncedGroups.add(groupId);
           }
+
+          for (const groupId of currentGroupIds) {
+            if (groupCoursesById.has(groupId)) continue;
+
+            const groupCourses = await fetchGroupCourses(
+              siteUrl,
+              auth,
+              groupId,
+              courseNameCache,
+            );
+
+            if (groupCourses !== null) {
+              groupCoursesById.set(groupId, groupCourses);
+            }
+          }
         }
 
         const progress = await fetchAllCourseProgress(
@@ -736,7 +907,32 @@ async function processTenant(
           emp.wp_user_id,
         );
 
+        if (currentGroupIds !== null) {
+          const anchorDatesByGroupId = new Map<string, string>();
+
+          for (const groupId of currentGroupIds) {
+            const groupCourses = groupCoursesById.get(groupId) ?? [];
+            anchorDatesByGroupId.set(
+              groupId,
+              deriveGroupAnchorDate({
+                groupCourses,
+                progress,
+                person: emp,
+              }),
+            );
+          }
+
+          await reconcileEmployeeGroupEnrollments(admin, {
+            tenantId: config.tenant_id,
+            personId: emp.id,
+            currentGroupIds,
+            anchorDatesByGroupId,
+            fallbackAnchorDate: bestPersonAnchorDate(emp),
+          });
+        }
+
         if (progress.length === 0) {
+          await refreshEmployeeStatus(admin, config.tenant_id, emp.id);
           skipped++;
           continue;
         }
@@ -822,6 +1018,8 @@ async function processTenant(
             synced++;
           }
         }
+
+        await refreshEmployeeStatus(admin, config.tenant_id, emp.id);
       } catch (empError) {
         const msg = empError instanceof Error ? empError.message : String(empError);
         console.error(`Error syncing employee ${emp.email}: ${msg}`);

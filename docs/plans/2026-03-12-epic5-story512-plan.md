@@ -52,3 +52,16 @@ Even if active training views are reconciled, recurring compliance remains incor
 - move one employee from group A to group B
 - rerun sync and rebuild
 - verify recurring dashboard shows only active group obligations
+
+## Future Production QA Checklist
+
+Use the Story 5.11 production verification checklist as the baseline closeout for recurring supersession, with extra emphasis on:
+
+1. recurring dashboard rows for the removed group must no longer appear active
+2. current-group recurring obligations must still generate normally
+3. historical removed-group records must remain queryable for audit review
+4. one employee with a manual anchor override must retain the manual value and must not be overwritten by the repair path
+
+### Closeout expectation
+
+- If Sonie Jaryee and the additional spot-check employees all show correct `Last Activity`, `Anchor Date`, and recalculated `Due Date`, this story can move from monitoring into documented production validation.

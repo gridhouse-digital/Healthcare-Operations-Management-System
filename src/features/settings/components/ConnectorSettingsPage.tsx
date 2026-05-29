@@ -521,11 +521,23 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
 
 interface JotFormFormValues {
   apiKey: string;
+  formIdApplication: string;
 }
 
-function JotFormConnector({ configured }: { configured: boolean }) {
+function JotFormConnector({
+  configured,
+  formIdApplication,
+}: {
+  configured: boolean;
+  formIdApplication: string | null;
+}) {
   const { register, handleSubmit, formState: { isSubmitting } } =
-    useForm<JotFormFormValues>();
+    useForm<JotFormFormValues>({
+      defaultValues: {
+        apiKey: "",
+        formIdApplication: formIdApplication ?? "",
+      },
+    });
 
   const saveJotForm = useSaveJotForm();
 
@@ -534,8 +546,16 @@ function JotFormConnector({ configured }: { configured: boolean }) {
   );
 
   async function onSave(values: JotFormFormValues) {
+    if (!values.apiKey && !values.formIdApplication.trim()) {
+      toast.error("Enter an API key and/or Application Form ID");
+      return;
+    }
+
     try {
-      await saveJotForm.mutateAsync(values);
+      await saveJotForm.mutateAsync({
+        apiKey: values.apiKey || undefined,
+        formIdApplication: values.formIdApplication.trim() || undefined,
+      });
       setStatus("active");
       toast.success("JotForm connector saved");
     } catch (err) {
@@ -573,6 +593,18 @@ function JotFormConnector({ configured }: { configured: boolean }) {
           )}
           <p className={helperCls}>
             Find your API key at JotForm &rarr; Settings &rarr; API
+          </p>
+        </div>
+
+        <div>
+          <label className={labelCls}>Application Form ID</label>
+          <input
+            {...register("formIdApplication")}
+            placeholder={formIdApplication ?? "e.g. 241904161216448"}
+            className={inputCls}
+          />
+          <p className={helperCls}>
+            Required for applicant sync. Find it in JotForm &rarr; Form &rarr; Settings &rarr; Form ID
           </p>
         </div>
 
@@ -883,7 +915,10 @@ export function ConnectorSettingsPage() {
         <BambooHRConnector configured={settings.bamboohr_key_configured} savedSubdomain={settings.bamboohr_subdomain} />
         <JazzHRConnector configured={settings.jazzhr_key_configured} isTenantAdmin={isAdmin} />
         <WordPressConnector configured={settings.wp_key_configured} savedSiteUrl={settings.wp_site_url} isTenantAdmin={isAdmin} />
-        <JotFormConnector configured={settings.jotform_key_configured} />
+        <JotFormConnector
+          configured={settings.jotform_key_configured}
+          formIdApplication={settings.jotform_form_id_application}
+        />
       </div>
 
       <LdGroupMappingsSection />

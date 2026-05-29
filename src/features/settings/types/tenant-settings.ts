@@ -18,6 +18,7 @@ export interface TenantSettings {
   jazzhr_key_configured: boolean;
   wp_key_configured: boolean;
   jotform_key_configured: boolean;
+  jotform_form_id_application: string | null;
   active_connectors: ConnectorSource[];
   ld_group_mappings: LdGroupMapping[];
   profile_source: ConnectorSource | null;
