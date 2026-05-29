@@ -5,6 +5,15 @@
 
 ---
 
+## 2026-05-28 | LearnDash group re-entry starts a new active compliance series by default
+
+**What:** When a person returns to a previously removed LearnDash group and there is no newer assignment evidence than the old anchor, the HR app starts a fresh active recurring-compliance series from the re-entry date and marks the prior open series rows as `superseded`.
+**Why:** Re-entry is a new active obligation context. Reusing the old anchor would pull stale due dates and overdue cycles back into active dashboards after a group change, which breaks operator trust.
+**Alternatives:** Always resume the prior series â€” rejected because it revives stale obligations after A -> B -> A reassignment. Hard-delete old rows â€” rejected because it destroys audit history.
+**Consequence:** Active recurring views now exclude pre-reentry cycles and superseded rows, while audit views retain them for traceability.
+
+---
+
 ## 2026-03-26 | Recurring compliance business dates use DATE semantics
 
 **What:** `employee_group_enrollments.anchor_date`, `employee_compliance_instances.cycle_start_at`, and `employee_compliance_instances.due_at` are treated as calendar dates, not instants in time. The model is standardized on Postgres `DATE` semantics.

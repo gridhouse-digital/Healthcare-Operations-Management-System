@@ -12,6 +12,7 @@ interface SaveConnectorBody {
   source: "bamboohr" | "jazzhr" | "wordpress" | "jotform";
   subdomain?: string; // BambooHR only
   apiKey?: string; // BambooHR / JazzHR / JotForm
+  formIdApplication?: string;
   // WordPress-specific fields
   wpSiteUrl?: string;
   wpUsername?: string;
@@ -35,19 +36,26 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json() as SaveConnectorBody;
-    const { source, apiKey, subdomain, wpSiteUrl, wpUsername, wpAppPassword } = body;
+    const { source, apiKey, subdomain, formIdApplication, wpSiteUrl, wpUsername, wpAppPassword } = body;
 
     if (!source) {
       return withCors(errorResponse("MISSING_FIELDS", "source required", 400), req);
     }
 
-    if (source === "bamboohr" || source === "jazzhr" || source === "jotform") {
+    if (source === "bamboohr" || source === "jazzhr") {
       if (!apiKey) {
         return withCors(errorResponse("MISSING_FIELDS", "apiKey required", 400), req);
       }
       if (source === "bamboohr" && !subdomain) {
         return withCors(errorResponse("MISSING_FIELDS", "subdomain required for BambooHR", 400), req);
       }
+    }
+
+    if (source === "jotform" && !apiKey && !formIdApplication?.trim()) {
+      return withCors(
+        errorResponse("MISSING_FIELDS", "apiKey or formIdApplication required", 400),
+        req,
+      );
     }
 
     if (source === "wordpress") {
@@ -73,6 +81,7 @@ Deno.serve(async (req: Request) => {
       bamboohr_api_key_encrypted?: string;
       jazzhr_api_key_encrypted?: string;
       jotform_api_key_encrypted?: string;
+      jotform_form_id_application?: string;
       wp_site_url?: string;
       wp_username_encrypted?: string;
       wp_app_password_encrypted?: string;
@@ -111,12 +120,17 @@ Deno.serve(async (req: Request) => {
       updatePayload.active_connectors = [source];
       if (profileSourceIsEmpty) updatePayload.profile_source = source;
     } else if (source === "jotform") {
-      const { data: encryptedKey, error: encErr } = await adminClient.rpc(
-        "pgp_sym_encrypt_text",
-        { plaintext: apiKey, passphrase: PGCRYPTO_KEY },
-      );
-      if (encErr) throw encErr;
-      updatePayload.jotform_api_key_encrypted = encryptedKey as string;
+      if (apiKey) {
+        const { data: encryptedKey, error: encErr } = await adminClient.rpc(
+          "pgp_sym_encrypt_text",
+          { plaintext: apiKey, passphrase: PGCRYPTO_KEY },
+        );
+        if (encErr) throw encErr;
+        updatePayload.jotform_api_key_encrypted = encryptedKey as string;
+      }
+      if (formIdApplication?.trim()) {
+        updatePayload.jotform_form_id_application = formIdApplication.trim();
+      }
       // JotForm is not a profile_source or ATS connector — don't set those
     } else {
       // wordpress — encrypt username and app password

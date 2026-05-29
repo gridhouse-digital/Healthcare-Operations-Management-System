@@ -33,6 +33,24 @@ function formatDate(value: string | null) {
   return format(new Date(value), 'MMM d, yyyy h:mm a');
 }
 
+function formatCalendarDate(value: string | null) {
+  if (!value) return '-';
+
+  const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnlyMatch) {
+    return format(
+      new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3]),
+      ),
+      'MMM d, yyyy',
+    );
+  }
+
+  return format(new Date(value), 'MMM d, yyyy');
+}
+
 function formatHours(minutes: number | null) {
   if (minutes == null) return '-';
   const hours = Math.floor(minutes / 60);
@@ -81,6 +99,21 @@ function getSummaryChipClass(label: string) {
   if (label.includes('adjusted')) return 'status-chip status-chip-cyan';
   if (label.includes('% complete')) return 'status-chip status-chip-green';
   return 'status-chip status-chip-muted';
+}
+
+function historicalVisibilityLabel(state: string) {
+  switch (state) {
+    case 'superseded':
+      return 'Superseded';
+    case 'inactive_group':
+      return 'Inactive Group';
+    case 'historical_series':
+      return 'Prior Series';
+    case 'primary_group_filtered':
+      return 'Primary Group Filtered';
+    default:
+      return 'Historical';
+  }
 }
 
 function getPayloadString(payload: Record<string, unknown>, key: string) {
@@ -214,7 +247,7 @@ export function EmployeeTrainingDetailPage() {
     );
   }
 
-  const { employee, courses, adjustments, stats } = data;
+  const { employee, courses, historicalCourses, recurringHistory, adjustments, stats } = data;
   const fullName = `${employee.first_name ?? ''} ${employee.last_name ?? ''}`.trim() || employee.email;
   const monogram = `${employee.first_name?.[0] ?? ''}${employee.last_name?.[0] ?? ''}` || employee.email[0]?.toUpperCase();
 
@@ -375,9 +408,83 @@ export function EmployeeTrainingDetailPage() {
               );
             })
           )}
+
+          {historicalCourses.length > 0 ? (
+            <div className="saas-card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-[13px] font-semibold tracking-[-0.01em] text-foreground">
+                    Historical / Superseded Training
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    These records stay visible for audit review but do not count toward the employee&apos;s active group obligations.
+                  </p>
+                </div>
+                <span className="status-chip status-chip-muted">{historicalCourses.length} records</span>
+              </div>
+
+              <div className="space-y-3">
+                {historicalCourses.map((record) => (
+                  <div key={record.training_record_id} className="rounded-md border border-border bg-secondary/35 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-[13px] font-medium text-foreground">
+                          {normalizeCourseTitle(record.course_name ?? `Course #${record.course_id}`)}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Status: {(record.effective_status ?? 'not_started').replace('_', ' ')}
+                        </p>
+                      </div>
+                      <span className="status-chip status-chip-muted">Historical</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-5">
+          {recurringHistory.length > 0 ? (
+            <section className="saas-card p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Recurring Compliance History</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Prior-series and superseded recurring cycles remain audit-visible here while active dashboards show only the current obligation set.
+                  </p>
+                </div>
+                <span className="status-chip status-chip-muted">{recurringHistory.length} rows</span>
+              </div>
+
+              <div className="space-y-3">
+                {recurringHistory.map((record) => (
+                  <div key={record.instance_id} className="rounded-md border border-border bg-card p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground">
+                          {record.rule_name}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Group {record.group_id} • Cycle {record.cycle_number} • Due {formatCalendarDate(record.due_at)}
+                        </p>
+                        {record.completed_at ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Completed {formatDate(record.completed_at)}
+                            {record.completion_source ? ` via ${record.completion_source}` : ''}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span className="status-chip status-chip-muted">
+                        {historicalVisibilityLabel(record.visibility_state)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section className="saas-card p-5">
             <div className="mb-4 flex items-center gap-2">
               <ClipboardEdit size={14} strokeWidth={2} style={{ color: 'var(--primary)' }} />

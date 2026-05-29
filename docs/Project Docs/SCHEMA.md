@@ -338,6 +338,7 @@ UNIQUE (tenant_id, person_id, group_id)
 
 **RLS:** SELECT / INSERT / UPDATE for own tenant.
 **Critical:** `anchor_date` is intentionally `DATE`. It must be treated as a business calendar value, not rendered as a timezone-shifted instant.
+**Anchor sources:** includes `group_reentry` when a user returns to a previously removed LearnDash group and a fresh active series must start without deleting the old history.
 
 ---
 
@@ -366,6 +367,7 @@ UNIQUE (tenant_id, person_id, rule_id, cycle_number)
 
 **RLS:** SELECT for own tenant.
 **Critical:** `cycle_start_at` and `due_at` are `DATE` fields because recurring compliance deadlines are calendar dates.
+**Status overrides:** includes `superseded` for rows kept only for audit/history after a group change or re-entry resets the active series.
 
 ---
 
@@ -376,6 +378,22 @@ Derived recurring compliance view over `employee_compliance_instances`, `trainin
 **Key columns:** `rule_name`, `group_id`, `cycle_number`, `cycle_start_at`, `due_at`, `completed_at`, `completion_source`, `reminder_suppressed`, `compliance_status`.
 
 **Status logic:** compares `due_at` to `current_date` rather than `now()` so due/overdue behavior is timezone-safe.
+**Visibility logic:** excludes rows when the linked group enrollment is inactive, when the row is explicitly `superseded`, when it belongs to a pre-reentry series (`cycle_start_at < current anchor_date`), or when it falls outside the active `primary_compliance_group_id` context.
+
+---
+
+## v_recurring_compliance_audit
+
+Audit-oriented recurring compliance view that retains all cycle rows, including rows hidden from active dashboards after group changes or re-entry.
+
+**Key columns:** all recurring compliance identifiers plus `visibility_state`, `enrollment_active`, and `current_anchor_date`.
+
+**Visibility states:**
+- `active`
+- `superseded`
+- `inactive_group`
+- `historical_series`
+- `primary_group_filtered`
 
 ---
 

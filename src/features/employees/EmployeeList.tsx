@@ -10,6 +10,7 @@ import { toast } from '@/hooks/useToast';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { AppSelect } from '@/components/ui/AppSelect';
+import { fetchAssignedGroupCourses } from '@/features/training/hooks/assignedGroupCourses';
 
 const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
 const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
@@ -84,6 +85,10 @@ function formatCalendarDate(value: string | null): string {
     return format(new Date(value), 'MMMM d, yyyy');
 }
 
+function normalizeCourseName(courseName: string): string {
+    return courseName.toUpperCase();
+}
+
 export function EmployeeList() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
@@ -156,14 +161,6 @@ export function EmployeeList() {
 
                 setTrainingRecords(normalized);
 
-                const allDone = normalized.length > 0 && normalized.every((r) => r.status === 'completed');
-                if (allDone && selectedEmployee && selectedEmployee.employee_status === 'Onboarding') {
-                    await employeeService.updateEmployee(selectedEmployee.id, { employee_status: 'Active' } as Partial<Employee>);
-                    toast.success('All courses completed! Status updated to Active.');
-                    await loadEmployees();
-                    setSelectedEmployee({ ...selectedEmployee, employee_status: 'Active' });
-                }
-
                 return;
             }
 
@@ -176,16 +173,27 @@ export function EmployeeList() {
                 progress_pct: row.effective_completion_pct ?? 0,
             }));
 
-            setTrainingRecords(normalized);
+            const assignedGroupCourses = await fetchAssignedGroupCourses([personId]);
+            const existingCourseNames = new Set(
+                normalized.map((record) => record.course_name.trim().toLowerCase())
+            );
 
-            // Auto-update status if all courses completed
-            const allDone = normalized.length > 0 && normalized.every((r) => r.status === 'completed');
-            if (allDone && selectedEmployee && selectedEmployee.employee_status === 'Onboarding') {
-                await employeeService.updateEmployee(selectedEmployee.id, { employee_status: 'Active' } as Partial<Employee>);
-                toast.success('All courses completed! Status updated to Active.');
-                await loadEmployees();
-                setSelectedEmployee({ ...selectedEmployee, employee_status: 'Active' });
-            }
+            const assignedRecords = assignedGroupCourses
+                .filter((course) => {
+                    const courseName = (course.course_name ?? `Course #${course.course_id}`).trim().toLowerCase();
+                    return !existingCourseNames.has(courseName);
+                })
+                .map((course) => ({
+                    id: `assigned:${personId}:${course.course_id}`,
+                    course_name: course.course_name ?? `Course #${course.course_id}`,
+                    status: 'not_started',
+                    progress_pct: 0,
+                }));
+
+            const combinedRecords = [...normalized, ...assignedRecords]
+                .sort((a, b) => a.course_name.localeCompare(b.course_name));
+
+            setTrainingRecords(combinedRecords);
         } catch (err) {
             console.error('Failed to load training records', err);
         } finally {
@@ -430,7 +438,7 @@ export function EmployeeList() {
                 isOpen={!!selectedEmployee}
                 onClose={() => { setSelectedEmployee(null); setIsEditing(false); setEditFormData({}); }}
                 title="Employee Profile"
-                width="lg"
+                width="xl"
             >
                 {selectedEmployee && (
                     <div className="space-y-6">
@@ -479,15 +487,15 @@ export function EmployeeList() {
                                         <div key={record.id} className="p-3.5 bg-muted/30 rounded-md border border-border">
                                             <div className="flex justify-between items-center mb-2.5">
                                                 <span className="text-[13px] text-foreground font-medium">
-                                                    {record.course_name}
+                                                    {normalizeCourseName(record.course_name)}
                                                 </span>
                                                 {record.status === 'completed' ? (
-                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)] border-[color-mix(in_srgb,var(--severity-low)_20%,transparent)]">
-                                                        Completed
+                                                    <span className="inline-flex shrink-0 whitespace-nowrap text-[10px] font-semibold leading-none px-2.5 py-1 rounded-full border bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)] border-[color-mix(in_srgb,var(--severity-low)_20%,transparent)]">
+                                                        COMPLETED
                                                     </span>
                                                 ) : (
-                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-[color-mix(in_srgb,var(--severity-medium)_10%,transparent)] text-[var(--severity-medium)] border-[color-mix(in_srgb,var(--severity-medium)_20%,transparent)]">
-                                                        In Progress
+                                                    <span className="inline-flex shrink-0 whitespace-nowrap text-[10px] font-semibold leading-none px-2.5 py-1 rounded-full border bg-[color-mix(in_srgb,var(--severity-medium)_10%,transparent)] text-[var(--severity-medium)] border-[color-mix(in_srgb,var(--severity-medium)_20%,transparent)]">
+                                                        IN PROGRESS
                                                     </span>
                                                 )}
                                             </div>
@@ -544,7 +552,7 @@ export function EmployeeList() {
                             ) : (
                                 <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
                                     <p className="text-[12px] text-muted-foreground">No recurring compliance records available.</p>
-                                    <p className="mt-1 text-[11px] text-muted-foreground/70">This will populate after Epic 5.9 migrations and rules are configured.</p>
+                                    <p className="mt-1 text-[11px] text-muted-foreground/70">Recurring compliance will appear when this employee has an active compliance group and a recurring rule is tied to one of that group&apos;s courses.</p>
                                 </div>
                             )}
                         </div>

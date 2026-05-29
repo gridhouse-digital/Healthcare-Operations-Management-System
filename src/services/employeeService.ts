@@ -42,6 +42,76 @@ export const employeeService = {
         return data as Employee;
     },
 
+    async getEmployeeOnboardingStatus(personId: string): Promise<'Onboarding' | 'Active'> {
+        let activeQuery = await supabase
+            .from('v_onboarding_training_compliance')
+            .select('effective_status')
+            .eq('person_id', personId);
+
+        const viewMissing =
+            activeQuery.error &&
+            (
+                activeQuery.error.code === '42P01' ||
+                activeQuery.error.code === 'PGRST205' ||
+                /relation .* does not exist/i.test(activeQuery.error.message || '') ||
+                /schema cache/i.test(activeQuery.error.message || '')
+            );
+
+        if (viewMissing) {
+            const fallbackQuery = await supabase
+                .from('training_records')
+                .select('status')
+                .eq('person_id', personId);
+
+            if (fallbackQuery.error) throw fallbackQuery.error;
+
+            const rows = fallbackQuery.data || [];
+            const allDone = rows.length > 0 && rows.every((row) => row.status === 'completed');
+            return allDone ? 'Active' : 'Onboarding';
+        }
+
+        if (activeQuery.error) throw activeQuery.error;
+
+        const rows = activeQuery.data || [];
+        const allDone = rows.length > 0 && rows.every((row) => row.effective_status === 'completed');
+        return allDone ? 'Active' : 'Onboarding';
+    },
+
+    async findEmployeeMatch(applicantId: string, tenantId: string, email: string) {
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const [{ data: byApplicant, error: byApplicantError }, { data: byEmail, error: byEmailError }] = await Promise.all([
+            supabase
+                .from('people')
+                .select('*')
+                .eq('tenant_id', tenantId)
+                .eq('type', 'employee')
+                .eq('applicant_id', applicantId)
+                .maybeSingle(),
+            supabase
+                .from('people')
+                .select('*')
+                .eq('tenant_id', tenantId)
+                .eq('type', 'employee')
+                .ilike('email', normalizedEmail)
+                .order('wp_user_id', { ascending: false })
+                .limit(5),
+        ]);
+
+        if (byApplicantError) throw byApplicantError;
+        if (byEmailError) throw byEmailError;
+
+        if (byApplicant) return byApplicant as Employee;
+
+        const matches = (byEmail || []) as Employee[];
+        if (matches.length === 0) return null;
+
+        const exactNormalizedMatch = matches.find((row) => row.email.trim().toLowerCase() === normalizedEmail);
+        if (exactNormalizedMatch) return exactNormalizedMatch;
+
+        return matches[0];
+    },
+
     async createEmployeeFromApplicant(applicantId: string, offerDetails: { start_date: string; position: string; salary: number }) {
         // 1. Get applicant details
         const { data: applicant, error: appError } = await supabase
@@ -53,36 +123,54 @@ export const employeeService = {
         if (appError) throw appError;
         if (!applicant) throw new Error('Applicant not found');
 
-        // 2. Check if employee record already exists in people
-        const { data: existing } = await supabase
-            .from('people')
-            .select('id')
-            .eq('applicant_id', applicantId)
-            .eq('type', 'employee')
-            .maybeSingle();
+        const normalizedEmail = applicant.email.trim().toLowerCase();
+        const existing = await this.findEmployeeMatch(applicantId, applicant.tenant_id, normalizedEmail);
+
+        const payload = {
+            tenant_id: applicant.tenant_id,
+            first_name: applicant.first_name,
+            last_name: applicant.last_name,
+            email: normalizedEmail,
+            phone: applicant.phone || null,
+            job_title: offerDetails.position,
+            type: 'employee',
+            applicant_id: applicant.id,
+            hired_at: offerDetails.start_date,
+        };
+
+        let employee: Employee | null = null;
+        let empError: Error | null = null;
 
         if (existing) {
-            throw new Error('Employee record already exists for this applicant');
-        }
+            const employeeStatus = await this.getEmployeeOnboardingStatus(existing.id);
+            const { data, error } = await supabase
+                .from('people')
+                .update({
+                    ...payload,
+                    employee_status: employeeStatus,
+                    employee_id: existing.employee_id || `EMP-${Date.now().toString().slice(-6)}`,
+                })
+                .eq('id', existing.id)
+                .eq('type', 'employee')
+                .select()
+                .single();
 
-        // 3. Upsert into people as employee (may already exist as candidate from hire-detection)
-        const { data: employee, error: empError } = await supabase
-            .from('people')
-            .upsert({
-                tenant_id: applicant.tenant_id,
-                first_name: applicant.first_name,
-                last_name: applicant.last_name,
-                email: applicant.email,
-                phone: applicant.phone || null,
-                job_title: offerDetails.position,
-                type: 'employee',
-                employee_status: 'Onboarding',
-                employee_id: `EMP-${Date.now().toString().slice(-6)}`,
-                applicant_id: applicant.id,
-                hired_at: offerDetails.start_date,
-            }, { onConflict: 'tenant_id,email' })
-            .select()
-            .single();
+            employee = data as Employee;
+            empError = error;
+        } else {
+            const { data, error } = await supabase
+                .from('people')
+                .insert({
+                    ...payload,
+                    employee_status: 'Onboarding',
+                    employee_id: `EMP-${Date.now().toString().slice(-6)}`,
+                })
+                .select()
+                .single();
+
+            employee = data as Employee;
+            empError = error;
+        }
 
         if (empError) throw empError;
 
@@ -108,36 +196,54 @@ export const employeeService = {
         if (appError) throw appError;
         if (!applicant) throw new Error('Applicant not found');
 
-        // 2. Check if employee already exists
-        const { data: existing } = await supabase
-            .from('people')
-            .select('id')
-            .eq('applicant_id', applicantId)
-            .eq('type', 'employee')
-            .maybeSingle();
+        const normalizedEmail = applicant.email.trim().toLowerCase();
+        const existing = await this.findEmployeeMatch(applicantId, applicant.tenant_id, normalizedEmail);
+
+        const payload = {
+            tenant_id: applicant.tenant_id,
+            first_name: applicant.first_name,
+            last_name: applicant.last_name,
+            email: normalizedEmail,
+            phone: applicant.phone || null,
+            job_title: applicant.position_applied || 'To Be Assigned',
+            type: 'employee',
+            applicant_id: applicant.id,
+            hired_at: new Date().toISOString().split('T')[0],
+        };
+
+        let employee: Employee | null = null;
+        let empError: Error | null = null;
 
         if (existing) {
-            throw new Error('Employee record already exists for this applicant');
-        }
+            const employeeStatus = await this.getEmployeeOnboardingStatus(existing.id);
+            const { data, error } = await supabase
+                .from('people')
+                .update({
+                    ...payload,
+                    employee_status: employeeStatus,
+                    employee_id: existing.employee_id || `EMP-${Date.now().toString().slice(-6)}`,
+                })
+                .eq('id', existing.id)
+                .eq('type', 'employee')
+                .select()
+                .single();
 
-        // 3. Create employee record in people table
-        const { data: employee, error: empError } = await supabase
-            .from('people')
-            .upsert({
-                tenant_id: applicant.tenant_id,
-                first_name: applicant.first_name,
-                last_name: applicant.last_name,
-                email: applicant.email,
-                phone: applicant.phone || null,
-                job_title: applicant.position_applied || 'To Be Assigned',
-                type: 'employee',
-                employee_status: 'Onboarding',
-                employee_id: `EMP-${Date.now().toString().slice(-6)}`,
-                applicant_id: applicant.id,
-                hired_at: new Date().toISOString().split('T')[0],
-            }, { onConflict: 'tenant_id,email' })
-            .select()
-            .single();
+            employee = data as Employee;
+            empError = error;
+        } else {
+            const { data, error } = await supabase
+                .from('people')
+                .insert({
+                    ...payload,
+                    employee_status: 'Onboarding',
+                    employee_id: `EMP-${Date.now().toString().slice(-6)}`,
+                })
+                .select()
+                .single();
+
+            employee = data as Employee;
+            empError = error;
+        }
 
         if (empError) throw empError;
 

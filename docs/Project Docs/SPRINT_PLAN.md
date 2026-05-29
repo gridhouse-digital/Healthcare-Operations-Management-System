@@ -395,12 +395,11 @@
 - Training tied only to removed groups is marked inactive, legacy, or superseded in active HR views
 - Active compliance counts no longer include removed-group obligations
 - Historical training remains traceable for audit/admin review
-- Status: [~] In progress - 2026-03-12
-- Current state:
-  - `sync-training` now reconciles active/inactive group enrollments
-  - active onboarding/training views now derive from current LearnDash group context
-  - validated for A -> B reassignment on production data
-  - remaining work is closeout validation for re-entry cases and any final superseded-state UX
+- Status: [x] Complete - 2026-05-28
+- Delivery notes:
+  - `sync-training` now supersedes removed-group recurring instances and re-entry starts a fresh active series when no newer assignment evidence exists
+  - historical training is visible in employee training detail without counting toward active obligations
+  - recurring compliance history remains audit-visible through `v_recurring_compliance_audit`
 - Plan: `docs/plans/2026-03-12-epic5-story511-plan.md`
 
 ### Story 5.12 - Recurring compliance supersession on group change
@@ -410,11 +409,11 @@
 - Removed-group recurring anchors/instances no longer count as active obligations
 - Historical recurring cycles remain visible for audit
 - Rebuild logic does not recreate superseded old-group obligations
-- Status: [~] In progress - 2026-03-12
-- Current state:
-  - inactive group enrollments no longer surface recurring obligations in `v_recurring_compliance_status`
-  - `primary_compliance_group_id` now supports intentional multi-group users without forcing every group into compliance
-  - remaining work is finalizing re-entry policy handling beyond the current `resume_previous_series` behavior and validating broader edge cases
+- Status: [x] Complete - 2026-05-28
+- Delivery notes:
+  - active recurring views now hide inactive-group rows, explicit `superseded` rows, pre-reentry historical cycles, and primary-group-filtered rows
+  - removed-group history is preserved for audit instead of being destroyed or reused as active obligation state
+  - manual anchor overrides remain protected from automated re-entry repair paths
 - Plan: `docs/plans/2026-03-12-epic5-story512-plan.md`
 
 ### Story 5.13 - Multi-rule recurring compliance UI loading fix
@@ -519,14 +518,12 @@
 
 ### Epic 5 Follow-up Priority Order
 
-1. Story 5.11 - Training sync group change reconciliation closeout and re-entry QA
-2. Story 5.12 - Recurring compliance supersession policy completion
-3. Story 5.18 - JotForm compliance catalog restructure
-4. Story 5.19 - Applicant source policy + ATS sync restructure
-5. Story 5.20 - Offer flow source-agnostic audit
-6. Story 5.21 - AI intelligence post-restructure audit
-7. Recurring compliance reminder notification flow
-8. Epic 6 - Compliance exports
+1. Story 5.18 - JotForm compliance catalog restructure
+2. Story 5.19 - Applicant source policy + ATS sync restructure
+3. Story 5.20 - Offer flow source-agnostic audit
+4. Story 5.21 - AI intelligence post-restructure audit
+5. Recurring compliance reminder notification flow
+6. Epic 6 - Compliance exports
 
 ---
 

@@ -25,7 +25,7 @@ This document tracks active product and engineering issues that require follow-u
 
 | # | Issue | Priority | Severity | Owner | Next Action | Target Sprint |
 |---|---|---|---|---|---|---|
-| 1 | WordPress group change does not fully resync HR app training assignments | `P1` | `High` | Engineering + Architecture | Close out re-entry validation and finalize superseded-state behavior for multi-group edge cases | Current sprint |
+| 1 | WordPress group change does not fully resync HR app training assignments | `P1` | `High` | Engineering + Architecture | Monitor post-deploy re-entry behavior and keep regression coverage in place for future recurring-compliance changes | Current sprint |
 | 2 | Second recurring compliance rule not visible or generating compliance records | `P1` | `High` | Engineering | Keep regression coverage only; manual cycle controls are shipped and reminder automation remains separate feature work | Current sprint |
 | 3 | Platform admin applicant visibility lacks tenant filter | `P2` | `Medium` | Product + UX, then Engineering | Monitor after rollout; keep behavior unchanged for tenant-admin and HR-admin roles | Current sprint |
 
@@ -38,9 +38,9 @@ This document tracks active product and engineering issues that require follow-u
 | Priority | `P1` |
 | Severity | `High` |
 | Area | Sync pipeline -> `sync-wp-users` / `sync-training` / training ledger |
-| Status | In progress / narrowed |
+| Status | Resolved / Monitoring |
 | Owner | Engineering + Architecture |
-| Next Action | Validate A -> B -> A/C reassignment behavior, confirm expected UX for superseded training history, and document any required re-entry override |
+| Next Action | Monitor post-deploy A -> B -> A/C reassignment behavior and retain regression coverage for re-entry/supersession paths |
 | Target Sprint | Current sprint |
 | Date discovered | 2026-03-11 |
 | Reported by | Oyiny |
@@ -87,6 +87,10 @@ This leaves stale course assignments and can cause the HR app to show a user as 
 - Production validation on 2026-03-12 confirmed old-group training is removed from active views for a user reassigned from group `54` to group `1428`.
 - A multi-group leader case remains intentional rather than defective when the user truly belongs to both groups in LearnDash.
 - `primary_compliance_group_id` now lets HR keep multi-group access while scoping onboarding and recurring compliance to one selected group.
+- 2026-05-28 hardening completed the remaining gap:
+  - removed-group recurring instances are marked `superseded`
+  - group re-entry starts a fresh active series when no newer evidence exists
+  - historical training and recurring rows remain audit-visible without counting as active obligations
 
 ### Proposed direction
 

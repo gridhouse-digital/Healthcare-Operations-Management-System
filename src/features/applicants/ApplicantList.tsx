@@ -106,7 +106,7 @@ export function ApplicantList() {
                     onClick={() => {
                         syncMutation.mutate(undefined, {
                             onSuccess: () => toast.success('Synced with JotForm'),
-                            onError: (err) => toast.error(`Sync failed: ${err.message}`),
+                            onError: (err) => toast.error(err.message),
                         });
                     }}
                     disabled={syncMutation.isPending}

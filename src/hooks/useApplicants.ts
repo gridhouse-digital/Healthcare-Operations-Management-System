@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { parseEdgeFunctionError } from '@/lib/edgeFunctionError';
 import type { Applicant } from '@/types';
 
 interface ApplicantTenantOption {
@@ -70,13 +71,13 @@ export const useSyncApplicants = () => {
 
             if (error) {
                 console.error('Sync error:', error);
-                throw new Error(`Sync failed: ${error.message || JSON.stringify(error)}`);
+                throw new Error(await parseEdgeFunctionError(error));
             }
 
-            // Check if Edge Function returned an error in the body
-            if (data && typeof data === 'object' && 'error' in data) {
+            const bodyError = (data as { error?: { message?: string } } | null)?.error?.message;
+            if (bodyError) {
                 console.error('Edge Function returned error:', data);
-                throw new Error(data.error as string);
+                throw new Error(bodyError);
             }
 
             return data;

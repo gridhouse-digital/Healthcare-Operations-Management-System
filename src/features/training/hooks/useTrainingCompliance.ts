@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import type { TrainingComplianceRecord, TrainingEmployee, ComplianceStatus } from '../types';
+import { fetchAssignedGroupCourses } from './assignedGroupCourses';
 
 function isMissingSchema(error: unknown): boolean {
   const code = (error as { code?: string } | null)?.code;
@@ -52,6 +53,8 @@ async function fetchTrainingCompliance(): Promise<TrainingEmployee[]> {
     .select('*')
     .order('person_id');
 
+  const assignedGroupCourses = await fetchAssignedGroupCourses();
+
   if (recordsQuery.error && isMissingSchema(recordsQuery.error)) {
     recordsQuery = await supabase
       .from('v_training_compliance')
@@ -62,7 +65,6 @@ async function fetchTrainingCompliance(): Promise<TrainingEmployee[]> {
   const { data: records, error: recErr } = recordsQuery;
 
   if (recErr) throw recErr;
-
   // Index compliance records by person_id
   const recordsByPerson = new Map<string, TrainingComplianceRecord[]>();
   for (const row of (records ?? [])) {
@@ -74,9 +76,42 @@ async function fetchTrainingCompliance(): Promise<TrainingEmployee[]> {
     recordsByPerson.get(pid)!.push(rec);
   }
 
+  for (const row of assignedGroupCourses) {
+    if (!recordsByPerson.has(row.person_id)) {
+      recordsByPerson.set(row.person_id, []);
+    }
+
+    const existingByCourseId = new Set(recordsByPerson.get(row.person_id)!.map((record) => record.course_id));
+    if (existingByCourseId.has(row.course_id)) continue;
+
+    recordsByPerson.get(row.person_id)!.push({
+      training_record_id: `assigned:${row.person_id}:${row.course_id}`,
+      tenant_id: row.tenant_id,
+      person_id: row.person_id,
+      course_id: row.course_id,
+      course_name: row.course_name,
+      effective_status: 'not_started',
+      effective_completion_pct: 0,
+      effective_completed_at: null,
+      effective_training_hours: null,
+      raw_status: null,
+      raw_completion_pct: 0,
+      raw_completed_at: null,
+      raw_training_hours: null,
+      expires_at: null,
+      last_synced_at: null,
+      last_adjusted_at: null,
+      has_overrides: false,
+      enrolled_at: row.anchor_date,
+      derived_from_group: true,
+    });
+  }
+
   // Build TrainingEmployee array — every employee appears, even with 0 records
   return employees.map((person) => {
-    const personRecords = recordsByPerson.get(person.id) ?? [];
+    const personRecords = (recordsByPerson.get(person.id) ?? []).sort((a, b) =>
+      (a.course_name ?? '').localeCompare(b.course_name ?? '')
+    );
     const coursesAssigned = personRecords.length;
     const coursesCompleted = personRecords.filter(r => r.effective_status === 'completed').length;
     const completionPct = coursesAssigned > 0

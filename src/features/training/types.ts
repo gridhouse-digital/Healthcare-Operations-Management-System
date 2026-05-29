@@ -21,6 +21,7 @@ export interface TrainingComplianceRecord {
   last_adjusted_at: string | null;
   has_overrides: boolean;
   enrolled_at: string | null;
+  derived_from_group?: boolean;
 }
 
 /** Employee with joined people fields + aggregated compliance */
@@ -69,6 +70,19 @@ export interface EmployeeTrainingDetail {
     employee_status: string | null;
   };
   courses: TrainingComplianceRecord[];
+  historicalCourses: TrainingComplianceRecord[];
+  recurringHistory: Array<{
+    instance_id: string;
+    rule_name: string;
+    group_id: string;
+    cycle_number: number;
+    due_at: string;
+    completed_at: string | null;
+    completion_source: string | null;
+    compliance_status: 'not_yet_due' | 'due_soon' | 'due' | 'overdue' | 'completed';
+    visibility_state: string;
+    status_override: string | null;
+  }>;
   adjustments: TrainingAdjustment[];
   events: TrainingEvent[];
   stats: {

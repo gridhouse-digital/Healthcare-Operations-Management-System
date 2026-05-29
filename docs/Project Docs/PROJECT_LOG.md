@@ -3,6 +3,94 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-05-28 - JotForm applicant sync fix
+
+### What shipped
+
+- Diagnosed `listApplicants` 400: JotForm API key configured but `jotform_form_id_application` missing after Epic 5 column migration
+- Backfilled legacy JotForm form IDs for Prolific Homecare tenant in remote DB
+- Added migration `20260528000000_backfill_jotform_form_ids.sql`
+- Surfaced real Edge Function error messages in applicant sync (replaces generic non-2xx toast)
+- Added Application Form ID field to Settings → JotForm connector
+- Updated `save-connector` to persist form ID without requiring API key re-entry
+
+### Files changed
+
+- `supabase/migrations/20260528000000_backfill_jotform_form_ids.sql`
+- `supabase/functions/save-connector/index.ts`
+- `src/lib/edgeFunctionError.ts`
+- `src/hooks/useApplicants.ts`
+- `src/features/applicants/ApplicantList.tsx`
+- `src/features/settings/components/ConnectorSettingsPage.tsx`
+- `src/features/settings/hooks/useTenantSettings.ts`
+- `src/features/settings/types/tenant-settings.ts`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `npm run build` — pass (exit 0)
+
+### How to verify manually
+
+1. Applicants → **Sync JotForm** — should succeed for Prolific Homecare
+2. If misconfigured, toast shows specific message (e.g. missing form ID) not generic non-2xx
+3. Settings → JotForm — Application Form ID visible/editable
+
+### Deploy note
+
+- Run `npx supabase db push` for migration
+- Deploy `save-connector` Edge Function for settings UI form ID save path
+
+---
+## 2026-05-28 - Story 5.11 / 5.12 closeout: re-entry supersession + audit visibility
+
+### What shipped
+
+- Implemented explicit LearnDash group re-entry handling so returning to a previously removed group starts a fresh active recurring-compliance series when no newer assignment evidence exists
+- Added supersession behavior for removed-group recurring instances so open old-group obligations no longer leak back into active recurring dashboards
+- Rebuilt active recurring status logic to hide:
+  - inactive-group rows
+  - explicit `superseded` rows
+  - pre-reentry historical cycles
+  - rows filtered out by `primary_compliance_group_id`
+- Added a recurring audit view so historical and superseded cycles remain queryable for admin review
+- Added employee training-detail visibility for:
+  - historical/superseded training rows outside the active group context
+  - recurring compliance history rows hidden from active dashboards
+- Added shared recurring-compliance series tests covering:
+  - date normalization
+  - re-entry anchor resolution
+  - post-reentry cycle numbering
+  - completion-to-cycle mapping
+
+### Files changed
+
+- `supabase/functions/_shared/recurring-compliance-series.ts`
+- `supabase/functions/_shared/tests/recurring-compliance-series.test.ts`
+- `supabase/functions/sync-training/index.ts`
+- `supabase/functions/rebuild-compliance-instances/index.ts`
+- `supabase/functions/manage-recurring-compliance-instance/index.ts`
+- `supabase/migrations/20260528000001_story511_story512_reentry_supersession.sql`
+- `src/features/training/hooks/useEmployeeTrainingDetail.ts`
+- `src/features/training/EmployeeTrainingDetailPage.tsx`
+- `src/features/training/types.ts`
+- `docs/Project Docs/DECISIONS.md`
+- `docs/Project Docs/SCHEMA.md`
+- `docs/Project Docs/SPRINT_PLAN.md`
+- `docs/Project Docs/PROJECT_LOG.md`
+
+### Verified
+
+- `deno test --allow-env --allow-net _shared/tests/recurring-compliance-series.test.ts`
+- `deno check sync-training/index.ts rebuild-compliance-instances/index.ts manage-recurring-compliance-instance/index.ts`
+- `npm run build`
+
+### Notes
+
+- Re-entry now defaults to a fresh active series unless a newer training-record-derived anchor exists; manual anchors remain untouched
+- Historical recurring rows are preserved for audit through `v_recurring_compliance_audit` instead of being reused as active obligations
+
+---
 ## 2026-03-26 - Recurring compliance calendar-date hardening
 
 ### What shipped
