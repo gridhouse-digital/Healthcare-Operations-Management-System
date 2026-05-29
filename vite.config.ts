@@ -10,4 +10,10 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // Strip all console.* and debugger statements from production builds so that
+  // no PII (applicant data, AI assessments, etc.) is ever written to the
+  // browser console in production. Dev builds keep them for debugging.
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
 })

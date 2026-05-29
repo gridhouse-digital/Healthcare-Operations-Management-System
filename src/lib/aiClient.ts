@@ -28,8 +28,12 @@ async function callAI<T>(
     // or sometimes just the output if cached?
     // Let's handle both.
 
-    // Debug: Log the full response to understand structure
-    console.log("AI Response structure:", data);
+    // NOTE: never log the AI payload itself — it can contain applicant PII and
+    // AI assessments. Log only non-PII shape info for debugging.
+    console.debug("AI response received", {
+        keys: data ? Object.keys(data) : [],
+        from_cache: data?.from_cache ?? false,
+    });
 
     // Worker returns: { success: true, task, model, result: { response: "..." } }
     // Or from cache: { success: true, output: "...", from_cache: true }
@@ -57,15 +61,12 @@ async function callAI<T>(
     }
 
     if (!responseText) {
-        console.error("AI Response missing:", data);
+        console.error("AI response missing expected output field");
         throw new Error("AI did not return a response.");
     }
 
-    console.log("Extracted response:", responseText);
-
     // Check if responseText is already an object (not a string)
     if (typeof responseText === 'object') {
-        console.log("Response is already an object:", responseText);
         return responseText as T;
     }
 
@@ -73,12 +74,34 @@ async function callAI<T>(
         // The AI might wrap JSON in markdown code blocks ```json ... ```
         const cleanJson = responseText.replace(/```json\n?|\n?```/g, "").trim();
         const parsed = JSON.parse(cleanJson);
-        console.log("Parsed AI response:", parsed);
         return parsed as T;
     } catch (e) {
-        console.error("Failed to parse AI JSON:", responseText);
+        // Do not log the raw response — it may contain applicant PII.
+        console.error("AI returned invalid JSON (unparseable response)");
         throw new Error("AI returned invalid JSON.");
     }
+}
+
+// Top-level applicant keys that encode protected characteristics. Stripped
+// before sending to the AI so the model is never given them to reason about
+// (EEO input minimization — layered with the prompt-level EEO guardrail).
+// Note: JotForm `answers` blobs may still embed such data in free-form fields;
+// the prompt guardrail is the backstop for those.
+const PROTECTED_APPLICANT_KEYS = [
+    'date_of_birth', 'dob', 'birth_date', 'birthdate', 'age',
+    'gender', 'sex', 'race', 'ethnicity', 'nationality', 'national_origin',
+    'religion', 'marital_status', 'disability',
+];
+
+function stripProtectedAttributes<T extends Record<string, any>>(applicant: T): T {
+    if (!applicant || typeof applicant !== 'object') return applicant;
+    const clone: Record<string, any> = { ...applicant };
+    for (const key of Object.keys(clone)) {
+        if (PROTECTED_APPLICANT_KEYS.includes(key.toLowerCase())) {
+            delete clone[key];
+        }
+    }
+    return clone as T;
 }
 
 export const aiClient = {
@@ -86,14 +109,14 @@ export const aiClient = {
         return callAI<ApplicantSummary>(
             'ai-summarize-applicant',
             AIPrompts.summarizeApplicant(),
-            applicant
+            stripProtectedAttributes(applicant)
         );
     },
     rankApplicants: async (candidates: any[], job_description: string) => {
         return callAI<ApplicantRanking>(
             'ai-rank-applicants',
             AIPrompts.rankApplicants(job_description),
-            candidates
+            Array.isArray(candidates) ? candidates.map(stripProtectedAttributes) : candidates
         );
     },
     draftOfferLetter: async (details: any) => {
@@ -121,7 +144,6 @@ export const aiClient = {
 
         // Handle error returned in data
         if (data && data.error) {
-            console.error("AI returned specific error:", data.error);
             throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
         }
 
@@ -133,7 +155,7 @@ export const aiClient = {
         else if (data.response) responseText = data.response;
 
         if (!responseText) {
-            console.error("AI Response missing in onboarding logic:", data);
+            console.error("AI response missing expected output field (onboarding logic)");
             throw new Error("AI did not return a response.");
         }
 
@@ -145,7 +167,8 @@ export const aiClient = {
             const parsed = JSON.parse(cleanJson);
             return parsed as OnboardingSummary;
         } catch (e) {
-            console.error("Failed to parse AI JSON:", responseText);
+            // Do not log the raw response — it may contain employee PII.
+            console.error("AI returned invalid JSON (onboarding logic)");
             throw new Error("AI returned invalid JSON.");
         }
     },

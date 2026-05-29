@@ -13,11 +13,11 @@ export interface ScoreBreakdown {
 }
 
 export function calculateApplicantScore(applicant: any): ScoreBreakdown {
-    // Debug: Log applicant structure to understand data format
-    console.log('Calculating score for applicant:', {
+    // Log only the applicant id + the set of answer keys (no values) so we
+    // never write applicant PII (names, addresses, answers) to the console.
+    console.debug('Calculating applicant score', {
         id: applicant?.id,
         answersKeys: applicant?.answers ? Object.keys(applicant.answers) : [],
-        sampleAnswers: applicant?.answers
     });
 
     let total = 0;
