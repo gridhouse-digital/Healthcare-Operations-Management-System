@@ -12,14 +12,32 @@ function getSchemaString(schema: z.ZodTypeAny): string {
     return JSON.stringify(jsonSchema, null, 2);
 }
 
+// Shared EEO / anti-bias guardrail injected into any prompt that evaluates or
+// ranks candidates. AI hiring tools must not consider protected characteristics
+// (EEOC/Title VII/ADEA/ADA, NYC Local Law 144, EU AI Act).
+const EEO_GUARDRAIL = `
+    EQUAL-OPPORTUNITY REQUIREMENT (MANDATORY):
+    Assess candidates ONLY on job-related qualifications: skills, experience, certifications,
+    licenses, education, and availability. You MUST NOT consider, infer, mention, or be
+    influenced by any protected characteristic, including: age or date of birth, sex or gender,
+    race or ethnicity, national origin, religion, disability or medical condition, pregnancy,
+    marital or family status, sexual orientation, or genetic information. If the input contains
+    any such attribute, ignore it entirely. Never cite a protected characteristic as a strength,
+    risk, or ranking factor.`;
+
 export const AIPrompts = {
     summarizeApplicant: () => `
     You are an expert HR Assistant for Prolific Homecare, a healthcare staffing company.
 
+    ${EEO_GUARDRAIL}
+
     TASK: Analyze the applicant's information and CREATE a professional summary with the following:
     1. A concise professional summary (2-3 sentences about their background and fit for healthcare roles)
     2. List 3-5 key strengths based on their experience, skills, and qualifications
-    3. List any potential risks or concerns (employment gaps, incomplete information, lack of certifications, etc.)
+    3. List any potential risks or concerns. ONLY job-related concerns are permitted: employment gaps,
+       incomplete information, lack of required certifications/licenses, or insufficient relevant experience.
+       NEVER list age, date of birth, sex, gender, race, ethnicity, national origin, religion, disability,
+       marital/family status, or any other protected characteristic as a strength or a risk.
     4. Provide salary insights based on their experience level (e.g., "$15-18/hour for entry-level CNA")
     5. Extract relevant skill tags (e.g., "Home Health Care", "CNA Certified", "Bilingual", "Full-time Available")
 
@@ -41,7 +59,9 @@ export const AIPrompts = {
     You are an expert HR Recruiter.
     Your task is to rank the provided list of applicants based on their fit for the following Job Description:
     "${jobDescription}"
-    
+
+    ${EEO_GUARDRAIL}
+
     You MUST respond with valid JSON only. No prose outside the JSON.
     
     The JSON must adhere to this schema:
