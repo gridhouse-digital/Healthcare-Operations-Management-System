@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { render } from "npm:@react-email/render@0.0.7";
 import * as React from "npm:react@18.3.1";
 import { WelcomeEmail } from "../_shared/emails/WelcomeEmail.tsx";
+import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
+import { TenantGuardError } from "../_shared/tenant-guard.ts";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -15,6 +17,12 @@ serve(async (req) => {
     }
 
     try {
+        // Auth FIRST: this EF is invoked by the on_offer_accepted DB webhook
+        // (service-role JWT → mode "cron"). A user JWT is also accepted. The
+        // request is rejected if neither is present. tenant_id is NEVER taken
+        // from the body — it is derived from the applicant record below.
+        const auth = cronOrTenantGuard(req)
+
         const supabaseClient = createClient(
             Deno.env.get('SUPABASE_URL') ?? '',
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -43,9 +51,23 @@ serve(async (req) => {
             throw new Error(`Applicant not found: ${applicantError?.message}`)
         }
 
-        // 3. Fetch tenant settings (WP credentials & group map)
-        // Determine tenant from applicant (or fallback to known tenant)
-        const tenantId = applicant.tenant_id || '11111111-1111-1111-1111-111111111111';
+        // 3. Determine tenant from the server-trusted applicant record ONLY.
+        // Never trust record.tenant_id from the request body. No hardcoded fallback.
+        const tenantId = applicant.tenant_id;
+        if (!tenantId) {
+            throw new Error(`Applicant ${applicantId} has no tenant_id; cannot onboard`);
+        }
+        // If the webhook payload carried a tenant_id, it must match the applicant's.
+        if (record.tenant_id && record.tenant_id !== tenantId) {
+            throw new Error('tenant_id mismatch between offer payload and applicant record');
+        }
+        // Defense-in-depth: if invoked by an authenticated user (not cron), the
+        // caller's tenant must match the applicant's tenant.
+        if (auth.mode === 'user' && auth.tenantId !== tenantId) {
+            throw new Error('Caller tenant does not match applicant tenant');
+        }
+
+        // Fetch tenant settings (WP credentials & group map)
         const PGCRYPTO_KEY = Deno.env.get("PGCRYPTO_ENCRYPTION_KEY") ?? "";
 
         const { data: tenantSettings, error: settingsError } = await supabaseClient
@@ -245,9 +267,11 @@ serve(async (req) => {
         )
 
     } catch (error) {
+        const status = error instanceof TenantGuardError ? error.status : 400
+        const message = error instanceof Error ? error.message : String(error)
         return new Response(
-            JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+            JSON.stringify({ error: message }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }
         )
     }
 })
