@@ -1,5 +1,9 @@
 # INTEGRATIONS — HOMS
 
+> [!CAUTION]
+> **[FRESHNESS REVIEW REQUIRED]** — Last updated 2026-03-06, before Epic 5 changes. Verify
+> per-integration details against current code before relying on them. Flagged by the 2026-05-29 doc audit.
+
 > Per-integration reference: auth method, endpoints, sync cadence, idempotency, retry rules.
 > Updated: 2026-03-06
 

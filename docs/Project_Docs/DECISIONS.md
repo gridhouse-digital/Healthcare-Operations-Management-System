@@ -1,5 +1,8 @@
 # DECISIONS — HOMS
 
+> **Hierarchy rank:** 5 (current — authoritative for design rationale / "why" behind the codebase).
+> Companion to the rank-5 current capability/domain/gap docs. Registered by the 2026-05-29 doc audit.
+
 > Architecture, product, and security decisions. Most recent first.
 > Format: ## [DATE] Title | What | Why | Alternatives considered
 

@@ -3,6 +3,33 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-05-29 - Documentation governance audit promotion
+
+Promoted the documentation governance audit decisions, establishing a strict canonical hierarchy and clearing out stale mirrors.
+
+### What shipped
+
+- Promoted `DECISIONS.md`, `SCHEMA.md`, and `ISSUES.md` to Rank-5 authority in the documentation hierarchy.
+- Flagged stale parent-folder documents (`RUNBOOK.md`, `INTEGRATIONS.md`, `CLAUDE.md`, `DESIGN_SYSTEM.md`) with `[FRESHNESS REVIEW REQUIRED]`.
+- Archived the rejected pitch document (`BADIDEAS_PITCH_HOM.md`) to preserve active context cleanliness.
+- Rewrote 6 absolute OneDrive paths in the master specification to use canonical relative workspace paths.
+- Updated BMAD status across all governance documents to accurately reflect its installed and running state.
+
+### Files changed
+
+- `docs/Project_Docs/DECISIONS.md`
+- `docs/Project_Docs/SCHEMA.md`
+- `docs/Project_Docs/ISSUES.md`
+- `docs/Project_Docs/RUNBOOK.md`
+- `docs/Project_Docs/INTEGRATIONS.md`
+- `docs/Project_Docs/CLAUDE.md`
+- `docs/Project_Docs/DESIGN_SYSTEM.md`
+- `docs/Archive/BADIDEAS_PITCH_HOM.md`
+- `docs/architecture/homs-platform-expansion-implementation-spec.md`
+- `docs/bmad/documentation-governance.md`
+- `docs/Project_Docs/PROJECT_LOG.md`
+
+---
 ## 2026-05-29 - Phase 0 remediation: tenant-guard hardening of 5 Edge Functions
 
 Remediated the 5 non-compliant Edge Functions from the Phase 0 audit. Source of truth:

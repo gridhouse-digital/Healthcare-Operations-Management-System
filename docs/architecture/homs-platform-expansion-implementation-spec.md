@@ -1479,12 +1479,12 @@ This specification supersedes and consolidates guidance from:
 
 | Document | Status | Relationship |
 |---|---|---|
-| [homs-existing-platform-summary.md](file:///c:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/docs/product/homs-existing-platform-summary.md) | Current | Source of truth for what HOMS does today |
-| [homs-current-capability-map.md](file:///c:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/docs/audits/homs-current-capability-map.md) | Current | Evidence-based inventory of current capabilities |
-| [homs-current-domain-map.md](file:///c:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/docs/architecture/homs-current-domain-map.md) | Current | Logical domain boundaries in current code |
-| [homs-gap-register.md](file:///c:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/docs/audits/homs-gap-register.md) | Current | Known gaps driving Phase 0-1 priorities |
-| [homs-planned-capability-map.md](file:///c:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/docs/audits/homs-planned-capability-map.md) | Current | Future capability aspirations (not shipped) |
-| [homs-jotform-replacement-strategy.md](file:///c:/Users/oyiny/OneDrive/2025/manueltech/Projects/Prolific%20Homecare%20LLC/Prolific%20HR%20-%20Command%20Centre/docs/architecture/homs-jotform-replacement-strategy.md) | Current | JotForm migration governance |
+| [homs-existing-platform-summary.md](../product/homs-existing-platform-summary.md) | Current | Source of truth for what HOMS does today |
+| [homs-current-capability-map.md](../audits/homs-current-capability-map.md) | Current | Evidence-based inventory of current capabilities |
+| [homs-current-domain-map.md](./homs-current-domain-map.md) | Current | Logical domain boundaries in current code |
+| [homs-gap-register.md](../audits/homs-gap-register.md) | Current | Known gaps driving Phase 0-1 priorities |
+| [homs-planned-capability-map.md](../audits/homs-planned-capability-map.md) | Current | Future capability aspirations (not shipped) |
+| [homs-jotform-replacement-strategy.md](./homs-jotform-replacement-strategy.md) | Current | JotForm migration governance |
 | homs-platform-evolution-plan.md | Superseded by this document | Original evolution plan (partial) |
 
 ## Appendix B: Glossary

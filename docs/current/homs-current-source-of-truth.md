@@ -12,8 +12,8 @@
 - Phase 0 tenant-guard remediation is **complete, pushed, and merged into `main`**.
 - **Phase 0 gate is MET.**
 - **Phase 1 has not started.**
-- **BMAD is not installed yet.**
-- Before installing or using BMAD, agents **must** read, in order:
+- **BMAD is installed and running.** It is scoped to **documentation, brainstorming, review, and handoff planning only**. BMAD must not modify application code unless explicitly instructed.
+- Before using BMAD for any task, agents **must** read, in order:
   1. `docs/architecture/homs-platform-expansion-implementation-spec.md`
   2. `docs/current/homs-current-source-of-truth.md`
   3. `docs/bmad/documentation-governance.md`

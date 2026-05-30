@@ -1,3 +1,8 @@
+> [!NOTE]
+> **ARCHIVED** — Pitch/scratchpad, not active project context. Moved from `docs/Project_Docs/` to
+> `docs/Archive/` by the 2026-05-29 documentation audit (owner-approved). Historical record only; not
+> part of the source-of-truth hierarchy.
+
 # BADideas.fund × Anthropic — HOM pitch
 
 This is a copy-ready pitch pack for BADideas.fund’s Anthropic partnership pipeline: deck outline + memo + concrete AI/Anthropic roadmap.
