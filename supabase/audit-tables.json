@@ -9,7 +9,8 @@
     "training_adjustments",
     "credentials",
     "policy_acknowledgements",
-    "compliance_exports"
+    "compliance_exports",
+    "identity_collisions"
   ],
   "exempt": [
     "tenants",

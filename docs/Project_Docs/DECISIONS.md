@@ -8,6 +8,80 @@
 
 ---
 
+## 2026-05-30 | Phase 1 lifecycle decisions (Q1–Q5): hired_at, status model, job_title, conversion authority, identity precedence
+
+> Owner rulings that gate the Phase 1 lifecycle-stabilization implementation. Source handoff:
+> `docs/bmad/working-notes/2026-05-29-phase-1-lifecycle-stabilization-handoff.md`. Implements master
+> spec §3 Priorities 1–2 and §20 Phase 1. These decisions are binding on the future code task.
+
+### Q1 — `people.hired_at` is the legal employment start date
+
+**What:** `people.hired_at` stores the legal employment start date from the **accepted offer** (`offer.start_date`). It is NOT the button-click time, row-creation time (`created_at`), sync-discovery time, or onboarding-start time. Once populated it is immutable to automated sync and conversion retries. Corrections require an explicit, audited HR action — not an incidental side effect of editing/reprocessing an offer. If the accepted offer has no `start_date`, conversion **fails with an actionable error**.
+**Why:** A hire date is a business fact that can anchor deadlines, recurring-compliance cycles, probation windows, and reporting. A conversion timestamp is merely a system event; the two must be stored separately.
+**Alternatives:** Use conversion/creation timestamp — rejected (conflates a system event with a legal fact). Silently default a missing date — rejected (produces wrong compliance anchors).
+**Consequence:** Conversion reads `offer.start_date`; NFR-3 sync boundary already forbids overwriting `hired_at` once set. Separation of facts: legal start → `hired_at`; record creation → `created_at`; conversion event → `audit_log`; provisioning → `integration_log`.
+
+### Q2 — `employee_status` is resolved deterministically; lifecycle ≠ compliance
+
+**What:** `people.employee_status` is `Onboarding` | `Active` | `Terminated`, written **only** by one idempotent resolver. `Active` = mandatory onboarding obligations complete and safely evaluable. `Onboarding` = obligations incomplete, missing, or not safely evaluable (**fail-closed** — the resolver never guesses; missing rule/group-mapping/anchor/sync ⇒ `Onboarding` + a machine-readable diagnostic reason code). `Terminated` is HR-controlled and **cannot be reversed by automation**. Ongoing compliance failures do **not** revert an established employee to `Onboarding`.
+**Why:** Lifecycle state (where the employee is in the relationship), compliance state (are current obligations met), and staffing eligibility are three distinct concepts. An established employee with an expired annual credential should stay `Active` while becoming `non_compliant`/ineligible — moving them back to `Onboarding` would misrepresent history.
+**Alternatives:** Define `Active` as "fully compliant forever" — rejected (conflates onboarding with ongoing compliance). Compute status inline at conversion time (current behavior) — rejected (snapshot taken by one path against a maybe-missing view; non-deterministic).
+**Consequence:** Resolver is the sole automated writer of `employee_status`, idempotent, re-invoked after conversion and after relevant training/group changes, preserves explicit `Terminated`, emits reason codes. A **separate** compliance state (`compliant`/`non_compliant`/`unknown`/`configuration_error`) is introduced. Future Care-Ops staffing eligibility = `Active` AND `compliant` AND current credentials (deferred — not Phase 1).
+
+### Q3 — `job_title` authoritative source is the accepted offer's `position_title`
+
+**What:** During conversion, `people.job_title` is sourced from the accepted offer's `position_title`. A missing title **blocks conversion** with an actionable error (no silent `'To Be Assigned'` default). Automated connector sync must not silently replace an HR-authoritative title; later title changes require an explicit audited HR workflow.
+**Why:** The accepted offer is the most specific accepted employment agreement. Applicant-selected role, requisition title, ATS profile, and WP role are weaker/staler sources; a hardcoded placeholder silently breaks LearnDash mapping and reporting.
+**Alternatives:** Default to placeholder — rejected. Source from applicant/requisition — rejected (aspirational/broad).
+**The authoritative contract:**
+```text
+sendOffer request.position
+  -> offers.position_title          (persisted; authoritative once the offer exists)
+  -> onboard-employee reads record.position_title
+  -> people.job_title
+```
+The input name `position` is an **API boundary detail**; the persisted DB field `position_title` is authoritative once the offer exists.
+**Consequence + verified bug to fix:** `onboard-employee/index.ts:41` reads `record.position`, but the `offers` row has only `position_title` (`20251128000001_create_offers_table.sql:6`; `Offer` type `src/types/index.ts:24`) — so `record.position` is `undefined`. (`sendOffer` accepts an input param `position` and persists it as `position_title`; the defect is the **read side** in `onboard-employee`.) Phase 1 must: (a) fix the read side to use `record.position_title`, and (b) add a regression test using the **persisted offer-row shape**. **Do NOT rename the `sendOffer` request parameter** unless a broader API cleanup is intentionally scoped — this is a targeted lifecycle bug, not a schema issue.
+
+### Q4 — One server-side conversion authority; conversion and provisioning are separate idempotent steps
+
+**What:** HOMS has **one server-side** applicant-to-employee conversion authority. The browser must not perform multi-step conversion writes; client code becomes a thin caller. The accepted-offer trigger and authorized UI actions enter the **same** server-side workflow. An authorized retry re-runs provisioning **without creating another employee row**.
+
+**MANDATORY responsibility split (locked 2026-05-30):**
+> Internal applicant-to-employee conversion and external WordPress/LearnDash provisioning **MUST** be separate idempotent steps with independent failure and retry handling. The **preferred** implementation is a dedicated `convert-applicant` Edge Function invoking `onboard-employee` for provisioning. An alternative structure is acceptable **only if** it preserves the same transactional boundary, retry semantics, and single-writer authority.
+
+The split of *responsibilities* is mandatory; two separately deployed Edge Functions are **not** mandated — the constraint is the transactional boundary, not the deployment topology.
+**Why:** Conversion is a business transaction with tenancy/audit/retry/idempotency requirements. Client-side orchestration creates partial-state risk on disconnect, tab-close, retry, WP-succeeds-but-LearnDash-fails, concurrent admins, or webhook↔UI race. External APIs can fail *after* the DB conversion succeeds; HOMS must preserve internal truth and support retries. Coupling internal employee creation to unreliable external APIs is the failure mode this prevents.
+**Alternatives:** Keep conversion in the browser/`employeeService` — rejected (partial-state risk). Treat conversion+provisioning as one indivisible transaction — **rejected and now forbidden** (couples internal truth to external API reliability). Single EF owning both responsibilities — acceptable only if it preserves the mandatory boundary/retry/single-writer guarantees above.
+**Consequence:** Idempotency on `(tenant_id, normalized_email)`; conversion retries → exactly one `people` row; existing valid `hired_at` never overwritten; WP lookup-before-create; LearnDash enrollment retries don't duplicate membership; integration failures stay visible in `integration_log`; no silent failure.
+
+### Q5 — Identity reconciliation is tenant-scoped and fail-safe
+
+**What:** Precedence: (1) scope every query by `tenant_id`; (2) exact `applicant_id` linkage wins; (3) else exactly one normalized-email match within that tenant auto-links; (4) zero matches ⇒ create new employee when the workflow permits; (5) multiple matches or conflicting evidence ⇒ **do not auto-link/merge** — record an unresolved identity collision for manual HR review. Normalization is `trim(lowercase(email))`, applied identically in DB uniqueness, reconciliation code, and tests. No provider-specific transforms (e.g. Gmail dot-stripping) without explicit approval.
+**Why:** Email is the practical dedup key but not infallible (reuse, case/whitespace, typos, imported dupes, changed addresses, conflicting applicant/WP records). "Most recently updated wins" is unacceptable — recency is not evidence of identity. Cross-tenant matching must never happen.
+**Alternatives:** Recency-wins tie-break — rejected. Auto-merge on any email match — rejected (silent wrong merges). Provider-specific normalization — rejected unless approved (can merge distinct addresses).
+**Consequence:** Phase 1 defines a durable unresolved-collision state (tenant, candidate record IDs, source system, normalized email, reason code, timestamp, resolution status, resolving actor + audit trail). An admin review UI may follow if it can't fit the first slice. `findEmployeeMatch` precedence moves into `_shared/identity.ts`; cross-tenant non-match is asserted inside the Phase 0 RLS suite.
+
+### Implementation addendum (2026-05-30, code task) — schema/rollback details
+
+The Phase 1 code task surfaced two details worth recording beyond the Q1–Q5 rulings:
+
+1. **`people.employee_status` pre-existed** (`20260309000003`) as `TEXT DEFAULT 'Active'` with a CHECK in {Active, Onboarding, Terminated}. The handoff framed the status column as a new, null-backfilled column; in reality only the **default** needed changing. Migration `20260530000001` therefore **drops the `'Active'` default** (so the fail-closed resolver — not a column default — is the authoritative writer; a row with no resolver run is NULL, never a false `Active`) and adds the **separate `compliance_state`** column + the `identity_collisions` ledger. No existing-row backfill (out of scope; NFR-3). **Rollback:** `alter table public.people alter column employee_status set default 'Active'; drop table identity_collisions; alter table public.people drop column compliance_state;` (NULL-only backfill ⇒ non-destructive drop).
+
+2. **Trigger repoint (Q4 split).** `on_offer_accepted` previously invoked `onboard-employee` directly (`20260529000000`). Under the mandatory conversion↔provisioning split, migration `20260530000002` repoints the trigger to `convert-applicant` (the conversion authority), which then invokes `onboard-employee` for external provisioning. **Rollback:** drop `notify_convert_applicant()` + re-create the `notify_onboard_employee()` trigger from `20260529000000`. The `convert-applicant` → `onboard-employee` call passes the service-role key and `{ record: { applicant_id, status:'Accepted' }, person_id }`; `onboard-employee` is update-only on `people` (no duplicate row on retry).
+
+### Verification addendum (2026-05-30) — live-gate results + two open decisions
+
+The Phase 1 code task was verified against a **live disposable Supabase stack** (local `supabase start` + full `migration up`), not just static checks. Three things to record:
+
+3. **CV-1 latent gap closed defensively (not a rewrite).** Audit confirmed **no code path creates a `type='candidate'` `people` row** (`detect-hires-bamboohr/jazzhr` and `sync-wp-users` all insert `type:'employee'`; JotForm only reads), so the reviewer's "P0 conversion blocker" cannot fire on current data. Rather than the proposed UPDATE-in-place rewrite of the conversion critical path, `_shared/conversion.ts` gained a 3-line **defensive fallback**: if the `type='employee'` re-select misses after the `ON CONFLICT DO NOTHING` upsert, it adopts the existing same-email row and flips its `type` to `employee` (one row, no duplicate). No behavior change on current data; covered by a `conversion.test.ts` case.
+
+4. **`employee_status` backfill — DEFERRED (grandfather, with proof of mechanism).** The live DB confirmed `people.employee_status` now has **no column default** (the resolver is the sole writer; new rows are NULL, never a false `Active`). A meaningful "ambiguous existing `Active` rows" count requires a **production** snapshot (the disposable DB has none). Because the resolver's *"established `Active` stays `Active`"* rule (Q2) means a naive re-resolve will **not** correct historically-misclassified rows, any backfill must be a deliberate **reset-then-resolve** migration — explicitly **out of scope** here (the handoff excluded existing-employee backfill; NFR-3 forbids rewriting `hired_at`). **Decision:** ship Phase 1 without backfill; spin off a separate risk-managed **Phase 1.1 reset-then-resolve** task if a production count shows material ambiguous `Active` rows.
+
+5. **CV-3 rehire-via-row-reuse — OWNER RULING NEEDED (no code change made).** When a previously-`Active` employee is rehired by reusing their existing `people` row, the resolver keeps them `Active` even if fresh onboarding obligations are unmet — this is **literal Q2 behavior** ("established Active stays Active"; lifecycle ≠ compliance). Whether a rehire should re-enter `Onboarding` is a **product decision**, not a bug. **Decision:** leave current behavior as-is; obtain an explicit owner ruling. Only add a rehire-detection branch (e.g. reset to `Onboarding` on group re-entry with unmet mandatory courses) if the owner rules the current behavior wrong. Related: [[phase-0-tenant-guard-remediation]] follow-ups.
+
+---
+
 ## 2026-05-28 | LearnDash group re-entry starts a new active compliance series by default
 
 **What:** When a person returns to a previously removed LearnDash group and there is no newer assignment evidence than the old anchor, the HR app starts a fresh active recurring-compliance series from the re-entry date and marks the prior open series rows as `superseded`.

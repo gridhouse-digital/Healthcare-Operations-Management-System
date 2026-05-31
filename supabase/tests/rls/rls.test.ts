@@ -43,6 +43,7 @@ import {
   SKIP_MESSAGE,
 } from "./_harness.ts";
 import { type SeededIds, seedTenant } from "./_seed.ts";
+import { findEmployeeMatch } from "../../functions/_shared/identity.ts";
 
 const env = loadEnv();
 
@@ -168,6 +169,79 @@ for (const { table, idOf } of CASES) {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Phase 1 ID-5: cross-tenant identity reconciliation must NOT match across
+// tenants. findEmployeeMatch is scoped by tenant_id; under an RLS-active client
+// the other tenant's row is invisible, so the SAME normalized email in another
+// tenant yields `none` (never a match, never a collision pointing at B's row).
+// This is the merge-gate cross-tenant assertion required by the Phase 1 handoff.
+// ---------------------------------------------------------------------------
+
+Deno.test({
+  name: "Phase1 ID-5: findEmployeeMatch does NOT match the same email across tenants (RLS-scoped)",
+  ignore: !env,
+  ...wrap,
+  fn: async () => {
+    const { h, seedB } = await ensureSetup();
+
+    // applicant_id is a uuid column — a syntactically-valid but non-existent
+    // UUID lets us exercise the email branch without an applicant_id match
+    // (a non-uuid string would be rejected by Postgres as 22P02).
+    const ABSENT_APPLICANT_ID = "00000000-0000-0000-0000-0000000000ff";
+
+    // Tenant B's seeded employee email (created by seedTenant).
+    const sharedEmail = `person-b-${h.runId}@example.test`;
+
+    // (1) PURE cross-tenant non-match: Tenant A has NO row with this email.
+    //     Reconciling as Tenant A must yield `none` — B's row is RLS-invisible,
+    //     so no match and no collision pointing at B. This is the core ID-5 claim.
+    const crossOnly = await findEmployeeMatch({
+      client: h.tenantA.client,
+      tenantId: h.tenantA.tenantId,
+      applicantId: ABSENT_APPLICANT_ID,
+      email: sharedEmail,
+    });
+    assertEquals(
+      crossOnly.outcome,
+      "none",
+      "Tenant A must NOT match (or collide on) Tenant B's same-email row",
+    );
+
+    // (2) Positive control: give Tenant A its OWN row with the SAME normalized
+    //     email. Reconciling as Tenant A now matches A's row only — never B's.
+    await h.admin.from("people").insert({
+      tenant_id: h.tenantA.tenantId,
+      email: sharedEmail,
+      first_name: "Shared",
+      last_name: "EmailA",
+      type: "employee",
+    });
+
+    const asA = await findEmployeeMatch({
+      client: h.tenantA.client,
+      tenantId: h.tenantA.tenantId,
+      applicantId: ABSENT_APPLICANT_ID,
+      email: sharedEmail,
+    });
+    assertEquals(asA.outcome, "matched", "Tenant A should match its OWN same-email row");
+    if (asA.outcome === "matched") {
+      assertEquals(asA.employee.tenant_id, h.tenantA.tenantId);
+      assertEquals(
+        asA.employee.id !== seedB.personId,
+        true,
+        "Tenant A's match must not be Tenant B's row",
+      );
+    }
+
+    // Cleanup the extra row we inserted for this assertion.
+    await h.admin
+      .from("people")
+      .delete()
+      .eq("tenant_id", h.tenantA.tenantId)
+      .eq("email", sharedEmail);
+  },
+});
 
 // ===========================================================================
 // 2. ai_cache — PK is input_hash (text), so the id-keyed matrix above does not
