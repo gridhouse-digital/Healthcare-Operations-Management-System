@@ -1,5 +1,10 @@
 # RUNBOOK — HOMS
 
+> [!CAUTION]
+> **[FRESHNESS REVIEW REQUIRED]** — Last updated 2026-03-11, before Epic 5 multi-tenant changes and
+> legacy-table drops. Verify against current code/schema before relying on these steps. Flagged by the
+> 2026-05-29 doc audit.
+
 > How to run, test, deploy, and troubleshoot. Updated: 2026-03-11.
 
 ---

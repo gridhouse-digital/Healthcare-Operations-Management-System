@@ -1,5 +1,11 @@
 # CLAUDE.md — HOMS App (prolific-hr-app/)
 
+> [!CAUTION]
+> **[FRESHNESS REVIEW REQUIRED]** — Last updated 2026-03-10. Predates Epic 5 (legacy `employees`/`profiles`
+> drops, tenant-scoped JotForm) and the recurring-compliance subsystem. The Documentation Index at the
+> bottom still references the legacy space-named `docs/Project Docs/` path — use `docs/Project_Docs/`
+> (underscore) per documentation-governance §3. Verify before relying on it. Flagged by the 2026-05-29 doc audit.
+
 This file provides detailed guidance for the **HOMS** (Healthcare Operations Management System) application. It is referenced by the root `CLAUDE.md` and should be read before making any changes to this codebase.
 
 ## Project Overview

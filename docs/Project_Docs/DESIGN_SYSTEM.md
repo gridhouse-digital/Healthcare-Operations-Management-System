@@ -1,5 +1,9 @@
 # Prolific HR Design System
 
+> [!CAUTION]
+> **[FRESHNESS REVIEW REQUIRED]** — Last updated 2026-05-01. Verify against current UI components
+> before relying on it as canonical. Flagged by the 2026-05-29 doc audit.
+
 ## Purpose
 
 This document is the canonical UI reference for `prolific-hr-app`.

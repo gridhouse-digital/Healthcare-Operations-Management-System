@@ -4,6 +4,24 @@ This file is the primary guidance file loaded by Claude Code for this repository
 
 ---
 
+## ⚠️ BMAD / Phase Status (read before any BMAD work)
+
+- Phase 0 tenant-guard remediation is **complete, pushed, and merged into `main`**.
+- **Phase 0 gate is MET.**
+- **Phase 1 has not started.**
+- **BMAD is installed and running.** It is scoped to **documentation, brainstorming, review, and handoff planning only.**
+- **BMAD must NOT modify application code unless explicitly instructed.** (Code-writing BMAD skills — e.g. `bmad-dev-story`, `bmad-quick-dev`, `bmad-create-story` — are out of scope unless the user explicitly directs a code change.)
+- Before using BMAD for any task, agents **must** read, in order:
+  1. `docs/architecture/homs-platform-expansion-implementation-spec.md` (primary source of truth)
+  2. `docs/current/homs-current-source-of-truth.md`
+  3. `docs/bmad/documentation-governance.md`
+  4. `docs/bmad/agent-handoff-template.md`
+- BMAD is for **documentation governance, brainstorming, architecture review, PRD refinement, phase planning, and agent handoff prompts**.
+- **Old docs outside the app folder are untrusted until reviewed.**
+- **Folk Care is reference only — do not copy code from it.**
+
+---
+
 ## Product Context
 
 HOMS is a **multi-tenant, compliance-grade operations platform for healthcare agencies**. It automates the hire-to-onboard pipeline:

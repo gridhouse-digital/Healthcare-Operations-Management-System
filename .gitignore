@@ -62,6 +62,15 @@ BMAD/
 _bmad/
 _bmad-output/
 
+# BMAD / AI local runtime artifacts
+.bmad-cache/
+.bmad-output/
+.bmad-tmp/
+.bmad-logs/
+.bmad-sessions/
+.bmad-local/
+.bmad-memory/
+
 # Reference / prototype directories
 Backup/
 Design Inspiration/

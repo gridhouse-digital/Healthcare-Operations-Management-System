@@ -1,5 +1,8 @@
 # SCHEMA — HOMS
 
+> **Hierarchy rank:** 5 (current — authoritative for table structure / RLS notes).
+> Registered by the 2026-05-29 doc audit.
+
 > Canonical table reference. Updated: 2026-03-11.
 > All tables have RLS enabled. Tenant-scoped MVP tables have audit triggers. `tenant_access_requests` is the intentional pre-tenant exception because `audit_log` requires a tenant context.
 

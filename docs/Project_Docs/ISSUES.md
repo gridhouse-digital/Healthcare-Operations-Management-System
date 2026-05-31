@@ -1,3 +1,8 @@
+# ISSUES — HOMS
+
+> **Hierarchy rank:** 5 (current — authoritative for active issue tracking).
+> Registered by the 2026-05-29 doc audit.
+
 ## Known Issues
 
 This document tracks active product and engineering issues that require follow-up.
