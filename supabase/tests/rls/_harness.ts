@@ -161,6 +161,9 @@ export async function setupHarness(env: RlsEnv): Promise<Harness> {
   const teardown = async () => {
     // Children first (FKs), then tenants, then users. Service role bypasses RLS.
     for (const t of [tenantA, tenantB]) {
+      // Phase 0.1 leak tables (ai_logs.tenant_id is legacy TEXT — eq() coerces).
+      await admin.from("ai_logs").delete().eq("tenant_id", t.tenantId);
+      await admin.from("ai_cache").delete().eq("tenant_id", t.tenantId);
       await admin.from("audit_log").delete().eq("tenant_id", t.tenantId);
       await admin.from("employee_compliance_instances")
         .delete().eq("tenant_id", t.tenantId);
