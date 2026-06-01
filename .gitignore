@@ -55,7 +55,6 @@ prolific-hr-app/
 .claude/
 .cursor/
 .gemini/
-.github/
 
 # BMAD framework files
 BMAD/
