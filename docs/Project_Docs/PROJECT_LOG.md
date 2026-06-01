@@ -3,6 +3,70 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-01 - P0 fix: ai-summarize-applicant tenant isolation + SSRF
+
+Closed the live cross-tenant write + SSRF in the deployed `ai-summarize-applicant`
+Edge Function (the 3rd isolation gap found). Branch:
+`fix/ai-summarize-applicant-tenant-isolation` (off `main`). **Not yet deployed —
+deploy is a separate credentialed step.**
+
+### What shipped (code)
+
+- `supabase/functions/ai-summarize-applicant/handler.ts` (new) — handler extracted
+  from `index.ts` for unit testing. Now:
+  1. Derives tenant from the JWT via `tenantGuard(req)` (was `getContext` →
+     `x-tenant-id` header). The `x-tenant-id` header is ignored and removed from
+     the advertised CORS allow-headers. Missing/invalid JWT → 401/403.
+  2. Fetches the applicant scoped by `(id, JWT tenant_id)` before any work; a row
+     outside the caller's tenant → 404, no further processing.
+  3. Scopes the `resume_text` write with `.eq('tenant_id').eq('id')`.
+  4. Sources `resume_url`/`resume_text` from the verified DB row, never the request
+     body — kills the SSRF + forged-input vector. Added an `isAllowedResumeUrl()`
+     guard (https-only, host allowlist incl. Supabase + JotForm, rejects
+     loopback/link-local/private ranges).
+- `supabase/functions/ai-summarize-applicant/index.ts` — now just wires
+  `serve()` → `handleSummarize()`.
+- `supabase/functions/_shared/tests/ai-summarize-applicant.test.ts` (new) — 8 tests
+  using the real `tenantGuard`: (a) spoofed `x-tenant-id` ignored, (b) cross-tenant
+  id → 404 + no write, (c) own-tenant happy path, (d) `resume_url` sourced from DB +
+  tenant-scoped write, (e) missing JWT → 401, plus 3 `isAllowedResumeUrl` cases.
+
+### Systemic audit (grep gotcha: `.gitignore:78 ai-summarize-applicant/` hides the
+folder from ripgrep — audited with `--no-ignore`)
+
+- **A (header-derived tenant):** Among EFs only `ai-summarize-applicant` still used
+  `getContext`/`x-tenant-id`; the other 4 AI EFs were remediated in Phase 0.
+  `aiClient.ts` keys `ai_cache`/`ai_logs` on the caller-passed `tenantId` — correct
+  now that the only header-tenant caller is fixed. No change to `aiClient.ts`.
+- **B (service-role writes filtered by id alone):** All mutations acting on a
+  user-supplied id are tenant-scoped (`admin-update-user`, `deactivate-tenant-user`,
+  `update-tenant-user-role`, `manage-recurring-compliance-instance`, `sendOffer`,
+  `save-connector`, invites). Cron/sync/webhook EFs (`detect-hires-*`,
+  `process-hire`, `sync-training`, `sync-wp-users`, compliance backfill/rebuild,
+  `jotform-webhook`, `onboard-employee`) update ids drawn from tenant-scoped queries
+  / server-derived tenant, not request input. `request-access` updates a
+  platform-level table by id by design. `ai-summarize-applicant` was the lone genuine
+  same-class bug.
+- Follow-up flagged: `_shared/context.ts` (`getContext`) is now unused and a known
+  header-trusting footgun — candidate for deletion in a separate PR.
+
+### How to verify
+
+- `cd supabase/functions && deno task check` → clean.
+- `deno test _shared/tests/ --allow-env --allow-net` → 60 passed / 0 failed
+  (includes the 8 new tests).
+- `npm run build` → clean.
+- CI: edge-functions (check + tests), rls-isolation (fresh DB + RLS suite, unchanged
+  by this PR — no migrations), frontend lint/build.
+
+### Files changed
+
+- `supabase/functions/ai-summarize-applicant/handler.ts` (new)
+- `supabase/functions/ai-summarize-applicant/index.ts`
+- `supabase/functions/_shared/tests/ai-summarize-applicant.test.ts` (new)
+- `docs/Project_Docs/PROJECT_LOG.md`
+
+---
 ## 2026-05-29 - Documentation governance audit promotion
 
 Promoted the documentation governance audit decisions, establishing a strict canonical hierarchy and clearing out stale mirrors.
