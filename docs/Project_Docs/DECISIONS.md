@@ -212,3 +212,58 @@ begin
 end $$;
 ```
 > Rolling back re-opens the corresponding advisor finding — disposable/preview environments only.
+
+---
+
+## 2026-06-01 — Fresh-DB bootstrap fixes (BUG 1, BUG 2) + Addendum C2
+
+Two pre-existing defects blocked a clean `supabase start` / `db reset` (DR, staging,
+local, CI). Fixed off `main` (post-0.1) on branch `fix/fresh-db-bootstrap`. Not Phase 1
+or Phase 0.1 migrations.
+
+### BUG 1 — Epic-5.7 backfill aborted on an empty tenants table
+`20260310000001_epic5_offers_aicache_tenant.sql` raised an exception when `tenants`
+was empty, aborting a fresh apply. Changed that branch to a graceful `return;` (empty
+tenants ⇒ nothing to backfill). Editing the historical migration is correct: already-
+applied environments never re-run it; only fresh applies change behavior. Backfill is
+unchanged when a tenant exists.
+**Rollback:** restore the original guard:
+```sql
+if v_tenant_id is null then
+  raise exception 'No tenant row found for backfill in Epic 5.7 migration';
+end if;
+```
+(Re-introduces the fresh-apply abort — do not roll back without a seeded tenant.)
+
+### BUG 2 — audit_ai_cache() referenced NEW.id (ai_cache PK is input_hash)
+New forward migration `20260601000000_fix_audit_ai_cache_record_id.sql` does
+`create or replace function public.audit_ai_cache()` writing `record_id = null`
+(audit_log.record_id is uuid; input_hash is text and is preserved in before/after via
+`to_jsonb`). SECURITY DEFINER + pinned `search_path = public, pg_catalog`; C-era EXECUTE
+revokes preserved across replace.
+**Rollback:** `create or replace` the function back to `record_id = coalesce(new.id, old.id)`
+(re-introduces the `record "new" has no field "id"` failure on every ai_cache write —
+do not roll back).
+
+### Addendum C2 — residual function-grant hardening
+New migration `20260601000001_c2_function_grant_hardening.sql`:
+- `REVOKE EXECUTE ... FROM anon, authenticated, public` on `notify_onboard_employee()`,
+  `training_adjustments_event_trigger()`, `training_records_event_trigger()` (trigger-only).
+- `REVOKE EXECUTE ON FUNCTION public.storage_obj_in_caller_tenant(text,text) FROM anon`
+  (authenticated retained — storage RLS policies invoke it as the caller).
+- `REVOKE EXECUTE ... FROM anon, authenticated, public` on `get_my_role()`, `is_admin()`
+  — verified no RLS policy or frontend RPC calls them (profiles policies dropped in Epic 5).
+**Rollback:** re-grant EXECUTE to the prior roles:
+```sql
+grant execute on function public.notify_onboard_employee() to anon, authenticated;
+grant execute on function public.training_adjustments_event_trigger() to anon, authenticated;
+grant execute on function public.training_records_event_trigger() to anon, authenticated;
+grant execute on function public.storage_obj_in_caller_tenant(text, text) to anon;
+grant execute on function public.get_my_role() to anon, authenticated;
+grant execute on function public.is_admin() to anon, authenticated;
+```
+(PUBLIC grants are the Postgres default for new functions; the explicit role grants above
+restore the pre-C2 reachability.)
+
+After deploy, `get_advisors(security)` should leave only `respond_to_offer` (intentional
+anon offer-response path) and `leaked_password` (owner dashboard toggle).

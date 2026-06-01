@@ -15,8 +15,13 @@ declare
 begin
   select id into v_tenant_id from public.tenants order by created_at asc limit 1;
 
+  -- Fresh DB: `tenants` is empty → there is nothing to backfill, so this is a
+  -- graceful no-op. (Previously raised an exception, which aborted a clean
+  -- `supabase start` / `db reset` on an empty volume — see DECISIONS.md 2026-06-01.)
+  -- Already-applied environments never re-run this migration; only fresh applies
+  -- take this path. When a tenant DOES exist, the backfill below runs unchanged.
   if v_tenant_id is null then
-    raise exception 'No tenant row found for backfill in Epic 5.7 migration';
+    return;
   end if;
 
   update public.offers
