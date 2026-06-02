@@ -243,6 +243,60 @@ Deno.test({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Phase 1 (Q5): identity_collisions is a NEW tenant-scoped table (migration
+// 20260601000002). Prove its RLS isolates rows by tenant — Tenant B cannot read
+// Tenant A's collision-ledger entries, anon sees none, and the owning tenant
+// sees its own. Mirrors the id-keyed matrix above for the new table; seeded via
+// the service-role client (RLS bypassed) and asserted through RLS-active clients.
+// ---------------------------------------------------------------------------
+
+Deno.test({
+  name: "Phase1: identity_collisions is tenant-isolated (B cannot see A; anon none; A sees own)",
+  ignore: !env,
+  ...wrap,
+  fn: async () => {
+    const { h } = await ensureSetup();
+
+    const mkRow = (tenantId: string, tag: string) => ({
+      tenant_id: tenantId,
+      source: "convert-applicant",
+      normalized_email: `collision-${tag}-${h.runId}@example.test`,
+      reason_code: "multiple_email_matches",
+      candidate_ids: [],
+      resolution_status: "unresolved",
+    });
+
+    const { data: rowA, error: errA } = await h.admin
+      .from("identity_collisions").insert(mkRow(h.tenantA.tenantId, "a"))
+      .select("id").single();
+    if (errA) throw new Error(`seed A collision failed: ${errA.message}`);
+    const { data: rowB, error: errB } = await h.admin
+      .from("identity_collisions").insert(mkRow(h.tenantB.tenantId, "b"))
+      .select("id").single();
+    if (errB) throw new Error(`seed B collision failed: ${errB.message}`);
+
+    const idA = rowA!.id as string;
+    const idB = rowB!.id as string;
+
+    try {
+      // cross-tenant DENY (both directions)
+      assertEquals(await visibleCount(h.tenantB.client, "identity_collisions", "id", idA), 0,
+        "identity_collisions: Tenant B leaked Tenant A's row");
+      assertEquals(await visibleCount(h.tenantA.client, "identity_collisions", "id", idB), 0,
+        "identity_collisions: Tenant A leaked Tenant B's row");
+      // anon sees nothing
+      assertEquals(await visibleCount(h.anon, "identity_collisions", "id", idA), 0,
+        "identity_collisions: anon leaked a row");
+      // positive control: the owning tenant reads its own row
+      assertEquals(await visibleCount(h.tenantA.client, "identity_collisions", "id", idA), 1,
+        "identity_collisions: Tenant A could not read its own row");
+    } finally {
+      await h.admin.from("identity_collisions").delete().in("id", [idA, idB]);
+    }
+  },
+});
+
 // ===========================================================================
 // 2. ai_cache — PK is input_hash (text), so the id-keyed matrix above does not
 //    cover it. Legacy "Authenticated users can read cache" USING(true) dropped
