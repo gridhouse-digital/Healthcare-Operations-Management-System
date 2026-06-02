@@ -6,6 +6,20 @@ import { WelcomeEmail } from "../_shared/emails/WelcomeEmail.tsx";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
 import { TenantGuardError } from "../_shared/tenant-guard.ts";
 
+// =============================================================================
+// onboard-employee — EXTERNAL provisioning ONLY (Phase 1, Q4).
+//
+// Responsibility (narrowed): idempotent WordPress user creation + LearnDash
+// group enrollment + onboarding notification. It does NOT create or own the
+// internal `people` employee row — that is the convert-applicant authority's
+// job. This function is invoked BY convert-applicant (and the accepted-offer
+// trigger via convert-applicant) and supports authorized RETRY without
+// creating a duplicate `people` row (it only updates wp_user_id on the existing
+// row; lookup-before-create on the WP side avoids duplicate WP users).
+//
+// Integration failures are logged to integration_log (no silent failure).
+// =============================================================================
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -38,7 +52,6 @@ serve(async (req) => {
         }
 
         const applicantId = record.applicant_id
-        const position = record.position // e.g., "Registered Nurse (RN)"
 
         // 2. Fetch Applicant Details (Email, Name)
         const { data: applicant, error: applicantError } = await supabaseClient
@@ -50,6 +63,21 @@ serve(async (req) => {
         if (applicantError || !applicant) {
             throw new Error(`Applicant not found: ${applicantError?.message}`)
         }
+
+        // Q3 fix: the offer row persists the job title as `position_title`
+        // (NOT `position`). Read the authoritative title from the persisted
+        // offer-row shape. The previous `record.position` read was always
+        // undefined because the offers table has no `position` column.
+        const { data: acceptedOffer } = await supabaseClient
+            .from('offers')
+            .select('position_title')
+            .eq('applicant_id', applicantId)
+            .eq('status', 'Accepted')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        const position = acceptedOffer?.position_title ?? '' // e.g., "Registered Nurse (RN)"
 
         // 3. Determine tenant from the server-trusted applicant record ONLY.
         // Never trust record.tenant_id from the request body. No hardcoded fallback.
@@ -197,20 +225,17 @@ serve(async (req) => {
             enrollmentResults.push({ groupId, status: enrollResponse.status })
         }
 
-        // 6. Update Employee Record in Supabase
-        // First check if employee record exists (it should have been created by another trigger or process, 
-        // but if not, we might need to create it or just update the applicant/offer metadata?
-        // Usually 'onboard-employee' implies creating the employee record too if it doesn't exist.
-        // For now, let's assume we update the 'applicants' or 'employees' table.
-        // The prompt mentioned "Update the employees table in Supabase with the new wp_user_id".
-
-        // Update the people record linked to this applicant
+        // 6. Provisioning is UPDATE-ONLY here (Q4): the `people` employee row is
+        // owned by convert-applicant. We only stamp wp_user_id onto the existing
+        // row. We NEVER create a `people` row here, so an authorized retry cannot
+        // produce a duplicate. If the row is missing, that is a conversion
+        // ordering issue — log it, do not create.
         const { data: person } = await supabaseClient
             .from('people')
             .select('id')
             .eq('applicant_id', applicantId)
             .eq('type', 'employee')
-            .single()
+            .maybeSingle()
 
         if (person) {
             await supabaseClient
@@ -220,6 +245,24 @@ serve(async (req) => {
         } else {
             console.log(`No people record found for applicant ${applicantId} to update wp_user_id`)
         }
+
+        // Record provisioning success in integration_log (no silent failure).
+        const failedEnrollments = enrollmentResults.filter((e) => e.status >= 400)
+        await supabaseClient.from('integration_log').upsert(
+            [{
+                tenant_id: tenantId,
+                source: 'learndash',
+                idempotency_key: `onboard:${applicantId}`,
+                status: failedEnrollments.length > 0 ? 'partial' : 'processed',
+                payload: {
+                    wp_user_id: wpUser.id,
+                    groups_enrolled: groupIds,
+                    enrollment_results: enrollmentResults,
+                },
+                completed_at: new Date().toISOString(),
+            }],
+            { onConflict: 'tenant_id,source,idempotency_key' },
+        )
 
         // 7. Send Welcome Email via Brevo
         if (config.brevo_api_key) {
@@ -269,6 +312,39 @@ serve(async (req) => {
     } catch (error) {
         const status = error instanceof TenantGuardError ? error.status : 400
         const message = error instanceof Error ? error.message : String(error)
+
+        // No silent failure: log the provisioning failure to integration_log when
+        // we have enough trusted context to do so. Best-effort — never throws.
+        try {
+            const failClient = createClient(
+                Deno.env.get('SUPABASE_URL') ?? '',
+                Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+            )
+            // Re-derive applicant/tenant from the body for the log key (trusted lookup).
+            const reqClone = req.clone()
+            const parsed = await reqClone.json().catch(() => ({}))
+            const appId = parsed?.record?.applicant_id
+            if (appId) {
+                const { data: app } = await failClient
+                    .from('applicants').select('tenant_id').eq('id', appId).maybeSingle()
+                if (app?.tenant_id) {
+                    await failClient.from('integration_log').upsert(
+                        [{
+                            tenant_id: app.tenant_id,
+                            source: 'learndash',
+                            idempotency_key: `onboard:${appId}`,
+                            status: 'failed',
+                            payload: { error: message },
+                            completed_at: new Date().toISOString(),
+                        }],
+                        { onConflict: 'tenant_id,source,idempotency_key' },
+                    )
+                }
+            }
+        } catch {
+            // swallow — logging must not mask the original error
+        }
+
         return new Response(
             JSON.stringify({ error: message }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status }

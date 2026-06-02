@@ -43,6 +43,7 @@ import {
   SKIP_MESSAGE,
 } from "./_harness.ts";
 import { type SeededIds, seedTenant } from "./_seed.ts";
+import { findEmployeeMatch } from "../../functions/_shared/identity.ts";
 
 const env = loadEnv();
 
@@ -168,6 +169,133 @@ for (const { table, idOf } of CASES) {
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Phase 1 ID-5: cross-tenant identity reconciliation must NOT match across
+// tenants. findEmployeeMatch is scoped by tenant_id; under an RLS-active client
+// the other tenant's row is invisible, so the SAME normalized email in another
+// tenant yields `none` (never a match, never a collision pointing at B's row).
+// This is the merge-gate cross-tenant assertion required by the Phase 1 handoff.
+// ---------------------------------------------------------------------------
+
+Deno.test({
+  name: "Phase1 ID-5: findEmployeeMatch does NOT match the same email across tenants (RLS-scoped)",
+  ignore: !env,
+  ...wrap,
+  fn: async () => {
+    const { h, seedB } = await ensureSetup();
+
+    // applicant_id is a uuid column — a syntactically-valid but non-existent
+    // UUID lets us exercise the email branch without an applicant_id match
+    // (a non-uuid string would be rejected by Postgres as 22P02).
+    const ABSENT_APPLICANT_ID = "00000000-0000-0000-0000-0000000000ff";
+
+    // Tenant B's seeded employee email (created by seedTenant).
+    const sharedEmail = `person-b-${h.runId}@example.test`;
+
+    // (1) PURE cross-tenant non-match: Tenant A has NO row with this email.
+    //     Reconciling as Tenant A must yield `none` — B's row is RLS-invisible,
+    //     so no match and no collision pointing at B. This is the core ID-5 claim.
+    const crossOnly = await findEmployeeMatch({
+      client: h.tenantA.client,
+      tenantId: h.tenantA.tenantId,
+      applicantId: ABSENT_APPLICANT_ID,
+      email: sharedEmail,
+    });
+    assertEquals(
+      crossOnly.outcome,
+      "none",
+      "Tenant A must NOT match (or collide on) Tenant B's same-email row",
+    );
+
+    // (2) Positive control: give Tenant A its OWN row with the SAME normalized
+    //     email. Reconciling as Tenant A now matches A's row only — never B's.
+    await h.admin.from("people").insert({
+      tenant_id: h.tenantA.tenantId,
+      email: sharedEmail,
+      first_name: "Shared",
+      last_name: "EmailA",
+      type: "employee",
+    });
+
+    const asA = await findEmployeeMatch({
+      client: h.tenantA.client,
+      tenantId: h.tenantA.tenantId,
+      applicantId: ABSENT_APPLICANT_ID,
+      email: sharedEmail,
+    });
+    assertEquals(asA.outcome, "matched", "Tenant A should match its OWN same-email row");
+    if (asA.outcome === "matched") {
+      assertEquals(asA.employee.tenant_id, h.tenantA.tenantId);
+      assertEquals(
+        asA.employee.id !== seedB.personId,
+        true,
+        "Tenant A's match must not be Tenant B's row",
+      );
+    }
+
+    // Cleanup the extra row we inserted for this assertion.
+    await h.admin
+      .from("people")
+      .delete()
+      .eq("tenant_id", h.tenantA.tenantId)
+      .eq("email", sharedEmail);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Phase 1 (Q5): identity_collisions is a NEW tenant-scoped table (migration
+// 20260601000002). Prove its RLS isolates rows by tenant — Tenant B cannot read
+// Tenant A's collision-ledger entries, anon sees none, and the owning tenant
+// sees its own. Mirrors the id-keyed matrix above for the new table; seeded via
+// the service-role client (RLS bypassed) and asserted through RLS-active clients.
+// ---------------------------------------------------------------------------
+
+Deno.test({
+  name: "Phase1: identity_collisions is tenant-isolated (B cannot see A; anon none; A sees own)",
+  ignore: !env,
+  ...wrap,
+  fn: async () => {
+    const { h } = await ensureSetup();
+
+    const mkRow = (tenantId: string, tag: string) => ({
+      tenant_id: tenantId,
+      source: "convert-applicant",
+      normalized_email: `collision-${tag}-${h.runId}@example.test`,
+      reason_code: "multiple_email_matches",
+      candidate_ids: [],
+      resolution_status: "unresolved",
+    });
+
+    const { data: rowA, error: errA } = await h.admin
+      .from("identity_collisions").insert(mkRow(h.tenantA.tenantId, "a"))
+      .select("id").single();
+    if (errA) throw new Error(`seed A collision failed: ${errA.message}`);
+    const { data: rowB, error: errB } = await h.admin
+      .from("identity_collisions").insert(mkRow(h.tenantB.tenantId, "b"))
+      .select("id").single();
+    if (errB) throw new Error(`seed B collision failed: ${errB.message}`);
+
+    const idA = rowA!.id as string;
+    const idB = rowB!.id as string;
+
+    try {
+      // cross-tenant DENY (both directions)
+      assertEquals(await visibleCount(h.tenantB.client, "identity_collisions", "id", idA), 0,
+        "identity_collisions: Tenant B leaked Tenant A's row");
+      assertEquals(await visibleCount(h.tenantA.client, "identity_collisions", "id", idB), 0,
+        "identity_collisions: Tenant A leaked Tenant B's row");
+      // anon sees nothing
+      assertEquals(await visibleCount(h.anon, "identity_collisions", "id", idA), 0,
+        "identity_collisions: anon leaked a row");
+      // positive control: the owning tenant reads its own row
+      assertEquals(await visibleCount(h.tenantA.client, "identity_collisions", "id", idA), 1,
+        "identity_collisions: Tenant A could not read its own row");
+    } finally {
+      await h.admin.from("identity_collisions").delete().in("id", [idA, idB]);
+    }
+  },
+});
 
 // ===========================================================================
 // 2. ai_cache — PK is input_hash (text), so the id-keyed matrix above does not

@@ -113,20 +113,54 @@ job_title        TEXT
 phone            TEXT                                -- Epic 5: added for employee records
 department       TEXT                                -- Epic 5: added for employee records
 employee_id      TEXT                                -- Epic 5: external employee ID (BambooHR/JazzHR)
-employee_status  TEXT                                -- Epic 5: 'active' | 'inactive' | 'terminated'
+employee_status  TEXT CHECK in {Onboarding,Active,Terminated}  -- LIFECYCLE state (Phase 1 Q2); resolver-only writer; no default
+compliance_state TEXT CHECK in {compliant,non_compliant,unknown,configuration_error}  -- Phase 1 Q2: SEPARATE from lifecycle; NULL until evaluated
+email_normalized TEXT GENERATED (lower(btrim(email))) STORED   -- tenant-scoped dedup key
 applicant_id     UUID FK applicants(id)              -- Epic 5: link back to applicant record
 type             TEXT NOT NULL DEFAULT 'candidate'   -- 'candidate' | 'employee'
 profile_source   TEXT                                -- 'bamboohr' | 'jazzhr' | 'wordpress'
-wp_user_id       INTEGER                             -- set after process-hire
+wp_user_id       INTEGER                             -- set after onboard-employee provisioning
 hired_at         TIMESTAMPTZ                         -- NFR-3: set once, NEVER overwritten by sync
 created_at       TIMESTAMPTZ
 updated_at       TIMESTAMPTZ
 ```
 
-**Unique:** `(tenant_id, email)` — universal deduplication key.
+**Unique:** `(tenant_id, email_normalized)` — universal deduplication key (normalized = `lower(btrim(email))`). The conversion authority upserts `ON CONFLICT (tenant_id, email_normalized)`.
 **RLS:** Own tenant only.
 **Audit trigger:** `audit_people_trigger`
-**Critical:** `hired_at` is set once when hire is first detected. Sync must check: if hired_at IS NOT NULL, skip.
+**Critical:** `hired_at` is set once (Phase 1 Q1: from accepted `offer.start_date`). Sync/conversion-retry must check: if hired_at IS NOT NULL, skip.
+**Phase 1 (Q2):** `employee_status` ∈ {Onboarding, Active, Terminated} is written **only** by the fail-closed employee-status resolver (`_shared/employee-status-resolver.ts`) — never inline-computed at conversion time, never via a column default (the prior `DEFAULT 'Active'` was dropped in `20260601000002`). `compliance_state` is a **separate** axis: an established `Active` employee whose credential later expires becomes `non_compliant` WITHOUT reverting to `Onboarding`. `Terminated` is HR-controlled and never auto-reversed.
+**Migration:** `20260601000002_phase1_compliance_state_and_identity_collisions.sql` (adds `compliance_state`, drops the `employee_status` default; no existing-row backfill).
+
+---
+
+## identity_collisions
+
+> Phase 1 (Q5). Durable ledger of **unresolved identity collisions**. When tenant-scoped reconciliation
+> (`_shared/identity.ts` `findEmployeeMatch`) finds ambiguous/conflicting evidence it records a row HERE
+> and does NOT auto-link, merge, create, or guess. One row per detected collision for manual HR review.
+
+```
+id                UUID PK
+tenant_id         UUID NOT NULL FK tenants(id)
+source            TEXT NOT NULL                       -- 'convert-applicant' | 'sync-wp-users' | ...
+applicant_id      UUID                                -- the applicant being reconciled (if any)
+normalized_email  TEXT NOT NULL                       -- lower(btrim(email)) at detection time
+candidate_ids     UUID[] NOT NULL DEFAULT '{}'        -- implicated people.id values (≥1)
+reason_code       TEXT NOT NULL CHECK in {multiple_email_matches, applicant_email_conflict}
+resolution_status TEXT NOT NULL DEFAULT 'unresolved' CHECK in {unresolved, resolved, dismissed}
+resolved_by       UUID FK auth.users(id)              -- resolving actor
+resolved_at       TIMESTAMPTZ
+resolution_note   TEXT
+detail            JSONB NOT NULL DEFAULT '{}'
+created_at        TIMESTAMPTZ
+updated_at        TIMESTAMPTZ
+```
+
+**Indexes:** `(tenant_id, resolution_status, created_at desc)`; partial UNIQUE `(tenant_id, applicant_id, normalized_email) WHERE resolution_status='unresolved'` (no duplicate open collisions).
+**RLS:** SELECT/INSERT/UPDATE own tenant (SELECT also `platform_admin`).
+**Audit trigger:** `audit_identity_collisions_trigger`.
+**Migration:** `20260601000002_phase1_compliance_state_and_identity_collisions.sql`.
 
 ---
 

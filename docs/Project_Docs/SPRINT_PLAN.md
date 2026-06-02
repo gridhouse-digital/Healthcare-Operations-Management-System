@@ -579,4 +579,47 @@
 - Status: [x] **COMPLETE — Phase 0 gate MET.** RLS suite delivered; audit delivered; tenant-guard
   remediation code-complete, statically validated, and DB-validated. Remaining work is
   deployment-only: deploy the migration + redeploy the 5 functions; ensure the `service_role_key`
-  Vault secret exists in the target project. **Phase 1 NOT started** (awaiting go-ahead).
+  Vault secret exists in the target project. **Phase 1 STARTED + IMPLEMENTED** (below).
+
+---
+
+## Phase 1 — Lifecycle Stabilization (conversion · identity · diagnostics)
+
+Source: `docs/bmad/working-notes/2026-05-29-phase-1-lifecycle-stabilization-handoff.md`;
+decisions Q1–Q5 in `DECISIONS.md` (2026-05-30). Implemented 2026-05-30.
+
+**P2 — Identity reconciliation extract (done first).** Status: [x] **DONE.**
+- `_shared/identity.ts` centralizes `normalizeEmail`+tenant-scoped fail-safe `findEmployeeMatch`;
+  `sync-wp-users` repointed; frontend inline matcher deleted (0 duplicate definitions). AC-4 met.
+- Tests: `identity.test.ts` (ID-1..ID-5 incl. cross-tenant non-match). AC-9/AC-12 supported.
+
+**P1 — One conversion authority + one status model.** Status: [x] **DONE.**
+- `convert-applicant` EF (+ `_shared/conversion.ts` core) is the single server-side conversion
+  authority; client collapsed to one thin caller; both duplicate methods deleted (AC-1).
+- `hired_at`=accepted `offer.start_date`, immutable on retry (AC-2); `job_title`=`offer.position_title`,
+  missing ⇒ fail, no placeholder (AC-3). Idempotent on `(tenant_id, email_normalized)` (AC-5).
+- `_shared/employee-status-resolver.ts`: pure fail-closed resolver, sole writer of `employee_status`,
+  re-invoked post-write (AC-6, AC-7). Separate `compliance_state` column (AC-10). NFR-3 preserved (AC-11).
+- Conversion ↔ provisioning are separate idempotent steps; `onboard-employee` narrowed to provisioning,
+  `record.position`→`position_title` read-side fix, retry-safe, `integration_log` visibility (AC-8).
+  `on_offer_accepted` trigger repointed to `convert-applicant` (migration `20260601000003`).
+
+**P3 — Recurring-compliance diagnostics (read-only).** Status: [x] **DONE.**
+- `_shared/compliance-diagnostics.ts` surfaces missing group/rule/mapping/anchor/sync. Engine
+  (5.11–5.17) unchanged (AC-10). Read-side only.
+
+**Migration:** `20260601000002` (compliance_state + identity_collisions + drop employee_status default).
+**Docs (AC-13):** DECISIONS.md (Q1–Q5, + rollback), SCHEMA.md (people/identity_collisions), PROJECT_LOG.md, this entry.
+**Validation:** `deno test _shared/tests/` 91/91 pass; `npm run build` 0 errors; RLS ID-5 added (merge gate).
+**Out of scope (not done, by design):** Phase 2 macro-domain refactor; existing-employee status backfill;
+any recurring-compliance engine change; Care Ops / Staff App / EVV / Family Portal / Billing / Payroll;
+Folk Care code.
+
+**Rebase status — 2026-06-02 (branch `phase-1/lifecycle-stabilization`, PREPARE-AND-VALIDATE):**
+[x] WIP `99f5d7a` cherry-picked onto current `main` (post 0.1 + bootstrap + ai-summarize); 2 conflicts
+resolved (PROJECT_LOG, rls.test.ts). [x] Migrations **renumbered** `20260530000001/2` →
+`20260601000002/3` (strictly after the verified live-ledger tip `20260601000001`) to avoid a
+silent-skip collision with main's `phase01_security_definer_views`/`function_grants` at the old
+versions. [x] CV-2 provisioning-failure logger made testable + tested; CV-1 confirmed; CV-3 owner ruling
+recorded (keep `Active`). [x] `deno test _shared/tests/` **105/0**. Pending in PR: `supabase db reset`
+fresh-apply, RLS suite, `npm run build`, GitHub Actions gate (must be GREEN). **Not deployed.**

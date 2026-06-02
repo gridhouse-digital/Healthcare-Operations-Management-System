@@ -6,7 +6,10 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // Deno Edge Functions have their own toolchain (deno lint / deno check / deno
+  // test) and import via jsr:/npm:/https: specifiers this browser-targeted
+  // ESLint config cannot resolve. They are linted by `deno lint`, not ESLint.
+  globalIgnores(['dist', 'supabase/functions/**']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

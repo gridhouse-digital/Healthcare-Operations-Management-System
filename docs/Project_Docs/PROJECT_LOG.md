@@ -3,6 +3,65 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-02 - Phase 1 lifecycle stabilization — REBASED onto stabilized main + migrations renumbered (PREPARE-AND-VALIDATE, not deployed)
+
+Rebased the Phase 1 WIP (`99f5d7a`, authored on pre-reconciliation `f6d4216`) onto
+**current `main`** (post Phase 0.1 RLS remediation + fresh-DB bootstrap + ai-summarize P0)
+on branch `phase-1/lifecycle-stabilization`. **Not deployed — deploy is a separate
+credentialed step.**
+
+### What was done
+
+- **Cherry-picked `99f5d7a`** onto main. Two real conflicts, both resolved keeping the
+  Phase 1 intent layered on top of main (no reconciliation/0.1/bootstrap work reverted):
+  - `PROJECT_LOG.md` — additive log entries from both sides kept in chronological order.
+  - `supabase/tests/rls/rls.test.ts` — kept the Phase 1 **ID-5** cross-tenant identity test
+    AND main's new `ai_cache`/`ai_logs`/storage RLS sections (phase-0.1); dropped the WIP's
+    now-misplaced teardown comment (main's teardown moved below the new sections).
+  - The four files the brief flagged (onboard-employee, sync-wp-users, eslint.config.js,
+    employeeService.ts) auto-merged cleanly — main had **not** touched them since `f6d4216`.
+  - `supabase/config.toml` + `supabase/.gitignore` were already on main → the WIP's adds
+    merged to no-ops (present in tree, not in the commit).
+- **🔑 Renumbered the two Phase 1 migrations to avoid a silent-skip collision.** The WIP had
+  stamped them `20260530000001/2`, but main reconciled DIFFERENT migrations into those exact
+  versions (`phase01_security_definer_views`, `phase01_function_grants_search_path`). Supabase
+  tracks applied migrations by version prefix, so a different file at an already-applied version
+  is **silently skipped**. Verified the **live ledger tip = `20260601000001`** (linked project
+  `peffyuhhlmidldugqalo`) and renumbered strictly after it AND the bootstrap fixes:
+  - `…0001_phase1_compliance_state_and_identity_collisions` → **`20260601000002`**
+  - `…0002_repoint_offer_accepted_to_convert_applicant` → **`20260601000003`**
+  Updated all Phase-1 cross-references (SPRINT_PLAN/SCHEMA/DECISIONS/PROJECT_LOG); left the
+  phase01 view/grant references (RLS suite, `_seed.ts`, DECISIONS 0.1 entry) at their original
+  numbers. Corrected the stale Phase 0.1 note that had planned `0530…0003/4` (it predated the
+  `0601` bootstrap migrations).
+- **CV-2 (real):** the convert-applicant authority already logged onboard-employee provisioning
+  failures to a durable `integration_log` `failed` row (not just `console.error`), but the logger
+  was trapped in `index.ts` (un-testable — `Deno.serve` on import). Extracted
+  `logProvisioningFailure` into testable `_shared/conversion.ts` (behavior unchanged) + added unit
+  tests (failed row, idempotency, no-tenant no-op).
+- **CV-1 (optional):** already implemented in the WIP (none-path adopts a pre-existing same-email
+  row and flips its type instead of throwing `CONVERSION_ROW_MISSING`) + already tested. Confirmed.
+- **CV-3 (owner decision):** recorded in DECISIONS.md — rehire-via-row-reuse stays `Active` with
+  fresh unmet onboarding (literal Q2; lifecycle ≠ compliance). Kept as-is; no rehire branch added.
+
+### Validation (in progress)
+
+- `deno test _shared/tests/` → **105 passed / 0 failed** (was 91 at WIP authoring; base grew via
+  main's added test files incl. the 8 ai-summarize tests; +3 new CV-2 provisioning-failure tests).
+- `deno check` on the touched EF modules → clean.
+- `supabase db reset` (fresh-from-scratch incl. renumbered Phase 1) + RLS suite + `npm run build`
+  + the GitHub Actions gate → run and recorded in the PR (see below).
+
+### Next
+
+- Open the PR; the Actions gate (frontend / edge-functions / rls-isolation / migration-parity)
+  must be GREEN before merge.
+- **Deploy (separate credentialed step):** `supabase db push` then
+  `supabase functions deploy convert-applicant onboard-employee sync-wp-users`; then a trigger
+  smoke-test (accept an offer → convert-applicant fires → tenant-scoped person created →
+  onboard-employee provisions). Ensure the Vault `service_role_key`/`project_url` secrets exist.
+
+---
 ## 2026-06-01 - P0 fix: ai-summarize-applicant tenant isolation + SSRF
 
 Closed the live cross-tenant write + SSRF in the deployed `ai-summarize-applicant`
@@ -65,6 +124,77 @@ folder from ripgrep — audited with `--no-ignore`)
 - `supabase/functions/ai-summarize-applicant/index.ts`
 - `supabase/functions/_shared/tests/ai-summarize-applicant.test.ts` (new)
 - `docs/Project_Docs/PROJECT_LOG.md`
+
+---
+## 2026-05-30 - 🔴 SECURITY FINDING (handed off) — cross-tenant RLS leak on `applicants` + `offers`
+
+Surfaced by the **live** Phase 0 RLS suite run during Phase 1 verification (local disposable Supabase stack). **Pre-existing — NOT introduced by Phase 1** (no Phase 1 migration touches these policies). **Assigned to a separate dev agent** for the fix; recorded here so it is not buried and the fixer has an exact repro. This branch intentionally does **not** modify these policies (out of lifecycle scope).
+
+**Finding:** `applicants` and `offers` each still carry allow-all RLS policies from the Epic-0 table-creation migrations, which **OR-override** the later tenant-scoped policies (multiple permissive policies are OR-ed in Postgres RLS), defeating tenant isolation:
+- `applicants`: policy `"Allow all access for authenticated users"` `USING (true)` — from `20251128000000_create_applicants_table.sql`. (Correct policies `applicants_select_own_tenant` etc. exist but are overridden.)
+- `offers`: policy `"Allow full access for authenticated users"` `USING (true)` and `"Everyone can view offers"` `USING (auth.role() = 'authenticated')` — from `20251128000001_create_offers_table.sql`.
+
+**Impact:** any authenticated user (any tenant) can SELECT another tenant's `applicants`/`offers` rows. **Repro:** `deno test --allow-env --allow-net rls.test.ts` in `supabase/tests/rls/` against a live DB → 4 failures (`Tenant B cannot see Tenant A's applicants/offers`, reciprocal, + `anonymous cannot see offers`). `people`, `training_records`, `employee_compliance_instances`, `audit_log` all isolate correctly; **Phase 1 ID-5 cross-tenant identity non-match is GREEN.**
+
+**Suggested fix (for the assigned agent):** a migration dropping the three stale allow-all policies (keep `offers`' `secure_token` anon-read policy and the tenant-scoped policies). Then the full RLS suite goes green.
+
+**Merge-gate note:** the *full* RLS suite is a merge gate and is currently red on applicants/offers pending that fix — blocked on the other agent, not on Phase 1. Phase 1's own gate item (ID-5) passes.
+
+**Update — formal handoff locked + scope expanded:** brief at [`docs/bmad/working-notes/2026-05-30-phase-0.1-rls-legacy-policy-remediation-handoff.md`](../bmad/working-notes/2026-05-30-phase-0.1-rls-legacy-policy-remediation-handoff.md). Architect verification widened the blast radius beyond the gate's two flagged tables: the same permissive-OR pattern also affects `ai_cache` (`"Authenticated users can read cache"` `USING(true)`) and legacy `ai_logs`, plus **tenant-unscoped `resumes`/compliance-docs storage buckets (PHI-class — I9/vaccination/license/background — and NOT covered by the table RLS suite).** Owner decision: full-scope fix in a dedicated `phase-0.1/rls-legacy-policy-remediation` branch off `main`, landed first, with the Phase 1 lifecycle branch rebased on top; RLS suite extended to cover ai_cache/ai_logs/storage.
+
+---
+## 2026-05-30 - Phase 1 lifecycle stabilization — IMPLEMENTED (P1/P2/P3)
+
+Implemented the Phase 1 lifecycle stabilization code task per the locked handoff and the Q1–Q5 owner decisions. Collapsed the divergent applicant→employee conversion paths into one server-side authority, extracted one identity reconciliation service, introduced a deterministic fail-closed status resolver with a separate compliance state, narrowed `onboard-employee` to provisioning, and added read-only recurring-compliance diagnostics. **Recurring-compliance engine (5.11–5.17) unchanged. No Phase 2 refactor. No existing-employee backfill. No Folk Care code copied.**
+
+### What shipped (code)
+
+- **P2 — identity (extracted first):** new `supabase/functions/_shared/identity.ts` centralizes `normalizeEmail()` (`trim(lowercase)`) + tenant-scoped, fail-safe `findEmployeeMatch()` (applicant_id wins → exactly one email match → none → **collision, never guess**; cross-tenant non-match). Repointed `sync-wp-users` to `normalizeEmail`; the frontend's inline matcher was **deleted** (conversion is now server-side), satisfying "0 duplicate definitions".
+- **Migration `20260601000002`** (renumbered from `20260530000001` during the 2026-06-02 rebase — see top entry)**:** adds `people.compliance_state` (separate from lifecycle), drops the `employee_status` default so the resolver is the sole writer, and adds the `identity_collisions` ledger (RLS + audit trigger). Rollback documented in the migration + DECISIONS.md.
+- **P1 — status resolver:** new `_shared/employee-status-resolver.ts` — a **pure, idempotent, fail-closed** `resolveEmployeeStatus()` implementing the exact Q2 matrix (+ `writeEmployeeStatus` as the sole DB writer, re-invoked after conversion/training writes). Lifecycle ≠ compliance; `Terminated` never auto-reversed; established `Active` never reverts.
+- **P1 — conversion authority:** new `convert-applicant` EF (`index.ts` + testable `_shared/conversion.ts` core). Sets `hired_at`=accepted `offer.start_date` (missing ⇒ fail), `job_title`=`offer.position_title` (missing ⇒ fail, no `'To Be Assigned'`), idempotent on `(tenant_id, email_normalized)`, preserves existing `hired_at`, records collisions instead of guessing, then invokes `onboard-employee` as a **separate** provisioning step. Frontend `employeeService` collapsed to one thin caller (`convertApplicantToEmployee`); `createEmployeeFromApplicant`/`moveApplicantToEmployee` **deleted** (0 callers); `OfferList` + `ApplicantDetailsPage` repointed.
+- **Narrowed `onboard-employee`:** provisioning-only; **fixed the read-side bug** `record.position` → reads persisted `offers.position_title`; update-only on `people` (no duplicate row on retry); logs success/partial/failure to `integration_log` (no silent failure). The `sendOffer` `position` request param was **NOT** renamed.
+- **Trigger repoint (`20260601000003`, renumbered from `20260530000002`):** `on_offer_accepted` now enters `convert-applicant` (which calls `onboard-employee`), per the Q4 split.
+- **P3 — diagnostics (read-only):** new `_shared/compliance-diagnostics.ts` surfaces missing group/rule/course-mapping/anchor/sync conditions. No engine behavior changed.
+- **RLS suite:** added the Phase 1 ID-5 cross-tenant identity non-match assertion to `supabase/tests/rls/rls.test.ts` (merge gate).
+- **ESLint config:** scoped Deno Edge Functions out of the browser ESLint run (they use `deno lint`/`deno check`/`deno test`), removing 86 false legacy errors.
+
+### Tests / validation
+
+- `deno test _shared/tests/` → **91 passed / 0 failed** (39 new: identity 11, resolver 11, conversion 8, diagnostics 9 + existing 52). `deno check` on new modules clean. `npm run build` → 0 type errors. RLS suite type-checks + collects ID-5 (runs on a live DB; skips without env).
+
+### Files changed
+
+NEW: `_shared/identity.ts`, `_shared/employee-status-resolver.ts`, `_shared/conversion.ts`, `_shared/compliance-diagnostics.ts`, `convert-applicant/index.ts`, 4 `_shared/tests/*.test.ts`, migrations `20260601000002` + `20260601000003` (renumbered from `20260530000001`/`2` on 2026-06-02).
+MODIFIED: `_shared`-importing `sync-wp-users/index.ts`, `onboard-employee/index.ts`, `src/services/employeeService.ts`, `src/features/offers/OfferList.tsx`, `src/features/applicants/ApplicantDetailsPage.tsx`, `supabase/tests/rls/rls.test.ts`, `supabase/audit-tables.json`, `eslint.config.js`, `SCHEMA.md`, `DECISIONS.md`, `SPRINT_PLAN.md`.
+
+### Next
+
+- Deploy migrations (`supabase db push`) + EFs (`convert-applicant`, `onboard-employee`, `sync-wp-users`); ensure the Vault `service_role_key`/`project_url` secrets exist (trigger reuses them).
+- Run the Phase 0 RLS suite (incl. new ID-5) against a disposable DB as the merge gate.
+- Future: admin UI to resolve `identity_collisions`; existing-employee status backfill (separate risk-managed task).
+
+---
+## 2026-05-30 - Phase 1 lifecycle stabilization — decisions + handoff promoted
+
+Recorded the Phase 1 lifecycle owner decisions (Q1–Q5) and promoted the implementation handoff to an official, coding-agent-ready brief. **Documentation only — no application code changed.** Phase 1 is now decision-complete but **not yet started** (implementation is the future task this handoff describes).
+
+### What shipped (docs)
+
+- Recorded 5 owner decisions in `DECISIONS.md` (2026-05-30 entry): **Q1** `hired_at` = accepted offer `start_date` (immutable to sync/retry); **Q2** deterministic fail-closed `employee_status` resolver ({Onboarding, Active, Terminated}) with a *separate* compliance state; **Q3** `job_title` = offer `position_title` (read-side bug fix, no `sendOffer` param rename); **Q4** mandatory conversion↔provisioning responsibility split (preferred `convert-applicant` → `onboard-employee`); **Q5** tenant-scoped fail-safe identity reconciliation (collision record, never guess).
+- Promoted `docs/bmad/working-notes/2026-05-29-phase-1-lifecycle-stabilization-handoff.md` to LOCKED status: all 13 ACs authorable, `pending Q2` placeholder replaced with explicit fail-closed resolver outcomes, ID-3 identity test rewritten to mandate manual collision handling and forbid tie-breaking.
+- Verified two asserted code-facts before recording: offers column is `position_title` (not `position`); `onboard-employee:41` reads `record.position` → `undefined`.
+
+### Files changed
+
+- `docs/Project_Docs/DECISIONS.md` (Q1–Q5 entry)
+- `docs/bmad/working-notes/2026-05-29-phase-1-lifecycle-stabilization-handoff.md` (locked + scrubbed)
+- `docs/Project_Docs/PROJECT_LOG.md` (this entry)
+
+### Next
+
+- Implementation (future code task): sequence is extract `_shared/identity.ts` first, then `convert-applicant` + status resolver, narrow `onboard-employee` to provisioning, P3 diagnostics in parallel.
+- Open follow-up: schedule the freshness-verification pass for the 4 docs flagged on 2026-05-29.
 
 ---
 ## 2026-05-29 - Documentation governance audit promotion

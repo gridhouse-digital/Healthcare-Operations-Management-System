@@ -3,6 +3,7 @@ import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
+import { normalizeEmail } from "../_shared/identity.ts";
 
 // Story 4.5.1 — sync-wp-users
 //
@@ -276,7 +277,7 @@ async function processTenant(
     }
 
     for (const wpUser of wpUsers) {
-      const email = wpUser.email?.toLowerCase().trim();
+      const email = wpUser.email ? normalizeEmail(wpUser.email) : "";
       if (!email) {
         skipped++;
         continue;

@@ -73,13 +73,13 @@ export function OfferList() {
 
         setProcessingId(offer.id);
         try {
-            await employeeService.createEmployeeFromApplicant(offer.applicant_id, {
-                position: offer.position_title,
-                start_date: offer.start_date,
-                salary: offer.salary
-            });
-            toast.success('Employee onboarded successfully!');
-            navigate('/employees');
+            const result = await employeeService.convertApplicantToEmployee(offer.applicant_id, offer.id);
+            if (result.outcome === 'collision') {
+                toast.error('Identity collision detected — flagged for manual HR review. No employee was created.');
+            } else {
+                toast.success('Employee onboarded successfully!');
+                navigate('/employees');
+            }
         } catch (err) {
             toast.error('Failed to onboard employee.');
             console.error(err);

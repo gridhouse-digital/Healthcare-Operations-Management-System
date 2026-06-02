@@ -203,7 +203,7 @@ export function ApplicantDetailsPage() {
 
         const confirmed = await confirm({
             title: 'Move to Employees',
-            description: `Are you sure you want to move ${getAnswer('fullName')?.first} ${getAnswer('fullName')?.last} to the Employees table?\n\nThis will:\n- Create an employee record\n- Set applicant status to 'Hired'\n- Mark employee as 'Onboarding' (will change to 'Active' when all courses are completed)`,
+            description: `Are you sure you want to move ${getAnswer('fullName')?.first} ${getAnswer('fullName')?.last} to the Employees table?\n\nConversion uses the applicant's ACCEPTED offer as the source of truth:\n- Sets the hire date from the accepted offer's start date\n- Sets the job title from the accepted offer's position title\n- Sets applicant status to 'Hired'\n\nIf there is no accepted offer (or it is missing a start date / title), conversion will fail with an actionable error.`,
             confirmText: 'Move to Employees',
         });
 
@@ -211,7 +211,14 @@ export function ApplicantDetailsPage() {
 
         setMoveToEmployeeLoading(true);
         try {
-            const employee = await employeeService.moveApplicantToEmployee(applicant.id);
+            // Thin caller — the server-side convert-applicant authority owns the
+            // conversion (Q4). No client-side identity matching or status compute.
+            const result = await employeeService.convertApplicantToEmployee(applicant.id);
+
+            if (result.outcome === 'collision') {
+                toast.error('Identity collision detected — flagged for manual HR review. No employee was created.');
+                return;
+            }
 
             await queryClient.invalidateQueries({ queryKey: ['applicant', id] });
             await queryClient.invalidateQueries({ queryKey: ['applicants'] });
@@ -220,7 +227,7 @@ export function ApplicantDetailsPage() {
             // Mark that employee record now exists
             setHasEmployeeRecord(true);
 
-            toast.success(`Successfully moved to Employees! Employee ID: ${employee.employee_id}`);
+            toast.success('Successfully moved to Employees!');
 
             // Optionally navigate to employee page after creation
             navigate('/employees');
