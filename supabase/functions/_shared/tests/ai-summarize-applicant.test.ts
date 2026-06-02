@@ -177,6 +177,7 @@ Deno.test({
     ...testOpts,
     name: "(b) cross-tenant applicant id -> 404, no AI call, no write",
     fn: async () => {
+        setupEnv();
         // The row exists but belongs to TENANT_A; caller is TENANT_B.
         const fake = makeFakeSupabase({
             row: { id: APP_ID, tenant_id: TENANT_A, resume_text: null, resume_url: null },
@@ -238,6 +239,7 @@ Deno.test({
     ...testOpts,
     name: "(d) resume_url sourced from DB row, not body; write is tenant+id scoped",
     fn: async () => {
+        setupEnv();
         const dbResumeUrl = `https://${PROJECT_HOST}/storage/v1/object/public/resumes/real.pdf`;
         const attackerUrl = "https://evil.example/attack.pdf";
 
@@ -294,6 +296,33 @@ Deno.test({
         assertEquals(res.status, 401);
         assertEquals(spies.aiCalls.length, 0);
         assertEquals(fake.log.selects.length, 0);
+    },
+});
+
+// ---------------------------------------------------------------------------
+// (f) A DB resume_url with a query string is still recognised as a PDF.
+// ---------------------------------------------------------------------------
+Deno.test({
+    ...testOpts,
+    name: "(f) resume_url with query string is extracted (pathname-based .pdf check)",
+    fn: async () => {
+        setupEnv();
+        const dbResumeUrl = `https://${PROJECT_HOST}/storage/v1/object/sign/resumes/real.pdf?token=abc.def`;
+        const fake = makeFakeSupabase({
+            row: { id: APP_ID, tenant_id: TENANT_B, resume_text: null, resume_url: dbResumeUrl },
+        });
+        const spies: Spies = { aiCalls: [], fetchUrls: [] };
+        const deps = makeDeps(fake.client, spies);
+
+        const res = await handleSummarize(
+            req(jwtForTenant(TENANT_B), { applicant: { id: APP_ID } }),
+            deps,
+        );
+
+        assertEquals(res.status, 200);
+        assertEquals(spies.fetchUrls, [dbResumeUrl]);
+        assertEquals(fake.log.updates.length, 1);
+        assertEquals(fake.log.updates[0].payload, { resume_text: "PARSED RESUME" });
     },
 });
 
