@@ -602,13 +602,13 @@ decisions Q1–Q5 in `DECISIONS.md` (2026-05-30). Implemented 2026-05-30.
   re-invoked post-write (AC-6, AC-7). Separate `compliance_state` column (AC-10). NFR-3 preserved (AC-11).
 - Conversion ↔ provisioning are separate idempotent steps; `onboard-employee` narrowed to provisioning,
   `record.position`→`position_title` read-side fix, retry-safe, `integration_log` visibility (AC-8).
-  `on_offer_accepted` trigger repointed to `convert-applicant` (migration `20260530000002`).
+  `on_offer_accepted` trigger repointed to `convert-applicant` (migration `20260601000003`).
 
 **P3 — Recurring-compliance diagnostics (read-only).** Status: [x] **DONE.**
 - `_shared/compliance-diagnostics.ts` surfaces missing group/rule/mapping/anchor/sync. Engine
   (5.11–5.17) unchanged (AC-10). Read-side only.
 
-**Migration:** `20260530000001` (compliance_state + identity_collisions + drop employee_status default).
+**Migration:** `20260601000002` (compliance_state + identity_collisions + drop employee_status default).
 **Docs (AC-13):** DECISIONS.md (Q1–Q5, + rollback), SCHEMA.md (people/identity_collisions), PROJECT_LOG.md, this entry.
 **Validation:** `deno test _shared/tests/` 91/91 pass; `npm run build` 0 errors; RLS ID-5 added (merge gate).
 **Out of scope (not done, by design):** Phase 2 macro-domain refactor; existing-employee status backfill;

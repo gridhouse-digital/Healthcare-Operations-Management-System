@@ -129,8 +129,8 @@ updated_at       TIMESTAMPTZ
 **RLS:** Own tenant only.
 **Audit trigger:** `audit_people_trigger`
 **Critical:** `hired_at` is set once (Phase 1 Q1: from accepted `offer.start_date`). Sync/conversion-retry must check: if hired_at IS NOT NULL, skip.
-**Phase 1 (Q2):** `employee_status` ∈ {Onboarding, Active, Terminated} is written **only** by the fail-closed employee-status resolver (`_shared/employee-status-resolver.ts`) — never inline-computed at conversion time, never via a column default (the prior `DEFAULT 'Active'` was dropped in `20260530000001`). `compliance_state` is a **separate** axis: an established `Active` employee whose credential later expires becomes `non_compliant` WITHOUT reverting to `Onboarding`. `Terminated` is HR-controlled and never auto-reversed.
-**Migration:** `20260530000001_phase1_compliance_state_and_identity_collisions.sql` (adds `compliance_state`, drops the `employee_status` default; no existing-row backfill).
+**Phase 1 (Q2):** `employee_status` ∈ {Onboarding, Active, Terminated} is written **only** by the fail-closed employee-status resolver (`_shared/employee-status-resolver.ts`) — never inline-computed at conversion time, never via a column default (the prior `DEFAULT 'Active'` was dropped in `20260601000002`). `compliance_state` is a **separate** axis: an established `Active` employee whose credential later expires becomes `non_compliant` WITHOUT reverting to `Onboarding`. `Terminated` is HR-controlled and never auto-reversed.
+**Migration:** `20260601000002_phase1_compliance_state_and_identity_collisions.sql` (adds `compliance_state`, drops the `employee_status` default; no existing-row backfill).
 
 ---
 
@@ -160,7 +160,7 @@ updated_at        TIMESTAMPTZ
 **Indexes:** `(tenant_id, resolution_status, created_at desc)`; partial UNIQUE `(tenant_id, applicant_id, normalized_email) WHERE resolution_status='unresolved'` (no duplicate open collisions).
 **RLS:** SELECT/INSERT/UPDATE own tenant (SELECT also `platform_admin`).
 **Audit trigger:** `audit_identity_collisions_trigger`.
-**Migration:** `20260530000001_phase1_compliance_state_and_identity_collisions.sql`.
+**Migration:** `20260601000002_phase1_compliance_state_and_identity_collisions.sql`.
 
 ---
 

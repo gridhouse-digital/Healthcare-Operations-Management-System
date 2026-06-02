@@ -91,11 +91,11 @@ Implemented the Phase 1 lifecycle stabilization code task per the locked handoff
 ### What shipped (code)
 
 - **P2 — identity (extracted first):** new `supabase/functions/_shared/identity.ts` centralizes `normalizeEmail()` (`trim(lowercase)`) + tenant-scoped, fail-safe `findEmployeeMatch()` (applicant_id wins → exactly one email match → none → **collision, never guess**; cross-tenant non-match). Repointed `sync-wp-users` to `normalizeEmail`; the frontend's inline matcher was **deleted** (conversion is now server-side), satisfying "0 duplicate definitions".
-- **Migration `20260530000001`:** adds `people.compliance_state` (separate from lifecycle), drops the `employee_status` default so the resolver is the sole writer, and adds the `identity_collisions` ledger (RLS + audit trigger). Rollback documented in the migration + DECISIONS.md.
+- **Migration `20260601000002`** (renumbered from `20260530000001` during the 2026-06-02 rebase — see top entry)**:** adds `people.compliance_state` (separate from lifecycle), drops the `employee_status` default so the resolver is the sole writer, and adds the `identity_collisions` ledger (RLS + audit trigger). Rollback documented in the migration + DECISIONS.md.
 - **P1 — status resolver:** new `_shared/employee-status-resolver.ts` — a **pure, idempotent, fail-closed** `resolveEmployeeStatus()` implementing the exact Q2 matrix (+ `writeEmployeeStatus` as the sole DB writer, re-invoked after conversion/training writes). Lifecycle ≠ compliance; `Terminated` never auto-reversed; established `Active` never reverts.
 - **P1 — conversion authority:** new `convert-applicant` EF (`index.ts` + testable `_shared/conversion.ts` core). Sets `hired_at`=accepted `offer.start_date` (missing ⇒ fail), `job_title`=`offer.position_title` (missing ⇒ fail, no `'To Be Assigned'`), idempotent on `(tenant_id, email_normalized)`, preserves existing `hired_at`, records collisions instead of guessing, then invokes `onboard-employee` as a **separate** provisioning step. Frontend `employeeService` collapsed to one thin caller (`convertApplicantToEmployee`); `createEmployeeFromApplicant`/`moveApplicantToEmployee` **deleted** (0 callers); `OfferList` + `ApplicantDetailsPage` repointed.
 - **Narrowed `onboard-employee`:** provisioning-only; **fixed the read-side bug** `record.position` → reads persisted `offers.position_title`; update-only on `people` (no duplicate row on retry); logs success/partial/failure to `integration_log` (no silent failure). The `sendOffer` `position` request param was **NOT** renamed.
-- **Trigger repoint (`20260530000002`):** `on_offer_accepted` now enters `convert-applicant` (which calls `onboard-employee`), per the Q4 split.
+- **Trigger repoint (`20260601000003`, renumbered from `20260530000002`):** `on_offer_accepted` now enters `convert-applicant` (which calls `onboard-employee`), per the Q4 split.
 - **P3 — diagnostics (read-only):** new `_shared/compliance-diagnostics.ts` surfaces missing group/rule/course-mapping/anchor/sync conditions. No engine behavior changed.
 - **RLS suite:** added the Phase 1 ID-5 cross-tenant identity non-match assertion to `supabase/tests/rls/rls.test.ts` (merge gate).
 - **ESLint config:** scoped Deno Edge Functions out of the browser ESLint run (they use `deno lint`/`deno check`/`deno test`), removing 86 false legacy errors.
@@ -106,7 +106,7 @@ Implemented the Phase 1 lifecycle stabilization code task per the locked handoff
 
 ### Files changed
 
-NEW: `_shared/identity.ts`, `_shared/employee-status-resolver.ts`, `_shared/conversion.ts`, `_shared/compliance-diagnostics.ts`, `convert-applicant/index.ts`, 4 `_shared/tests/*.test.ts`, migrations `20260530000001` + `20260530000002`.
+NEW: `_shared/identity.ts`, `_shared/employee-status-resolver.ts`, `_shared/conversion.ts`, `_shared/compliance-diagnostics.ts`, `convert-applicant/index.ts`, 4 `_shared/tests/*.test.ts`, migrations `20260601000002` + `20260601000003` (renumbered from `20260530000001`/`2` on 2026-06-02).
 MODIFIED: `_shared`-importing `sync-wp-users/index.ts`, `onboard-employee/index.ts`, `src/services/employeeService.ts`, `src/features/offers/OfferList.tsx`, `src/features/applicants/ApplicantDetailsPage.tsx`, `supabase/tests/rls/rls.test.ts`, `supabase/audit-tables.json`, `eslint.config.js`, `SCHEMA.md`, `DECISIONS.md`, `SPRINT_PLAN.md`.
 
 ### Next
