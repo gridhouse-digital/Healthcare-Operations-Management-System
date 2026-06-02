@@ -3,6 +3,65 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-02 - Phase 1 lifecycle stabilization — REBASED onto stabilized main + migrations renumbered (PREPARE-AND-VALIDATE, not deployed)
+
+Rebased the Phase 1 WIP (`99f5d7a`, authored on pre-reconciliation `f6d4216`) onto
+**current `main`** (post Phase 0.1 RLS remediation + fresh-DB bootstrap + ai-summarize P0)
+on branch `phase-1/lifecycle-stabilization`. **Not deployed — deploy is a separate
+credentialed step.**
+
+### What was done
+
+- **Cherry-picked `99f5d7a`** onto main. Two real conflicts, both resolved keeping the
+  Phase 1 intent layered on top of main (no reconciliation/0.1/bootstrap work reverted):
+  - `PROJECT_LOG.md` — additive log entries from both sides kept in chronological order.
+  - `supabase/tests/rls/rls.test.ts` — kept the Phase 1 **ID-5** cross-tenant identity test
+    AND main's new `ai_cache`/`ai_logs`/storage RLS sections (phase-0.1); dropped the WIP's
+    now-misplaced teardown comment (main's teardown moved below the new sections).
+  - The four files the brief flagged (onboard-employee, sync-wp-users, eslint.config.js,
+    employeeService.ts) auto-merged cleanly — main had **not** touched them since `f6d4216`.
+  - `supabase/config.toml` + `supabase/.gitignore` were already on main → the WIP's adds
+    merged to no-ops (present in tree, not in the commit).
+- **🔑 Renumbered the two Phase 1 migrations to avoid a silent-skip collision.** The WIP had
+  stamped them `20260530000001/2`, but main reconciled DIFFERENT migrations into those exact
+  versions (`phase01_security_definer_views`, `phase01_function_grants_search_path`). Supabase
+  tracks applied migrations by version prefix, so a different file at an already-applied version
+  is **silently skipped**. Verified the **live ledger tip = `20260601000001`** (linked project
+  `peffyuhhlmidldugqalo`) and renumbered strictly after it AND the bootstrap fixes:
+  - `…0001_phase1_compliance_state_and_identity_collisions` → **`20260601000002`**
+  - `…0002_repoint_offer_accepted_to_convert_applicant` → **`20260601000003`**
+  Updated all Phase-1 cross-references (SPRINT_PLAN/SCHEMA/DECISIONS/PROJECT_LOG); left the
+  phase01 view/grant references (RLS suite, `_seed.ts`, DECISIONS 0.1 entry) at their original
+  numbers. Corrected the stale Phase 0.1 note that had planned `0530…0003/4` (it predated the
+  `0601` bootstrap migrations).
+- **CV-2 (real):** the convert-applicant authority already logged onboard-employee provisioning
+  failures to a durable `integration_log` `failed` row (not just `console.error`), but the logger
+  was trapped in `index.ts` (un-testable — `Deno.serve` on import). Extracted
+  `logProvisioningFailure` into testable `_shared/conversion.ts` (behavior unchanged) + added unit
+  tests (failed row, idempotency, no-tenant no-op).
+- **CV-1 (optional):** already implemented in the WIP (none-path adopts a pre-existing same-email
+  row and flips its type instead of throwing `CONVERSION_ROW_MISSING`) + already tested. Confirmed.
+- **CV-3 (owner decision):** recorded in DECISIONS.md — rehire-via-row-reuse stays `Active` with
+  fresh unmet onboarding (literal Q2; lifecycle ≠ compliance). Kept as-is; no rehire branch added.
+
+### Validation (in progress)
+
+- `deno test _shared/tests/` → **105 passed / 0 failed** (was 91 at WIP authoring; base grew via
+  main's added test files incl. the 8 ai-summarize tests; +3 new CV-2 provisioning-failure tests).
+- `deno check` on the touched EF modules → clean.
+- `supabase db reset` (fresh-from-scratch incl. renumbered Phase 1) + RLS suite + `npm run build`
+  + the GitHub Actions gate → run and recorded in the PR (see below).
+
+### Next
+
+- Open the PR; the Actions gate (frontend / edge-functions / rls-isolation / migration-parity)
+  must be GREEN before merge.
+- **Deploy (separate credentialed step):** `supabase db push` then
+  `supabase functions deploy convert-applicant onboard-employee sync-wp-users`; then a trigger
+  smoke-test (accept an offer → convert-applicant fires → tenant-scoped person created →
+  onboard-employee provisions). Ensure the Vault `service_role_key`/`project_url` secrets exist.
+
+---
 ## 2026-06-01 - P0 fix: ai-summarize-applicant tenant isolation + SSRF
 
 Closed the live cross-tenant write + SSRF in the deployed `ai-summarize-applicant`

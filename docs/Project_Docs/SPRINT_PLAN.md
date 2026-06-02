@@ -614,3 +614,12 @@ decisions Q1–Q5 in `DECISIONS.md` (2026-05-30). Implemented 2026-05-30.
 **Out of scope (not done, by design):** Phase 2 macro-domain refactor; existing-employee status backfill;
 any recurring-compliance engine change; Care Ops / Staff App / EVV / Family Portal / Billing / Payroll;
 Folk Care code.
+
+**Rebase status — 2026-06-02 (branch `phase-1/lifecycle-stabilization`, PREPARE-AND-VALIDATE):**
+[x] WIP `99f5d7a` cherry-picked onto current `main` (post 0.1 + bootstrap + ai-summarize); 2 conflicts
+resolved (PROJECT_LOG, rls.test.ts). [x] Migrations **renumbered** `20260530000001/2` →
+`20260601000002/3` (strictly after the verified live-ledger tip `20260601000001`) to avoid a
+silent-skip collision with main's `phase01_security_definer_views`/`function_grants` at the old
+versions. [x] CV-2 provisioning-failure logger made testable + tested; CV-1 confirmed; CV-3 owner ruling
+recorded (keep `Active`). [x] `deno test _shared/tests/` **105/0**. Pending in PR: `supabase db reset`
+fresh-apply, RLS suite, `npm run build`, GitHub Actions gate (must be GREEN). **Not deployed.**
