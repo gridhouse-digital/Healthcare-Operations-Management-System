@@ -309,3 +309,43 @@ export async function convertApplicantToEmployee(
 
   return { outcome: "converted", tenantId, personId, reused };
 }
+
+/**
+ * Durable provisioning-failure logging (CV-2 / CLAUDE.md "no silent failures").
+ *
+ * EXTERNAL provisioning (onboard-employee) is a SEPARATE retryable step invoked
+ * by the convert-applicant authority AFTER the internal conversion has already
+ * succeeded and been persisted. A provisioning failure therefore must NOT roll
+ * back the conversion or throw to the caller — but it also must NOT be swallowed
+ * as a bare console.error. This records a durable `failed` integration_log row so
+ * the failure is visible and the provisioning can be retried independently.
+ *
+ * Idempotency key `provisioning:<applicantId>` means repeated failures update the
+ * single open row rather than piling up. Best-effort — never throws (logging must
+ * not mask the successful conversion). Lives here (not in index.ts) so it is unit
+ * testable without booting the Deno.serve handler.
+ */
+export async function logProvisioningFailure(
+  admin: AdminClient,
+  tenantId: string | undefined,
+  applicantId: string,
+  personId: string,
+  detail: unknown,
+): Promise<void> {
+  if (!tenantId) return;
+  try {
+    await admin.from("integration_log").upsert(
+      [{
+        tenant_id: tenantId,
+        source: "convert-applicant",
+        idempotency_key: `provisioning:${applicantId}`,
+        status: "failed",
+        payload: { person_id: personId, step: "onboard_employee_provisioning", detail },
+        completed_at: new Date().toISOString(),
+      }],
+      { onConflict: "tenant_id,source,idempotency_key" },
+    );
+  } catch (_e) {
+    // logging must not mask the (successful) conversion
+  }
+}

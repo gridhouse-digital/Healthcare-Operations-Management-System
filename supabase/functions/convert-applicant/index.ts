@@ -7,6 +7,7 @@ import { logAudit } from "../_shared/audit-logger.ts";
 import {
   convertApplicantToEmployee,
   ConversionError,
+  logProvisioningFailure,
 } from "../_shared/conversion.ts";
 import { writeEmployeeStatus } from "../_shared/employee-status-resolver.ts";
 
@@ -38,37 +39,9 @@ interface ConvertRequest {
   skip_provisioning?: boolean;
 }
 
-/**
- * Durable provisioning-failure logging (CV-2 / CLAUDE.md "no silent failures").
- * The internal conversion already succeeded and is preserved; provisioning is a
- * separate retryable step, so its failure is recorded to integration_log rather
- * than failing the conversion response. Best-effort — never throws.
- */
-async function logProvisioningFailure(
-  // deno-lint-ignore no-explicit-any
-  admin: any,
-  tenantId: string | undefined,
-  applicantId: string,
-  personId: string,
-  detail: unknown,
-): Promise<void> {
-  if (!tenantId) return;
-  try {
-    await admin.from("integration_log").upsert(
-      [{
-        tenant_id: tenantId,
-        source: "convert-applicant",
-        idempotency_key: `provisioning:${applicantId}`,
-        status: "failed",
-        payload: { person_id: personId, step: "onboard_employee_provisioning", detail },
-        completed_at: new Date().toISOString(),
-      }],
-      { onConflict: "tenant_id,source,idempotency_key" },
-    );
-  } catch (_e) {
-    // logging must not mask the (successful) conversion
-  }
-}
+// CV-2: the durable provisioning-failure logger now lives in _shared/conversion.ts
+// (exported `logProvisioningFailure`) so it is unit-testable without booting this
+// Deno.serve handler. Behavior is unchanged.
 
 Deno.serve(async (req: Request) => {
   const preflight = handleCors(req);

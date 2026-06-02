@@ -78,7 +78,7 @@ The Phase 1 code task was verified against a **live disposable Supabase stack** 
 
 4. **`employee_status` backfill — DEFERRED (grandfather, with proof of mechanism).** The live DB confirmed `people.employee_status` now has **no column default** (the resolver is the sole writer; new rows are NULL, never a false `Active`). A meaningful "ambiguous existing `Active` rows" count requires a **production** snapshot (the disposable DB has none). Because the resolver's *"established `Active` stays `Active`"* rule (Q2) means a naive re-resolve will **not** correct historically-misclassified rows, any backfill must be a deliberate **reset-then-resolve** migration — explicitly **out of scope** here (the handoff excluded existing-employee backfill; NFR-3 forbids rewriting `hired_at`). **Decision:** ship Phase 1 without backfill; spin off a separate risk-managed **Phase 1.1 reset-then-resolve** task if a production count shows material ambiguous `Active` rows.
 
-5. **CV-3 rehire-via-row-reuse — OWNER RULING NEEDED (no code change made).** When a previously-`Active` employee is rehired by reusing their existing `people` row, the resolver keeps them `Active` even if fresh onboarding obligations are unmet — this is **literal Q2 behavior** ("established Active stays Active"; lifecycle ≠ compliance). Whether a rehire should re-enter `Onboarding` is a **product decision**, not a bug. **Decision:** leave current behavior as-is; obtain an explicit owner ruling. Only add a rehire-detection branch (e.g. reset to `Onboarding` on group re-entry with unmet mandatory courses) if the owner rules the current behavior wrong. Related: [[phase-0-tenant-guard-remediation]] follow-ups.
+5. **CV-3 rehire-via-row-reuse — OWNER RULED 2026-06-02: KEEP AS-IS.** When a previously-`Active` employee is rehired by reusing their existing `people` row, the resolver keeps them `Active` even if fresh onboarding obligations are unmet — this is **literal Q2 behavior** ("established Active stays Active"; lifecycle ≠ compliance). Whether a rehire should re-enter `Onboarding` is a **product decision**, not a bug. **Ruling (Phase 1 rebase handoff, 2026-06-02):** the owner confirms the current behavior is correct — a reused/rehired row stays `Active`; compliance gaps surface through the **separate `compliance_state`** axis (`non_compliant`), never by reverting lifecycle to `Onboarding`. **No rehire-detection branch is added.** Should a future product decision want rehires to re-enter `Onboarding`, that is a deliberate, separately-scoped change (resolver gains a rehire input + reset-on-group-re-entry rule); it is explicitly NOT in Phase 1. Related: [[phase-0-tenant-guard-remediation]] follow-ups.
 
 ---
 
@@ -207,7 +207,19 @@ The brief required B/C to sort **after** `20260530000000` **and before** Phase 1
 (`…000000` and `…000001` are consecutive — no version sorts strictly between under
 Supabase's numeric ordering). **Resolution:** B/C take `20260530000001`/`20260530000002`;
 Phase 1's two WIP migrations (currently those numbers, on unmerged `99f5d7a`) must be
-**renumbered to `…0003/0004` during Phase 1's own rebase**. Phase 1 is not touched now.
+**renumbered during Phase 1's own rebase**. Phase 1 is not touched now.
+
+> **UPDATE 2026-06-02 (Phase 1 rebase — supersedes the `…0003/0004` plan above).**
+> The original note proposed renumbering Phase 1 to `20260530000003/0004`. That plan
+> predated the **bootstrap fixes** `20260601000000_fix_audit_ai_cache_record_id` and
+> `20260601000001_c2_function_grant_hardening`, which landed on `main` afterward and are
+> already in the **live ledger** (verified tip = `20260601000001`). Renumbering Phase 1 to
+> `0530…0003/4` would place it *before* those already-applied `0601` versions → an
+> out-of-order `supabase db push` on deploy. **Actual renumber (this rebase):**
+> `20260601000002_phase1_compliance_state_and_identity_collisions` and
+> `20260601000003_repoint_offer_accepted_to_convert_applicant` — strictly after the live
+> tip AND the bootstrap fixes, so a fresh `db reset` and a remote `db push` both apply them
+> cleanly in order.
 
 ### Decision — test-suite regression caught by the rebase
 The original 0.1 commit (`0d92220`, authored against stale `main`) had **stripped** the

@@ -2,6 +2,7 @@ import { assertEquals, assertExists } from "jsr:@std/assert";
 import {
   convertApplicantToEmployee,
   ConversionError,
+  logProvisioningFailure,
 } from "../conversion.ts";
 import { normalizeEmail } from "../identity.ts";
 
@@ -357,6 +358,50 @@ Deno.test("CV-2: applicant Hired-mark failure writes a durable integration_log r
   assertExists(failed);
   assertEquals(failed!.tenant_id, TENANT);
   assertEquals(failed!.idempotency_key, "applicant-hired:app-1");
+});
+
+// ---------------------------------------------------------------------------
+// CV-2 (the brief's finding): a FAILED onboard-employee provisioning call must
+// write a durable `failed` integration_log row — NOT just console.error. The
+// internal conversion has already succeeded; provisioning is a separate
+// retryable step (Q4). logProvisioningFailure is the shared writer the
+// convert-applicant authority calls on the non-ok / invocation-error paths.
+// ---------------------------------------------------------------------------
+
+Deno.test("CV-2: provisioning failure writes a durable failed integration_log row", async () => {
+  const admin = makeAdmin({});
+  await logProvisioningFailure(
+    admin,
+    TENANT,
+    "app-1",
+    "person-1",
+    { status: 502, body: { error: "WP unreachable" } },
+  );
+
+  assertEquals(admin.tables.integration_log.length, 1);
+  const row = admin.tables.integration_log[0];
+  assertEquals(row.tenant_id, TENANT);
+  assertEquals(row.source, "convert-applicant");
+  assertEquals(row.status, "failed");
+  // idempotency: keyed on the applicant so repeated failures update one row
+  assertEquals(row.idempotency_key, "provisioning:app-1");
+  const payload = row.payload as Record<string, unknown>;
+  assertEquals(payload.person_id, "person-1");
+  assertEquals(payload.step, "onboard_employee_provisioning");
+});
+
+Deno.test("CV-2: provisioning failure is idempotent on (tenant,source,key) — one open row", async () => {
+  const admin = makeAdmin({});
+  await logProvisioningFailure(admin, TENANT, "app-1", "person-1", { attempt: 1 });
+  await logProvisioningFailure(admin, TENANT, "app-1", "person-1", { attempt: 2 });
+  // same idempotency key → upsert updates the single row, never piles up
+  assertEquals(admin.tables.integration_log.length, 1);
+});
+
+Deno.test("CV-2: no tenant_id → no-op (cannot write a tenant-scoped row)", async () => {
+  const admin = makeAdmin({});
+  await logProvisioningFailure(admin, undefined, "app-1", "person-1", { error: "x" });
+  assertEquals(admin.tables.integration_log.length, 0);
 });
 
 // ---------------------------------------------------------------------------
