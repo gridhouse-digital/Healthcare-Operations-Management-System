@@ -214,7 +214,12 @@ export async function handleSummarize(
                 applicantData.resume_text = null;
                 try {
                     const dbUrl: string = row.resume_url;
-                    if (isAllowedResumeUrl(dbUrl) && dbUrl.toLowerCase().endsWith(".pdf")) {
+                    // Test the URL *pathname* for the .pdf extension so URLs with
+                    // query strings / fragments (e.g. signed-storage tokens) still
+                    // match. isAllowedResumeUrl() already validated it parses.
+                    const isPdf = isAllowedResumeUrl(dbUrl) &&
+                        new URL(dbUrl).pathname.toLowerCase().endsWith(".pdf");
+                    if (isPdf) {
                         console.log(`Extracting text from DB-sourced resume: ${dbUrl}`);
                         const fileRes = await deps.fetchFn(dbUrl);
                         if (fileRes.ok) {
