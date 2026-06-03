@@ -55,7 +55,7 @@ export const dashboardService = {
     async getRecentActivity(): Promise<ActivityItem[]> {
         const { data: applicants } = await supabase
             .from('applicants')
-            .select('id, first_name, last_name, full_name, position_applied, created_at')
+            .select('id, first_name, last_name, position_applied, created_at')
             .order('created_at', { ascending: false })
             .limit(5);
 

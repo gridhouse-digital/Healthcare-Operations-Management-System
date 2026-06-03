@@ -86,3 +86,64 @@ In order:
 3. Recommended next phase: **`compliance_state` enforcement** (backlog #1) — it turns the
    lifecycle/clearance model from scaffolding into an enforced healthcare control. Do the smoke
    test (#2) first to close out Phase 1.
+
+---
+
+# Addendum 2026-06-03 — Onboarding fail-open finding + Compliance Rule-Engine design
+
+Surfaced while debugging the running app (post `.env` recovery). These reshape backlog #1 from
+"enforce `compliance_state`" into a concrete, designed phase with a repro and a locked design.
+
+## New findings
+
+1. **🔴 Onboarding completeness is FAIL-OPEN (compliance-correctness defect).** Verified via
+   **Karimah Moss** (`people.id = a9e02e52-1d13-45d5-961f-1ffc2ce6d8c5`): her enrolled LearnDash
+   group `1428` has **8 expected courses**; her `training_records` has **2** (both `completed`);
+   `v_onboarding_training_compliance` shows 2/2 → the resolver set `employee_status = 'Active'`
+   while 6 onboarding courses are incomplete. **Root cause:** completeness is measured against
+   *courses that have a record*, not the *expected course set*. A not-started course produces no
+   `training_record`, so it's invisible and silently counted as done ("absence read as completion").
+   **Compounded by:** `compliance_state` is `null`/inert (no clearance signal); and Q2 stickiness —
+   a prematurely-`Active` row will not auto-revert. *This is the headline reason backlog #1 matters.*
+2. **Hire-detection writes a non-existent column.** `detect-hires-bamboohr:265`,
+   `detect-hires-jazzhr:279`, `sendOffer:92/108` write `full_name` to `applicants` — which has
+   `first_name`/`last_name` but **no `full_name`** → those upserts 400. BambooHR/JazzHR applicant
+   writes are broken (latent; JotForm is the live intake). Fix: write `first_name`/`last_name`
+   (the EFs already compute them as locals). New backlog item.
+3. **Dashboard `full_name` select fixed** — `dashboardService.ts:58` selected a non-existent
+   `applicants.full_name` → 400 on recent-activity. Fixed in working tree (commit it).
+
+## The next phase — ONE rule-driven, fail-closed compliance engine (expands backlog #1)
+
+**The config already exists:** `training_compliance_rules` is tenant-scoped with a
+`compliance_track` (`onboarding` | `recurring`), `applies_to_type`, `course_id`/`group_id`, and
+completion toggles. Today only **`recurring`** rules exist, and the status resolver doesn't read
+rules at all — so onboarding is "hardcoded by accident" (count records). Build:
+
+1. **Enforcement:** drive `v_onboarding_training_compliance` / the resolver from the tenant's
+   `training_compliance_rules WHERE compliance_track='onboarding' AND active` — enumerate required
+   courses (group's active courses, minus exclusions), require ALL `completed`, **fail-closed** on
+   missing/not-started.
+2. **One engine, both axes:** compute `employee_status` (Onboarding→Active) AND `compliance_state`
+   (compliant/non_compliant) from rule satisfaction. Unifies backlog #1 with this finding.
+3. **Admin UI:** extend the recurring-compliance rules UI to the onboarding track (which
+   group/courses gate "Active"). Every rule change audited to `audit_log`.
+4. **One-time re-resolve** of prematurely-`Active` rows (Karimah) — needs a deliberate reset
+   because of Q2 stickiness.
+
+**Locked design decisions (owner-agreed 2026-06-03):**
+- **Rule target:** group-based default (all *active* courses in the designated onboarding group)
+  **+ course-level exclusion** escape hatch. NOT hand-picked courses as the primary model.
+- **No-rule default:** **fail-closed + setup-gated** — no onboarding rule ⇒ stay `Onboarding`;
+  make rule definition a required tenant-setup step with an admin banner. **Fail-closed is a system
+  invariant, never an agency toggle** (agencies choose *which* courses gate, never *whether*
+  incompleteness blocks).
+- **Principles:** rules-as-data (tenants scale as rows, not code/`if`-branches); decouple from
+  LearnDash via the controlled sync boundary; per-role via `ld_group_mappings`; tenant-scoped + RLS;
+  audit every rule change.
+
+**Acceptance test #1:** Karimah (2 of 8) renders `Onboarding`, not `Active`.
+
+**Scalability caveat:** validating a "who's cleared to work" calc safely needs **Supabase Pro**
+(preview branches to test rule changes off-prod, + PITR backups) before real tenants. This phase
+is the forcing function for that upgrade.
