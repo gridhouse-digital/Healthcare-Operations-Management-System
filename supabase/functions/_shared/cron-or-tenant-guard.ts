@@ -31,6 +31,18 @@ export function cronOrTenantGuard(req: Request): InvocationContext {
 
   const token = authHeader.slice(7);
 
+  // ── Path A: service-role key (pg_cron / internal service-to-service) ──
+  // The service-role key is a shared secret — compare it DIRECTLY, before any
+  // JWT decode. This works whether the configured key is a legacy JWT or the
+  // new opaque `sb_secret_…` API key (which is NOT a 3-part JWT and would fail
+  // the decode below). Without this, internal calls like
+  // convert-applicant → onboard-employee fail with INVALID_JWT the moment the
+  // service key is the new format.
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (serviceRoleKey && token === serviceRoleKey) {
+    return { mode: "cron" };
+  }
+
   let payload: Record<string, unknown>;
   try {
     const parts = token.split(".");
@@ -40,7 +52,9 @@ export function cronOrTenantGuard(req: Request): InvocationContext {
     throw new TenantGuardError("INVALID_JWT", "JWT could not be decoded");
   }
 
-  // ── Path A: service-role token (pg_cron) ──────────────────────────
+  // ── Path A (fallback): legacy service-role JWT (role claim) ───────────
+  // Still honored for a pg_cron caller whose Vault key is a legacy JWT that
+  // differs from the EF env SUPABASE_SERVICE_ROLE_KEY.
   const topLevelRole = payload["role"];
   if (topLevelRole === "service_role") {
     return { mode: "cron" };
