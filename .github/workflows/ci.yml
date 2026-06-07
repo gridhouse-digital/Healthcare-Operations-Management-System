@@ -56,6 +56,30 @@ jobs:
         run: deno test _shared/tests/ --allow-env --allow-net
 
   # ---------------------------------------------------------------------------
+  # Invariant guards — cheap grep gates for known footguns. Fast, no deps.
+  # Added after the 2026-05-28 onConflict regression: people/applicants
+  # uniqueness is (tenant_id, email_normalized); upserting ON CONFLICT
+  # (tenant_id, email) raises 42P10 at runtime. This catches a reversion in CI.
+  # ---------------------------------------------------------------------------
+  invariant-guards:
+    name: Invariant Guards — forbidden patterns
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No (tenant_id,email) onConflict on people/applicants
+        shell: bash
+        run: |
+          # Exact match on the wrong target; the test file intentionally uses it
+          # to assert the 42P10 failure, so exclude _shared/tests/.
+          HITS="$(grep -rEn 'onConflict:[[:space:]]*"tenant_id,email"' supabase/functions --include='*.ts' | grep -v '/tests/' || true)"
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "::error::Found onConflict:\"tenant_id,email\". people/applicants uniqueness is (tenant_id,email_normalized) — use \"tenant_id,email_normalized\"."
+            exit 1
+          fi
+          echo "OK — no forbidden (tenant_id,email) onConflict targets."
+
+  # ---------------------------------------------------------------------------
   # Tenant-isolation gate — clean full migration apply + RLS suite.
   # This is the gate that protects the multi-tenant boundary. It also proves a
   # FRESH database boots cleanly (DR / new-env insurance) — only possible now

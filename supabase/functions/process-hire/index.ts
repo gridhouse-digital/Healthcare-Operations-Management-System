@@ -235,11 +235,17 @@ async function processHire(
       );
       wpUserId = created.id;
     }
-    await admin
+    const { error: wpIdErr } = await admin
       .from("people")
       .update({ wp_user_id: wpUserId })
       .eq("tenant_id", hire.tenant_id)
       .eq("email", email);
+    if (wpIdErr) {
+      // Do not swallow: a lost wp_user_id silently breaks training-sync matching.
+      console.error(
+        `Failed to persist wp_user_id=${wpUserId} for ${email}: ${wpIdErr.message}`,
+      );
+    }
   }
 
   // LearnDash group enrollment (match job title with singular/plural: Caregiver <-> Caregivers)

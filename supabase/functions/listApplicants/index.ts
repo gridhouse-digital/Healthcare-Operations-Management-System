@@ -235,12 +235,19 @@ Deno.serve(async (req: Request) => {
           // Handle email conflicts individually with tenant-scoped unique key
           for (const applicant of inserts) {
             try {
-              await admin
+              // supabase-js returns { error } on DB failures (does NOT throw),
+              // so the catch alone would swallow them — capture and surface.
+              const { error: fallbackErr } = await admin
                 .from("applicants")
                 .upsert(applicant, {
                   onConflict: "tenant_id,email_normalized",
                 })
                 .select();
+              if (fallbackErr) {
+                console.error(
+                  `Error processing applicant ${applicant.email}: ${fallbackErr.message}`,
+                );
+              }
             } catch (err) {
               console.error(
                 `Error processing applicant ${applicant.email}:`,
