@@ -238,7 +238,7 @@ Deno.serve(async (req: Request) => {
               await admin
                 .from("applicants")
                 .upsert(applicant, {
-                  onConflict: "tenant_id,email",
+                  onConflict: "tenant_id,email_normalized",
                 })
                 .select();
             } catch (err) {

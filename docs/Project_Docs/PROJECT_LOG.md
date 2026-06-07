@@ -3,6 +3,36 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-07 - Hotfix: onConflict target on people/applicants upserts (`tenant_id,email` → `tenant_id,email_normalized`)
+
+P1 correctness regression fix. Branch `hotfix/onconflict-email-normalized` off `main`. **Application-layer only — no migration, no schema change. Not deployed (deploy pending sign-off).**
+
+### Root cause
+
+Migration `20260528000002_normalized_email_uniqueness.sql` (landed 2026-05-28) replaced the unique index on `people` and `applicants` from `(tenant_id, email)` with `(tenant_id, email_normalized)` (generated `lower(btrim(email))`). Four Edge Functions still upserted with `onConflict: "tenant_id,email"`, which no longer matches any unique index → Postgres `42P10`. `_shared/conversion.ts` had been migrated correctly; these four sites were missed. Since 2026-05-28 no WP-direct insert into `people` succeeded (triggering case: applicant "Ida", WP id 293, added to WordPress 2026-06-06 — `Hired` in `applicants`, never created in `people`).
+
+- `sync-wp-users`: the upsert `{ error }` was discarded → the `42P10` was swallowed; the follow-up `UPDATE … WHERE email=` matched 0 rows for a new user (not an error) → `synced++` fired = **silent data loss reported as success** (`synced:16`, `errors:0`).
+- `detect-hires-bamboohr` / `detect-hires-jazzhr`: `if (peopleUpsertErr) throw` → latent hard-throw on the next real hire.
+- `listApplicants`: same latent throw on the email-conflict branch.
+
+### What shipped
+
+- **Fix A** — corrected the conflict target at 6 sites (4 files): `sync-wp-users` (people, line 302), `detect-hires-bamboohr` (people 252 + applicants 271), `detect-hires-jazzhr` (people 266 + applicants 285), `listApplicants` (applicants 241). Other `onConflict` targets (`id`, `jotform_id`, `tenant_id,source,idempotency_key`, `tenant_id,user_id`, `tenant_id,applicant_id,normalized_email`, etc.) left untouched.
+- **Fix B** — `sync-wp-users` now captures the insert-ignore `{ error }`; on error it logs, `errors++`, and `continue`s (no fall-through to the `UPDATE` / `synced++`). The `synced` count now reflects real writes, so a future target mismatch cannot masquerade as success.
+- Added `supabase/functions/_shared/tests/onconflict-email-normalized.test.ts` (7 tests): a Postgres-like fake client that raises `42P10` on a mismatched `ON CONFLICT` target; pins the corrected target, the swallow-guard contract (failed insert → counted as `error`, not `synced`; `UPDATE` not reached), and case-insensitive dedup. The four EF `index.ts` modules call `Deno.serve` at top level (not importable) and the prescribed test command grants no `--allow-read`, so this is a contract test that fails on reversion to `tenant_id,email`. Follow-up (out of scope): extract the `sync-wp-users` loop body to an importable handler (as `ai-summarize-applicant/handler.ts` did) for direct behavioural coverage.
+
+### Verification
+
+- `deno test _shared/tests/ --allow-env --allow-net` → **118 passed / 0 failed**.
+- `npm run build` → clean (`tsc -b` + `vite build`; pre-existing chunk-size warning only).
+- Live-schema zero-write probe (`peffyuhhlmidldugqalo`, `where false`): old `on conflict (tenant_id, email)` → `42P10`; corrected `on conflict (tenant_id, email_normalized)` → success. **Flip confirmed.**
+
+### Next (pending sign-off — deploy from `main` only)
+
+- `npx supabase functions deploy sync-wp-users detect-hires-bamboohr detect-hires-jazzhr listApplicants`.
+- Force-run WP sync; confirm Ida (`wp_user_id=293` / `idalwsbnl@gmail.com`) lands as one linked `people` row (`profile_source='wordpress'`, `applicant_id` set) and appears in **Employees**.
+
+---
 ## 2026-06-06 - BMAD AI architect review: enterprise AI gateway upgrade plan
 
 Produced a BMAD working-note review of the current HOMS AI implementation against the master spec, the supplied enterprise AI gateway upgrade plan, and Folk Care as reference architecture only. **Documentation only - no application code changed.**

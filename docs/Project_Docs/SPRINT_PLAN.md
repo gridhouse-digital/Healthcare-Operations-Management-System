@@ -1,6 +1,6 @@
 # SPRINT PLAN - HOMS MVP
 
-> Updated: 2026-06-06
+> Updated: 2026-06-07
 > Sprint window: 60-90 days from 2026-03-04
 > Methodology: Epic-gated. Each epic has a CI gate. Next epic only starts after gate passes.
 
@@ -12,6 +12,12 @@
 - [~] In progress
 - Not started
 - [B] Blocked
+
+---
+
+## Operational Hotfixes
+
+- **2026-06-07 — `onConflict` target regression (P1).** [~] Code complete on branch `hotfix/onconflict-email-normalized`; **deploy pending sign-off.** Four EFs (`sync-wp-users`, `detect-hires-bamboohr`, `detect-hires-jazzhr`, `listApplicants`) upserted `people`/`applicants` with the stale `onConflict: "tenant_id,email"` after migration `20260528000002` moved uniqueness to `(tenant_id, email_normalized)` → `42P10` (silent data loss in WP sync; latent throw in hire detectors). Fixed target at 6 sites + hardened `sync-wp-users` swallowed-error path; added contract test. `deno test` 118/0, `npm run build` clean, live probe flip confirmed. See PROJECT_LOG 2026-06-07 and DECISIONS 2026-06-07. Deploy step (4 functions) + Ida confirmation outstanding.
 
 ---
 

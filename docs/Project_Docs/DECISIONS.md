@@ -8,6 +8,13 @@
 
 ---
 
+## 2026-06-07 | Uniqueness key for `people`/`applicants` is `email_normalized`; all upserts must target it
+
+**What:** Migration `20260528000002_normalized_email_uniqueness.sql` replaced the unique index on `people` and `applicants` from `(tenant_id, email)` with `(tenant_id, email_normalized)` — a `GENERATED ALWAYS AS (lower(btrim(email)))` column. **Every `people`/`applicants` upsert MUST use `onConflict: "tenant_id,email_normalized"`.** Targeting `"tenant_id,email"` no longer matches any unique index and raises Postgres `42P10: there is no unique or exclusion constraint matching the ON CONFLICT specification`.
+**Why:** Case-/whitespace-insensitive dedup is the intended identity contract (`(tenant_id, email)` is the universal dedup key, normalized). The generated column makes normalization authoritative in the DB; the application must point `ON CONFLICT` at the index that actually exists.
+**Alternatives:** Keep a raw-email index — rejected (case/whitespace variants like `Ada@…` vs `ada@…` would create duplicate people/applicants). App-side normalization only — rejected (no DB-level uniqueness guarantee).
+**Consequence / guard:** Phase 1 migrated `_shared/conversion.ts` correctly but **missed four Edge Functions** (`sync-wp-users`, `detect-hires-bamboohr`, `detect-hires-jazzhr`, `listApplicants`) — fixed 2026-06-07 (see PROJECT_LOG 2026-06-07). **Review guard:** any new `people`/`applicants` upsert must target `email_normalized`; an exact grep for `onConflict: "tenant_id,email"` (with the closing quote) must return zero hits under `supabase/functions/`. **Rollback:** application-layer only — `git revert` the hotfix commit + redeploy the 4 functions; no DB/migration change is involved.
+
 ## 2026-05-30 | Phase 1 lifecycle decisions (Q1–Q5): hired_at, status model, job_title, conversion authority, identity precedence
 
 > Owner rulings that gate the Phase 1 lifecycle-stabilization implementation. Source handoff:

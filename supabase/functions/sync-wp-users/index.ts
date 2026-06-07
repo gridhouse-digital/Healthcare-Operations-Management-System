@@ -285,7 +285,7 @@ async function processTenant(
 
       try {
         // Insert-ignore: profile_source='wordpress' only on first insert
-        await admin.from("people").upsert(
+        const { error: insertErr } = await admin.from("people").upsert(
           [
             {
               tenant_id: config.tenant_id,
@@ -299,8 +299,14 @@ async function processTenant(
               profile_source: "wordpress",
             },
           ],
-          { onConflict: "tenant_id,email", ignoreDuplicates: true },
+          { onConflict: "tenant_id,email_normalized", ignoreDuplicates: true },
         );
+
+        if (insertErr) {
+          console.error(`Insert-ignore failed for ${email}: ${insertErr.message}`);
+          errors++;
+          continue;
+        }
 
         // Update non-protected fields — never touch profile_source, hired_at, job_title
         const { error: updateErr } = await admin

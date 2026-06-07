@@ -249,7 +249,7 @@ async function writePersonAndApplicant(
       profile_source: "bamboohr",
     },
     {
-      onConflict: "tenant_id,email",
+      onConflict: "tenant_id,email_normalized",
       ignoreDuplicates: true,
     },
   );
@@ -268,7 +268,7 @@ async function writePersonAndApplicant(
       position_applied: jobTitle,
     },
     {
-      onConflict: "tenant_id,email",
+      onConflict: "tenant_id,email_normalized",
       ignoreDuplicates: false,
     },
   );
