@@ -263,7 +263,7 @@ async function upsertPersonAndApplicant(
       profile_source: "jazzhr",
     },
     {
-      onConflict: "tenant_id,email",
+      onConflict: "tenant_id,email_normalized",
       ignoreDuplicates: true,
     },
   );
@@ -282,7 +282,7 @@ async function upsertPersonAndApplicant(
       position_applied: jobTitle,
     },
     {
-      onConflict: "tenant_id,email",
+      onConflict: "tenant_id,email_normalized",
       ignoreDuplicates: false,
     },
   );
