@@ -57,7 +57,10 @@ prolific-hr-app/
 .gemini/
 
 # BMAD framework files
-BMAD/
+# Root-anchored: ignore the top-level BMAD/ scratch folder ONLY. Without the
+# leading slash this also matched docs/bmad/ (Windows is case-insensitive),
+# silently un-tracking the BMAD governance + handoff docs. Anchored 2026-06-07.
+/BMAD/
 _bmad/
 _bmad-output/
 
