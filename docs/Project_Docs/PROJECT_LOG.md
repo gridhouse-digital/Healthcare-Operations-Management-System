@@ -3,6 +3,25 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-06 - BMAD AI architect review: enterprise AI gateway upgrade plan
+
+Produced a BMAD working-note review of the current HOMS AI implementation against the master spec, the supplied enterprise AI gateway upgrade plan, and Folk Care as reference architecture only. **Documentation only - no application code changed.**
+
+### What shipped (docs)
+
+- Created `docs/audits/homs-ai-architect-review-enterprise-gateway.md`.
+- Evaluated current AI surfaces: `ai-summarize-applicant`, `ai-rank-applicants`, `ai-draft-offer-letter`, `ai-onboarding-logic`, `ai-wp-validation`, `_shared/aiClient.ts`, `ai_logs`, `ai_cache`, AI dashboard telemetry, and AI-related tests.
+- Classified findings by current/planned/compliance-blocked status, including caller-supplied `messages` risk, prompt-only JSON parsing, gateway black-box dependency, partial PII minimization, AI log/cache telemetry gaps, and reliability gaps.
+- Reviewed the supplied `docs/architecture/enterprise-ai-gateway-upgrade-plan.md` as a draft input, not a promoted architecture decision.
+- Confirmed Folk Care is useful for provider abstraction, model tiers, Zod `generateJSON`, and AI usage telemetry patterns, but also has direct Anthropic services and prompt-only JSON parsing in several verticals.
+
+### Next
+
+- Owner decision: revise/promote/supersede the supplied enterprise AI gateway plan.
+- Current-fix candidate: remove public `messages` mode from AI Edge Functions and add server-side schema validation before caching output.
+- Compliance gate: no PHI/ePHI, Staff App note AI, safety-critical routing, RAG, or AI-Powered EVV until regulated-data architecture and vendor BAA posture are approved.
+
+---
 ## 2026-06-02 - Phase 1 lifecycle stabilization — REBASED onto stabilized main + migrations renumbered (PREPARE-AND-VALIDATE, not deployed)
 
 Rebased the Phase 1 WIP (`99f5d7a`, authored on pre-reconciliation `f6d4216`) onto

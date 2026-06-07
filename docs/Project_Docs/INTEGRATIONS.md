@@ -115,14 +115,21 @@
 
 ---
 
-## Anthropic Claude API
+## Cloudflare Workers AI Gateway
 
 | Property | Value |
 |---|---|
-| Auth method | API key (header: `x-api-key`) |
-| API key storage | Supabase EF secret: `ANTHROPIC_API_KEY` |
-| Model | claude-sonnet-4-6 (latest) |
-| Features | Applicant ranking, summarization, offer letter drafting |
+| Architecture | Supabase Edge Functions act as clients to a Cloudflare Worker AI Gateway |
+| Gateway URL | `https://hr-ai-worker.gridhouse-digital10.workers.dev/` (via `AI_GATEWAY_URL` env var) |
+| Auth method | Gateway API key (header: `x-api-key`) |
+| API key storage | Supabase EF secret: `AI_GATEWAY_API_KEY` |
+| Models | **Chat**: Llama 4 Scout (`@cf/meta/llama-4-scout-17b-16e-instruct`)<br>**Reasoning**: DeepSeek R1 (`@cf/deepseek/deepseek-r1-distill-qwen-32b`)<br>**Embeddings**: BGE Large (`@cf/baai/bge-large-en-v1.5`) |
+| Features | Applicant ranking, summarization, offer letter drafting, onboarding logic, wp validation |
 | All calls go through | `_shared/aiClient.ts` |
-| Logging | All calls logged to `ai_logs` table |
-| Rate limits | Per Anthropic plan; monitor via ai_logs |
+| Logging | All calls logged to `ai_logs` table with token usage tracking |
+| Rate limits | 60 requests per minute per tenant (enforced by `aiClient.ts`) |
+
+**Notes:**
+- The project does NOT use the Anthropic Claude API. It uses Cloudflare's native serverless AI models.
+- `aiClient.ts` maps domain tasks (e.g., 'summary', 'ranking') to worker tasks ('chat', 'reasoning').
+- Results are cached in the `ai_cache` table to optimize costs and latency.

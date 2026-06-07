@@ -1,6 +1,6 @@
 # SPRINT PLAN - HOMS MVP
 
-> Updated: 2026-03-15
+> Updated: 2026-06-06
 > Sprint window: 60-90 days from 2026-03-04
 > Methodology: Epic-gated. Each epic has a CI gate. Next epic only starts after gate passes.
 
@@ -509,6 +509,10 @@
 - AI prompts and fallbacks tolerate sparse ATS applicant data
 - Status: [ ] Not started
 - Plan: `docs/plans/2026-03-15-pre-epic6-restructure-plan.md`
+- BMAD architecture review completed 2026-06-06 as a working note:
+  `docs/audits/homs-ai-architect-review-enterprise-gateway.md`.
+  This does not mark Story 5.21 complete; it identifies prerequisite hardening
+  before implementation.
 
 **Epic 5 Gate:** Stories 5.1-5.10 are functionally complete on the linked project. Remote DB matches the post-migration model, active EF/runtime paths no longer depend on `employees`, `settings`, or `profiles`, and public request-access intake now hands off cleanly into the manual onboarding flow. Tenant provisioning itself is still manual and remains the next obvious platform-admin workflow gap.
 

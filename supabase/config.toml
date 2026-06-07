@@ -4,6 +4,16 @@
 # working directory name when running `supabase init`.
 project_id = "prolific-hr-app"
 
+# onboard-employee is invoked server-to-server by convert-applicant with the
+# service-role key (Bearer SUPABASE_SERVICE_ROLE_KEY). With the new opaque
+# `sb_secret_…` key format that is NOT a JWT, so the platform's verify_jwt gate
+# rejects it (UNAUTHORIZED_INVALID_JWT_FORMAT) BEFORE the function runs — the
+# function's own guard never gets a chance. Disable the platform gate here; the
+# function self-authenticates via cronOrTenantGuard (service key OR tenant user
+# JWT) as its FIRST action, so it is not left unprotected.
+[functions.onboard-employee]
+verify_jwt = false
+
 [api]
 enabled = true
 # Port to use for the API URL.
