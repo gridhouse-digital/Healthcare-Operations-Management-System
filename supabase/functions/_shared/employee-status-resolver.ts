@@ -37,8 +37,9 @@ export interface RawTrainingRow {
 
 export interface StatusResolverInput {
   /**
-   * Rows from v_onboarding_training_compliance, or `null` when the view is
-   * missing / not materialized (forces the raw fallback).
+   * Rows from v_onboarding_gate (requirement-driven: one row per gating
+   * course, missing records surface as 'not_started'), or `null` when the
+   * view is missing / not materialized (forces the raw fallback).
    */
   complianceView: ComplianceViewRow[] | null;
   /** Raw training_records rows — used only when complianceView is null. */
@@ -46,9 +47,10 @@ export interface StatusResolverInput {
   /** people.hired_at (set from accepted offer.start_date). Presence ≠ Active. */
   hiredAt: string | null;
   /**
-   * Whether the employee has at least one active LearnDash training group /
-   * mapped rule / anchor — i.e. onboarding obligations are CONFIGURED. When
-   * false, onboarding is not safely evaluable → fail closed.
+   * Whether onboarding obligations are CONFIGURED and the person is actively
+   * enrolled in the tenant's designated onboarding group
+   * (tenant_settings.onboarding_group_id). When false — setting unset or not
+   * enrolled — onboarding is not safely evaluable → fail closed.
    */
   hasActiveTrainingGroups: boolean;
   /** HR-controlled terminal flag. Wins over everything. */
@@ -132,18 +134,27 @@ export function resolveEmployeeStatus(
 type AdminClient = any;
 
 /**
- * Reads the resolver inputs for one person from the DB (using the onboarding
- * view, with a raw training_records fallback when the view is missing/not yet
- * materialized — exactly the snapshot the legacy inline code used).
+ * Reads the resolver inputs for one person from the DB.
+ *
+ * Onboarding-completion-gate rewiring (2026-06-12 handoff §5a):
+ *   - The tenant's designated onboarding group (tenant_settings.onboarding_group_id)
+ *     is the source of truth. Unset → not safely evaluable → fail closed.
+ *   - hasActiveTrainingGroups = active enrollment IN THE DESIGNATED GROUP,
+ *     not "any active enrollment".
+ *   - complianceView = the person's rows from v_onboarding_gate — requirement-
+ *     driven, one row per gating course whether or not a record exists, so a
+ *     never-started course can no longer vanish from the completeness check.
+ *   - The raw training_records fallback survives ONLY for the view-missing
+ *     path (42P01/PGRST205), semantics unchanged.
  */
 export async function gatherStatusInput(
   admin: AdminClient,
   personId: string,
 ): Promise<StatusResolverInput> {
-  // current persisted status + termination signal
+  // current persisted status + termination signal (+ tenant for the gate setting)
   const { data: person } = await admin
     .from("people")
-    .select("employee_status, hired_at")
+    .select("employee_status, hired_at, tenant_id")
     .eq("id", personId)
     .maybeSingle();
 
@@ -151,20 +162,39 @@ export async function gatherStatusInput(
     | EmployeeStatus
     | null;
   const isTerminated = currentStatus === "Terminated";
+  const tenantId = (person?.tenant_id ?? null) as string | null;
 
-  // Does this person have at least one ACTIVE group enrollment? (config/anchor
-  // present → onboarding is safely evaluable). Fail closed when none.
-  const { data: enrollments } = await admin
-    .from("employee_group_enrollments")
-    .select("id")
-    .eq("person_id", personId)
-    .eq("active", true)
-    .limit(1);
-  const hasActiveTrainingGroups = (enrollments?.length ?? 0) > 0;
+  // Designated onboarding group. Unset / unreadable → null → fail closed
+  // (configuration_incomplete). Never guess Active.
+  let onboardingGroupId: string | null = null;
+  if (tenantId) {
+    const { data: settings } = await admin
+      .from("tenant_settings")
+      .select("onboarding_group_id")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    onboardingGroupId = (settings?.onboarding_group_id ?? null) as
+      | string
+      | null;
+  }
 
-  // Onboarding compliance view, with raw fallback when missing.
+  // Onboarding is safely evaluable ONLY when the person is actively enrolled
+  // in the tenant's designated onboarding group.
+  let hasActiveTrainingGroups = false;
+  if (onboardingGroupId) {
+    const { data: enrollments } = await admin
+      .from("employee_group_enrollments")
+      .select("id")
+      .eq("person_id", personId)
+      .eq("group_id", onboardingGroupId)
+      .eq("active", true)
+      .limit(1);
+    hasActiveTrainingGroups = (enrollments?.length ?? 0) > 0;
+  }
+
+  // Requirement-driven gate view, with raw fallback when missing.
   const viewRes = await admin
-    .from("v_onboarding_training_compliance")
+    .from("v_onboarding_gate")
     .select("effective_status")
     .eq("person_id", personId);
 

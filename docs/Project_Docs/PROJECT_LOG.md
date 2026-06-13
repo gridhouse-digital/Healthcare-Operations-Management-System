@@ -3,6 +3,38 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-12 - Onboarding completion gate (fix fail-open Active) — P1 compliance correctness
+
+Implements `docs/bmad/working-notes/2026-06-07-onboarding-completion-gate-handoff.md` §4–§7. Branch `feature/onboarding-completion-gate` off `main`. **Not deployed; migration NOT pushed; backfill NOT executed** (owner runs it after configuring the Onboarding Group in Settings). Owner re-confirmed the **single** `onboarding_group_id` ruling (vs multi-select `text[]`) on 2026-06-12 before the migration was written.
+
+### Root cause (verified in handoff)
+
+`v_onboarding_training_compliance` is record-driven (built FROM `training_records`), so a mandatory course with no synced record vanishes from the resolver's completeness check — `rows.every(completed)` over only existing rows = fail-open `Active`. Karimah Moss: 8 mapped courses, 2 completed, 6 invisible → falsely `Active`.
+
+### What shipped
+
+- **Migration `20260612000001_onboarding_completion_gate.sql`** — `tenant_settings.onboarding_group_id text` (NULL = gate unconfigured → resolver fails closed) + NEW requirement-driven `v_onboarding_gate` (`security_invoker = on`): one row per (person × active course mapped to the designated group) whether or not a record exists; recurring-tracked courses excluded; effective status joined from `v_onboarding_training_compliance` (Layer B overrides apply). `v_onboarding_training_compliance` NOT modified. One deliberate refinement vs the spec's SQL block: `and lgc.active` on the `learndash_group_courses` join (see DECISIONS 2026-06-12 — validated live: course 135 was deactivated on group 1428 and must not gate).
+- **`_shared/employee-status-resolver.ts`** — `gatherStatusInput` rewired (§5a): reads the tenant's `onboarding_group_id` (unset → `hasActiveTrainingGroups:false` → `configuration_incomplete`); `hasActiveTrainingGroups` = active enrollment in the DESIGNATED group; `complianceView` = the person's `v_onboarding_gate` rows; raw `training_records` fallback kept ONLY for the view-missing path (42P01/PGRST205), semantics unchanged. **The pure `resolveEmployeeStatus` (Q2 matrix) is untouched**; `writeEmployeeStatus` remains the sole status writer.
+- **Settings UI + save path (§5b)** — "Onboarding Group" select on Settings → LearnDash (`OnboardingGroupCard` in `LdGroupMappingsPage.tsx`; options = union of `ld_group_mappings` and distinct active `learndash_group_courses.group_id`, label fallback = id). Persisted by extending `save-ld-mappings` EF (tenant_id from JWT only; absent field leaves stored value untouched; audit row includes the new value).
+- **Hire-path auto-enroll (§5c)** — `process-hire`: after job-title-mapped enrollment, ALSO enrolls into the designated onboarding group — idempotent (skips when an active `employee_group_enrollments` row exists), anchor via the existing `upsertGroupEnrollmentAnchor` (`anchor_source='process_hire'` — the spec's `'group_enrollment'` parenthetical is not a legal `anchor_source` CHECK value; see DECISIONS). `onboard-employee`: designated group appended to the WP LearnDash enrollment list (additive POST = idempotent); anchors converge via `sync-training` reconciliation (interim state resolves fail-closed to `Onboarding`, correct for a new hire).
+- **Employee-detail gate visibility (§5d)** — read-only `OnboardingGateCard` (new `useOnboardingGate` hook) on the employee training detail page: renders every gating course incl. `not_started` ("X of Y complete"); renders nothing when the gate is unconfigured or the person isn't enrolled.
+- **Backfill script (§6) — written, NOT executed**: `scripts/backfill-onboarding-gate.ts`. Default run = read-only identify; `--apply` = reset-then-resolve ONLY identified people via `writeEmployeeStatus` (never raw SQL for the resolve step); verifies `audit_log` rows; grandfathering = Active employees with zero gate rows are untouched.
+
+### Tests + verification
+
+- `cd supabase/functions && deno test _shared/tests/ --allow-env --allow-net` → **130 passed / 0 failed** (13 new in `onboarding-gate.test.ts`: fail-closed unset-setting / not-enrolled / no-record cases, all-complete → Active, view-missing fallback semantics, Terminated absolute, established-Active-stays-Active, **named Karimah regression** (8 mapped / 1 recurring-excluded / 2 completed → `Onboarding`), and a guard that `gatherStatusInput` reads `v_onboarding_gate` not the record-driven view).
+- RLS live suite extended: `v_onboarding_gate` added to the cross-tenant/anon/dashboard-safety view matrix + a gate contract test (seed: 4 mapped courses, 1 recurring-excluded, 1 completed record → exactly 3 rows, two `not_started` with `has_record=false`). Seeder + harness teardown extended (`employee_group_enrollments`, `learndash_group_courses`, `tenant_settings`).
+- `npm run build` → clean. `npm run lint` → 0 problems in every file touched by this change (the repo-wide 86 pre-existing problems on `main` are untouched legacy files).
+- **§6 step-1 identify (read-only, live `peffyuhhlmidldugqalo`)**: today's expected resets = **Karimah Moss only** (6 gating / 2 completed / 4 incomplete). Delta vs the spec's 2026-06-07 snapshot is explained by live data: (a) course 135 deactivated on group 1428 (8→7→6 gating after recurring exclusion); (b) **Debbra Deo's** single gap was course 938 — the *recurring* Annual Employee Review, which the gate excludes per locked owner decision #2; her 4 non-recurring gating courses were completed in Jan 2026 → she is legitimately `Active`, not reset. Recorded in DECISIONS 2026-06-12.
+
+### Next (pending owner sign-off — deploy from `main` only)
+
+1. Merge PR → `npx supabase db push` (migration BEFORE function deploys).
+2. `npx supabase functions deploy save-ld-mappings process-hire onboard-employee` + any EF bundling `_shared/employee-status-resolver.ts` (`convert-applicant`).
+3. Owner: create the universal New-Hires group in WP → sync → select it in Settings → LearnDash.
+4. Owner runs `scripts/backfill-onboarding-gate.ts` (read-only first, then `--apply`); verify Karimah → `Onboarding` and audit rows.
+
+---
 ## 2026-06-07 - Hotfix: onConflict target on people/applicants upserts (`tenant_id,email` → `tenant_id,email_normalized`)
 
 P1 correctness regression fix. Branch `hotfix/onconflict-email-normalized` off `main`. **Application-layer only — no migration, no schema change. Not deployed (deploy pending sign-off).**

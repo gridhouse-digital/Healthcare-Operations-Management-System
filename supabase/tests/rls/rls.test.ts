@@ -451,6 +451,8 @@ const VIEWS: ReadonlyArray<string> = [
   "v_onboarding_training_compliance",
   "v_recurring_compliance_status",
   "v_recurring_compliance_audit",
+  // Onboarding completion gate (migration 20260612000001, security_invoker).
+  "v_onboarding_gate",
 ];
 
 for (const view of VIEWS) {
@@ -494,6 +496,52 @@ for (const view of VIEWS) {
     },
   });
 }
+
+// ===========================================================================
+// 5b. v_onboarding_gate CONTRACT (handoff §7.2): the requirement-driven gate
+//     must emit one row per (person x gating course) WHETHER OR NOT a training
+//     record exists. Seed: 4 mapped courses, 1 recurring-tracked (excluded by
+//     the view), 1 completed record → expect exactly 3 rows: one 'completed'
+//     (has_record=true) and two 'not_started' (has_record=false). This is the
+//     structural fix for the fail-open Active bug — a never-started course can
+//     no longer vanish from the completeness check.
+// ===========================================================================
+
+Deno.test({
+  name: "GATE contract: 4 mapped, 1 recurring-excluded, 1 record → 3 rows, two not_started",
+  ignore: !env, ...wrap,
+  fn: async () => {
+    const { h, seedA } = await ensureSetup();
+    const { data, error } = await h.tenantA.client
+      .from("v_onboarding_gate")
+      .select("course_id, effective_status, has_record")
+      .eq("person_id", seedA.personId)
+      .order("course_id");
+    if (error) throw new Error(`v_onboarding_gate read error: ${error.message}`);
+
+    const rows = (data ?? []) as Array<{
+      course_id: string;
+      effective_status: string;
+      has_record: boolean;
+    }>;
+    assertEquals(rows.length, 3,
+      "gate must emit one row per non-recurring gating course (recurring course 4 excluded)");
+
+    const completed = rows.filter((r) => r.effective_status === "completed");
+    const notStarted = rows.filter((r) => r.effective_status === "not_started");
+    assertEquals(completed.length, 1, "exactly one gating course is completed");
+    assertEquals(notStarted.length, 2,
+      "courses with NO training record must surface as not_started rows (fail-open closed)");
+    for (const r of notStarted) {
+      assertEquals(r.has_record, false,
+        `${r.course_id}: not_started row must come from a MISSING record`);
+    }
+    for (const r of completed) {
+      assertEquals(r.has_record, true,
+        `${r.course_id}: completed row must be backed by a training record`);
+    }
+  },
+});
 
 // ===========================================================================
 // 6. FUNCTION GRANTS (migration 20260530000002). The revoked functions must no

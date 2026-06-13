@@ -5,6 +5,9 @@ import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 
 // FR-17: Save LearnDash group mappings.
+// Onboarding-completion-gate (2026-06-12 handoff §5b): also persists the
+// tenant's designated onboarding group (tenant_settings.onboarding_group_id)
+// when the field is present in the body. tenant_id comes from the JWT ONLY.
 
 interface LdGroupMapping {
   job_title: string;
@@ -13,6 +16,12 @@ interface LdGroupMapping {
 
 interface SaveLdMappingsBody {
   mappings: LdGroupMapping[];
+  /**
+   * Optional. When present: a non-empty string designates the onboarding
+   * group; null (or empty string) clears it — the resolver then fails closed.
+   * When ABSENT, the stored value is left untouched (legacy callers).
+   */
+  onboarding_group_id?: string | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -46,6 +55,30 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // Optional onboarding group designation. Distinguish "absent" (leave the
+    // stored value untouched) from "present" (set or clear).
+    const hasOnboardingGroup = Object.prototype.hasOwnProperty.call(
+      body,
+      "onboarding_group_id",
+    );
+    let onboardingGroupId: string | null = null;
+    if (hasOnboardingGroup) {
+      const raw = body.onboarding_group_id;
+      if (raw !== null && typeof raw !== "string") {
+        return withCors(
+          errorResponse(
+            "INVALID_PAYLOAD",
+            "onboarding_group_id must be a string or null",
+            400,
+          ),
+          req,
+        );
+      }
+      onboardingGroupId = typeof raw === "string" && raw.trim() !== ""
+        ? raw.trim()
+        : null;
+    }
+
     const adminUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(adminUrl, serviceKey, {
@@ -57,6 +90,9 @@ Deno.serve(async (req: Request) => {
       .upsert({
         tenant_id: ctx.tenantId,
         ld_group_mappings: mappings,
+        ...(hasOnboardingGroup
+          ? { onboarding_group_id: onboardingGroupId }
+          : {}),
         updated_at: new Date().toISOString(),
       });
 
@@ -68,7 +104,12 @@ Deno.serve(async (req: Request) => {
       action: "ld_mappings.updated",
       tableName: "tenant_settings",
       recordId: ctx.tenantId,
-      after: { mapping_count: mappings.length },
+      after: {
+        mapping_count: mappings.length,
+        ...(hasOnboardingGroup
+          ? { onboarding_group_id: onboardingGroupId }
+          : {}),
+      },
     });
 
     return withCors(

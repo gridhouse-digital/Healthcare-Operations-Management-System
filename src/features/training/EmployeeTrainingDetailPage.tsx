@@ -4,6 +4,7 @@ import { Check, ChevronLeft, Circle, ClipboardEdit, PenLine } from 'lucide-react
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEmployeeTrainingDetail } from './hooks/useEmployeeTrainingDetail';
 import { TrainingAdjustmentModal } from './components/TrainingAdjustmentModal';
+import { OnboardingGateCard } from './components/OnboardingGateCard';
 import type { TrainingComplianceRecord, TrainingEvent } from './types';
 import { Button } from '@/components/ui/button';
 
@@ -445,6 +446,8 @@ export function EmployeeTrainingDetailPage() {
         </div>
 
         <div className="space-y-5">
+          <OnboardingGateCard personId={employee.id} />
+
           {recurringHistory.length > 0 ? (
             <section className="saas-card p-5">
               <div className="mb-4 flex items-center justify-between gap-3">
