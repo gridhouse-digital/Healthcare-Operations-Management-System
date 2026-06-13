@@ -104,7 +104,13 @@ async function fetchOnboardingGroupSetting(): Promise<OnboardingGroupSetting> {
   }
   // Synced group-course mappings may reference groups with no job-title
   // mapping yet (e.g. a universal New-Hires group) — label falls back to id.
-  if (!syncedGroupsRes.error) {
+  if (syncedGroupsRes.error) {
+    // Suppress ONLY "feature not deployed yet" (missing schema). A real error
+    // (RLS denial, network, schema drift) must surface — silently dropping
+    // valid groups here would hand the admin an incomplete onboarding-group
+    // picker, the most consequential control in this feature.
+    if (!isMissingSchema(syncedGroupsRes.error)) throw syncedGroupsRes.error;
+  } else {
     for (const row of syncedGroupsRes.data ?? []) {
       const id = (row as { group_id: string }).group_id;
       if (id && !labelByGroupId.has(id)) labelByGroupId.set(id, id);
