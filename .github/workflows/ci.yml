@@ -108,12 +108,27 @@ jobs:
         shell: bash
         run: |
           # Capture the local stack's URL + keys from `supabase status`.
-          # Var names come from `supabase status -o env`; adjust if the CLI changes them.
+          # The CLI's var names / key format are a moving target (legacy JWT vs
+          # new opaque sb_secret_… keys). Print the CLI version and a MASKED dump
+          # (names + 6-char prefixes; values are throwaway local-stack keys) so a
+          # shakedown is diagnosable from the log instead of by guessing.
+          echo "supabase CLI: $(supabase --version)"
+          supabase status -o env --workdir "$GITHUB_WORKSPACE" \
+            | sed -E 's/=(.{6}).*/=\1…(masked)/'
           eval "$(supabase status -o env --workdir "$GITHUB_WORKSPACE" | sed 's/^/export /')"
           : "${API_URL:=http://127.0.0.1:54321}"
+          SRK="${SERVICE_ROLE_KEY:-$SECRET_KEY}"
+          AK="${ANON_KEY:-$PUBLISHABLE_KEY}"
+          # Fail loudly if a key is unresolved — empty keys make loadEnv() SKIP
+          # the suite (false green) and non-service keys resolve to anon
+          # ("permission denied for table tenants"), the 2026-06-12 shakedown.
+          if [ -z "$SRK" ] || [ -z "$AK" ]; then
+            echo "::error::Could not resolve ANON/SERVICE keys from 'supabase status -o env' (see masked dump above)."
+            exit 1
+          fi
           SUPABASE_URL="$API_URL" \
-          SUPABASE_ANON_KEY="${ANON_KEY:-$PUBLISHABLE_KEY}" \
-          SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:-$SECRET_KEY}" \
+          SUPABASE_ANON_KEY="$AK" \
+          SUPABASE_SERVICE_ROLE_KEY="$SRK" \
           deno task test:rls
 
   # ---------------------------------------------------------------------------
