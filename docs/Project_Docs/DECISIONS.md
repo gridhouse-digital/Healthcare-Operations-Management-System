@@ -8,6 +8,43 @@
 
 ---
 
+## 2026-06-12 | Onboarding completion gate: requirement-driven `v_onboarding_gate`, single designated group, grandfathering, rollback
+
+> Implements the owner decisions LOCKED 2026-06-11 in
+> `docs/bmad/working-notes/2026-06-07-onboarding-completion-gate-handoff.md` §2.
+> Migration `20260612000001_onboarding_completion_gate.sql`. Fixes the P1 fail-open
+> `Active` bug (mandatory courses with no synced record vanished from the completeness check).
+
+### Single `onboarding_group_id`, not multi-select (re-confirmed 2026-06-12)
+
+**What:** `tenant_settings.onboarding_group_id text` — ONE designated onboarding LearnDash group per tenant; the source of truth for onboarding assignment and the completion gate. NULL = gate unconfigured → resolver fails closed (`configuration_incomplete`).
+**Why:** Owner's planned WP restructure introduces a universal New-Hires group every new user joins first. Owner re-confirmed **single** over `onboarding_group_ids text[]` on 2026-06-12 (the handoff's ⚠️ flag).
+**Alternatives:** Multi-select `text[]` (per-role gates 54/1428) — deferred; the documented escape hatch is one column-type change + one `= ANY()` predicate if the WP restructure is abandoned. Per-person "first group" inference — rejected by owner (locked decision #1: explicit setting, not inference).
+
+### Gate semantics (requirement-driven, fail-closed)
+
+**What:** `v_onboarding_gate` (`security_invoker = on` per the Phase 0.1 ruling) emits one row per (person × active course mapped to the designated group) **whether or not a `training_records` row exists** — missing record surfaces as `effective_status='not_started'`. Courses with an active `compliance_track='recurring'` rule on the designated group are excluded (the recurring subsystem owns them). Effective status joins `v_onboarding_training_compliance`, so Layer B `training_adjustments` overrides still apply. `v_onboarding_training_compliance` itself is NOT modified.
+**Resolver wiring:** `gatherStatusInput` only — `hasActiveTrainingGroups` = active enrollment in the designated group; `complianceView` = gate rows. The pure `resolveEmployeeStatus` Q2 matrix is FROZEN and unchanged; `writeEmployeeStatus` remains the sole writer of `employee_status`.
+**Implementation refinements vs the handoff's SQL block (both fail-closed-safe, validated live 2026-06-12):**
+1. `and lgc.active` added to the `learndash_group_courses` join. The handoff's prose ("every **active course mapped** to the designated onboarding group"; §1 evidence used "active courses only") requires it; its SQL block omitted it. Live proof: course 135 was deactivated on group 1428 — without the predicate it would gate Karimah forever with an uncompletable course.
+2. `process-hire` auto-enroll anchors use `anchor_source='process_hire'` (the existing convention for that path). The handoff's `'group_enrollment'` parenthetical is not a legal `employee_group_enrollments.anchor_source` CHECK value (`process_hire|backfill|hired_at_fallback|manual`) — it conflated `training_compliance_rules.anchor_type`.
+
+### Grandfathering (owner-approved) + 2026-06-12 identify snapshot
+
+**What:** One-time corrective backfill (`scripts/backfill-onboarding-gate.ts`) resets ONLY currently-`Active` employees with ≥1 incomplete gating course; `Active` employees with **zero gate rows** (not enrolled in the designated group — completing against their current role group during the WP-restructure window) are untouched. Reset = `employee_status -> null`, then re-resolve via `writeEmployeeStatus` — never a raw status write.
+**Live identify (read-only, 2026-06-12):** expected resets = **Karimah Moss only** (6 gating / 2 completed). Delta vs the handoff's 2026-06-07 table: (a) course 135 deactivated on group 1428 since the snapshot; (b) **Debbra Deo is NOT reset** — her single gap was course 938, the *recurring* Annual Employee Review, which the gate excludes by locked decision #2; her 4 non-recurring gating courses completed Jan 2026. The handoff's "gap 1" for Debbra counted the recurring course as required; under shipped gate semantics she is legitimately `Active`.
+
+### Rollback (document before `db push`)
+
+```sql
+-- Schema (additive — safe to drop):
+drop view if exists public.v_onboarding_gate;
+alter table public.tenant_settings drop column if exists onboarding_group_id;
+```
+- **Resolver/EFs/UI:** `git revert` the feature commits (gatherStatusInput rewiring, save-ld-mappings, process-hire/onboard-employee enroll step, Settings/employee-detail UI) + redeploy the affected functions.
+- **Backfill:** `audit_log` preserves prior values for every status change (people audit trigger); restorable by a guarded script through `writeEmployeeStatus` after reverting the resolver wiring.
+- **Order:** revert/redeploy functions BEFORE dropping the view (the rewired resolver reads the gate view; the view-missing fallback keeps it fail-safe but noisy).
+
 ## 2026-06-07 | Uniqueness key for `people`/`applicants` is `email_normalized`; all upserts must target it
 
 **What:** Migration `20260528000002_normalized_email_uniqueness.sql` replaced the unique index on `people` and `applicants` from `(tenant_id, email)` with `(tenant_id, email_normalized)` — a `GENERATED ALWAYS AS (lower(btrim(email)))` column. **Every `people`/`applicants` upsert MUST use `onConflict: "tenant_id,email_normalized"`.** Targeting `"tenant_id,email"` no longer matches any unique index and raises Postgres `42P10: there is no unique or exclusion constraint matching the ON CONFLICT specification`.

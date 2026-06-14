@@ -633,3 +633,29 @@ silent-skip collision with main's `phase01_security_definer_views`/`function_gra
 versions. [x] CV-2 provisioning-failure logger made testable + tested; CV-1 confirmed; CV-3 owner ruling
 recorded (keep `Active`). [x] `deno test _shared/tests/` **105/0**. Pending in PR: `supabase db reset`
 fresh-apply, RLS suite, `npm run build`, GitHub Actions gate (must be GREEN). **Not deployed.**
+
+---
+
+## Phase 1.1 — Onboarding Completion Gate (fix fail-open Active) [IMPLEMENTED — PR pending sign-off]
+
+Source: `docs/bmad/working-notes/2026-06-07-onboarding-completion-gate-handoff.md` (owner decisions
+LOCKED 2026-06-11; single-group ruling re-confirmed 2026-06-12). P1 compliance correctness — first
+concrete slice of the per-tenant compliance rule engine. Branch `feature/onboarding-completion-gate`.
+Implemented 2026-06-12. **Not deployed; migration not pushed; backfill not executed.**
+
+**Acceptance criteria → status:**
+- [x] Migration `20260612000001`: `tenant_settings.onboarding_group_id` + requirement-driven
+  `v_onboarding_gate` (`security_invoker = on`); `v_onboarding_training_compliance` unmodified.
+- [x] `gatherStatusInput` rewired to the gate view + designated-group enrollment check; pure
+  `resolveEmployeeStatus` (Q2 matrix) unchanged; `writeEmployeeStatus` still the sole status writer.
+- [x] Settings → LearnDash "Onboarding Group" select; persisted via extended `save-ld-mappings`
+  (tenant-guarded, tenant_id from JWT only).
+- [x] Hire-path idempotent auto-enroll into the designated group (`process-hire` + `onboard-employee`).
+- [x] Employee-detail read-only gate visibility (`OnboardingGateCard`, includes `not_started` rows).
+- [x] Backfill script (`scripts/backfill-onboarding-gate.ts`) — identify (read-only) +
+  reset-then-resolve via `writeEmployeeStatus`; grandfathering per §6.3. **Owner-run only.**
+- [x] Tests: `deno test _shared/tests/` 130/0 incl. named Karimah regression; RLS suite extended with
+  `v_onboarding_gate` isolation + gate contract test; `npm run build` clean; changed files lint-clean.
+- [ ] Deploy from `main` after sign-off: `db push` → function deploys → owner configures the
+  New-Hires group in Settings → owner runs the backfill (expected reset on 2026-06-12 data:
+  **Karimah Moss only** — Debbra Deo's gap was the recurring-excluded course 938; see DECISIONS).

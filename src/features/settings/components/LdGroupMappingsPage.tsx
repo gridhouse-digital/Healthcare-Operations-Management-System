@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, Check, X } from "lucide-react";
-import { useLdGroupMappings, useSaveLdMappings } from "../hooks/useLdGroupMappings";
+import { Pencil, Trash2, Plus, Check, X, ShieldCheck } from "lucide-react";
+import {
+  useLdGroupMappings,
+  useOnboardingGroupSetting,
+  useSaveLdMappings,
+  useSaveOnboardingGroup,
+} from "../hooks/useLdGroupMappings";
 import type { LdGroupMapping } from "../types/tenant-settings";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +105,53 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
   );
 }
 
+// Onboarding completion gate (handoff §5b): the tenant designates ONE official
+// onboarding group. Employees are held in Onboarding until every active course
+// mapped to this group is complete — unset means the resolver fails closed.
+function OnboardingGroupCard() {
+  const { data, isLoading } = useOnboardingGroupSetting();
+  const save = useSaveOnboardingGroup();
+
+  if (isLoading || !data?.schemaReady) return null;
+
+  function handleChange(value: string) {
+    save.mutate(value === "" ? null : value, {
+      onSuccess: () => toast.success("Onboarding group saved"),
+      onError: (err) =>
+        toast.error(err instanceof Error ? err.message : "Failed to save onboarding group"),
+    });
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="space-y-3 px-4 py-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck size={15} className="text-primary" />
+          <span className="zone-label">Onboarding Group</span>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          The LearnDash group whose courses every new hire must complete before
+          their status can become Active. While this is not set, employees stay
+          in Onboarding (fail-closed).
+        </p>
+        <select
+          value={data.groupId ?? ""}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={save.isPending}
+          className={inputCls}
+        >
+          <option value="">Not configured — gate disabled (fail-closed)</option>
+          {data.options.map((o) => (
+            <option key={o.group_id} value={o.group_id}>
+              {o.label === o.group_id ? `Group ${o.group_id}` : `${o.label} (group ${o.group_id})`}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 export function LdGroupMappingsPage() {
   const { data: mappings = [], isLoading } = useLdGroupMappings();
   const saveMappings = useSaveLdMappings();
@@ -149,6 +201,8 @@ export function LdGroupMappingsPage() {
           Map job titles to LearnDash group IDs so new hires are automatically enrolled in the right learning paths during onboarding.
         </p>
       </div>
+
+      <OnboardingGroupCard />
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <table className="w-full">

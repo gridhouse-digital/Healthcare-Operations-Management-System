@@ -194,7 +194,7 @@ async function processHire(
   const { data: cfgRow, error: cErr } = await admin
     .from("tenant_settings")
     .select(
-      "wp_site_url, wp_username_encrypted, wp_app_password_encrypted, ld_group_mappings",
+      "wp_site_url, wp_username_encrypted, wp_app_password_encrypted, ld_group_mappings, onboarding_group_id",
     )
     .eq("tenant_id", hire.tenant_id)
     .single();
@@ -203,6 +203,7 @@ async function processHire(
     wp_username_encrypted: string | null;
     wp_app_password_encrypted: string | null;
     ld_group_mappings: LdGroupMapping[] | null;
+    onboarding_group_id: string | null;
   } | null;
 
   if (cErr || !cfg?.wp_site_url || !cfg?.wp_username_encrypted) {
@@ -260,6 +261,7 @@ async function processHire(
   });
 
   const enrollErrors: string[] = [];
+  const enrolledGroupIds: string[] = [];
   for (const m of matched) {
     try {
       await enrollLdGroup(siteUrl, auth, m.group_id, wpUserId);
@@ -269,6 +271,36 @@ async function processHire(
         groupId: m.group_id,
         enrolledAt: new Date().toISOString(),
       });
+      enrolledGroupIds.push(m.group_id);
+    } catch (e) {
+      enrollErrors.push(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // Onboarding completion gate (handoff §5c): the designated onboarding group
+  // is the assignment source of truth — ALSO enroll the new hire into it.
+  // Idempotent: skipped when an active enrollment anchor already exists.
+  const onboardingGroupId = (cfg.onboarding_group_id ?? "").trim() || null;
+  if (onboardingGroupId && !matched.some((m) => m.group_id === onboardingGroupId)) {
+    try {
+      const { data: existing } = await admin
+        .from("employee_group_enrollments")
+        .select("id")
+        .eq("tenant_id", hire.tenant_id)
+        .eq("person_id", person.id)
+        .eq("group_id", onboardingGroupId)
+        .eq("active", true)
+        .limit(1);
+      if (!existing?.length) {
+        await enrollLdGroup(siteUrl, auth, onboardingGroupId, wpUserId);
+        await upsertGroupEnrollmentAnchor(admin, {
+          tenantId: hire.tenant_id,
+          personId: person.id as string,
+          groupId: onboardingGroupId,
+          enrolledAt: new Date().toISOString(),
+        });
+        enrolledGroupIds.push(onboardingGroupId);
+      }
     } catch (e) {
       enrollErrors.push(e instanceof Error ? e.message : String(e));
     }
@@ -283,7 +315,7 @@ async function processHire(
       completed_at: new Date().toISOString(),
       payload: {
         wp_user_id: wpUserId,
-        groups_enrolled: matched.map((m) => m.group_id),
+        groups_enrolled: enrolledGroupIds,
         enrollment_errors: enrollErrors.length ? enrollErrors : undefined,
       },
     })
@@ -298,7 +330,7 @@ async function processHire(
     after: {
       email,
       wp_user_id: wpUserId,
-      groups_enrolled: matched.length,
+      groups_enrolled: enrolledGroupIds.length,
       enrollment_errors: enrollErrors.length,
     },
   });
