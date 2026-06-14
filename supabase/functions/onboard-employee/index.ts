@@ -100,7 +100,7 @@ serve(async (req) => {
 
         const { data: tenantSettings, error: settingsError } = await supabaseClient
             .from('tenant_settings')
-            .select('wp_site_url, wp_username_encrypted, wp_app_password_encrypted, ld_group_mappings, onboarding_group_id, brevo_api_key_encrypted, logo_light')
+            .select('wp_site_url, wp_username_encrypted, wp_app_password_encrypted, ld_group_mappings, brevo_api_key_encrypted, logo_light')
             .eq('tenant_id', tenantId)
             .single()
 
@@ -198,22 +198,6 @@ serve(async (req) => {
             }
         } catch (e) {
             console.error("Error parsing group map", e)
-        }
-
-        // Onboarding completion gate (handoff §5c): ALSO enroll into the
-        // tenant's designated onboarding group when set. The LearnDash group
-        // endpoint ADDs membership, so re-enrollment is a no-op (idempotent).
-        const onboardingGroupId: string | null =
-            typeof tenantSettings.onboarding_group_id === 'string' && tenantSettings.onboarding_group_id.trim() !== ''
-                ? tenantSettings.onboarding_group_id.trim()
-                : null
-        if (onboardingGroupId && !groupIds.some((g) => String(g) === onboardingGroupId)) {
-            const asNumber = Number(onboardingGroupId)
-            if (Number.isFinite(asNumber)) {
-                groupIds.push(asNumber)
-            } else {
-                console.error(`onboarding_group_id "${onboardingGroupId}" is not a numeric LearnDash group id; skipping auto-enroll`)
-            }
         }
 
         const enrollmentResults = []

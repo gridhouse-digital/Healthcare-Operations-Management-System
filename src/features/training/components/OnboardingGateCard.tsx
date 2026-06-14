@@ -2,11 +2,11 @@ import { ShieldCheck, CheckCircle2, Circle } from 'lucide-react';
 import { useOnboardingGate } from '../hooks/useOnboardingGate';
 
 // Onboarding completion gate — read-only visibility (handoff §5d).
-// Shows every gating course for the tenant's designated onboarding group,
+// Shows every gating course for the employee's onboarding-flagged group,
 // INCLUDING courses with no synced training record (not_started), so HR sees
 // "2 of 6 onboarding courses complete" instead of only the synced records.
 // Renders nothing when the gate is not configured or the person is not
-// enrolled in the designated group (zero rows).
+// enrolled in an onboarding-flagged group (zero rows).
 export function OnboardingGateCard({ personId }: { personId?: string }) {
   const { data: rows = [], isLoading } = useOnboardingGate(personId);
 
@@ -28,7 +28,7 @@ export function OnboardingGateCard({ personId }: { personId?: string }) {
       </div>
 
       <p className="mb-3 text-xs text-muted-foreground">
-        Required courses from the designated onboarding group. The employee
+        Required courses from the employee's onboarding group. The employee
         stays in Onboarding until every course below is complete.
       </p>
 

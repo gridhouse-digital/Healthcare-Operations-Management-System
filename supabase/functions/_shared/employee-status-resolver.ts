@@ -48,8 +48,8 @@ export interface StatusResolverInput {
   hiredAt: string | null;
   /**
    * Whether onboarding obligations are CONFIGURED and the person is actively
-   * enrolled in the tenant's designated onboarding group
-   * (tenant_settings.onboarding_group_id). When false — setting unset or not
+   * enrolled in at least one onboarding-flagged LearnDash group from
+   * tenant_settings.ld_group_mappings. When false — no flagged group or not
    * enrolled — onboarding is not safely evaluable → fail closed.
    */
   hasActiveTrainingGroups: boolean;
@@ -133,17 +133,23 @@ export function resolveEmployeeStatus(
 // deno-lint-ignore no-explicit-any
 type AdminClient = any;
 
+interface LdGroupMapping {
+  group_id?: unknown;
+  is_onboarding?: unknown;
+}
+
 /**
  * Reads the resolver inputs for one person from the DB.
  *
- * Onboarding-completion-gate rewiring (2026-06-12 handoff §5a):
- *   - The tenant's designated onboarding group (tenant_settings.onboarding_group_id)
- *     is the source of truth. Unset → not safely evaluable → fail closed.
- *   - hasActiveTrainingGroups = active enrollment IN THE DESIGNATED GROUP,
- *     not "any active enrollment".
+ * Onboarding-completion-gate rewiring (2026-06-13 revision §5):
+ *   - tenant_settings.ld_group_mappings entries with is_onboarding=true are the
+ *     source of truth. No flagged group → not safely evaluable → fail closed.
+ *   - hasActiveTrainingGroups = active enrollment in any onboarding-flagged
+ *     group, not "any active enrollment".
  *   - complianceView = the person's rows from v_onboarding_gate — requirement-
- *     driven, one row per gating course whether or not a record exists, so a
- *     never-started course can no longer vanish from the completeness check.
+ *     driven and per-department, one row per gating course whether or not a
+ *     record exists, so a never-started course can no longer vanish from the
+ *     completeness check.
  *   - The raw training_records fallback survives ONLY for the view-missing
  *     path (42P01/PGRST205), semantics unchanged.
  */
@@ -164,29 +170,39 @@ export async function gatherStatusInput(
   const isTerminated = currentStatus === "Terminated";
   const tenantId = (person?.tenant_id ?? null) as string | null;
 
-  // Designated onboarding group. Unset / unreadable → null → fail closed
-  // (configuration_incomplete). Never guess Active.
-  let onboardingGroupId: string | null = null;
+  // Onboarding group configuration. Only explicitly flagged mappings gate.
+  // Missing/empty/unset flags → no group ids → fail closed. Never guess Active.
+  let onboardingGroupIds: string[] = [];
   if (tenantId) {
     const { data: settings } = await admin
       .from("tenant_settings")
-      .select("onboarding_group_id")
+      .select("ld_group_mappings")
       .eq("tenant_id", tenantId)
       .maybeSingle();
-    onboardingGroupId = (settings?.onboarding_group_id ?? null) as
-      | string
-      | null;
+
+    const mappings = Array.isArray(settings?.ld_group_mappings)
+      ? settings.ld_group_mappings as LdGroupMapping[]
+      : [];
+    onboardingGroupIds = [
+      ...new Set(
+        mappings
+          .filter((m) => m?.is_onboarding === true)
+          .map((m) => typeof m.group_id === "string" ? m.group_id.trim() : "")
+          .filter((groupId) => groupId.length > 0),
+      ),
+    ];
   }
 
   // Onboarding is safely evaluable ONLY when the person is actively enrolled
-  // in the tenant's designated onboarding group.
+  // in one of the tenant's explicitly onboarding-flagged groups.
   let hasActiveTrainingGroups = false;
-  if (onboardingGroupId) {
+  if (tenantId && onboardingGroupIds.length > 0) {
     const { data: enrollments } = await admin
       .from("employee_group_enrollments")
       .select("id")
+      .eq("tenant_id", tenantId)
       .eq("person_id", personId)
-      .eq("group_id", onboardingGroupId)
+      .in("group_id", onboardingGroupIds)
       .eq("active", true)
       .limit(1);
     hasActiveTrainingGroups = (enrollments?.length ?? 0) > 0;
@@ -196,6 +212,7 @@ export async function gatherStatusInput(
   const viewRes = await admin
     .from("v_onboarding_gate")
     .select("effective_status")
+    .eq("tenant_id", tenantId)
     .eq("person_id", personId);
 
   const viewMissing = viewRes.error &&

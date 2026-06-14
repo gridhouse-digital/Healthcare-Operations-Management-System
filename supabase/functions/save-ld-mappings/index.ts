@@ -5,23 +5,17 @@ import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 
 // FR-17: Save LearnDash group mappings.
-// Onboarding-completion-gate (2026-06-12 handoff §5b): also persists the
-// tenant's designated onboarding group (tenant_settings.onboarding_group_id)
-// when the field is present in the body. tenant_id comes from the JWT ONLY.
+// Onboarding gate revision (2026-06-13): persists is_onboarding per mapping
+// entry. tenant_id comes from the JWT ONLY.
 
 interface LdGroupMapping {
   job_title: string;
   group_id: string;
+  is_onboarding?: boolean;
 }
 
 interface SaveLdMappingsBody {
   mappings: LdGroupMapping[];
-  /**
-   * Optional. When present: a non-empty string designates the onboarding
-   * group; null (or empty string) clears it — the resolver then fails closed.
-   * When ABSENT, the stored value is left untouched (legacy callers).
-   */
-  onboarding_group_id?: string | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -45,38 +39,37 @@ Deno.serve(async (req: Request) => {
       return withCors(errorResponse("INVALID_PAYLOAD", "mappings must be an array", 400), req);
     }
 
-    // Validate each mapping has required fields
+    const normalizedMappings: LdGroupMapping[] = [];
     for (const m of mappings) {
-      if (!m.job_title || !m.group_id) {
+      if (
+        typeof m?.job_title !== "string" ||
+        typeof m?.group_id !== "string" ||
+        m.job_title.trim() === "" ||
+        m.group_id.trim() === ""
+      ) {
         return withCors(
           errorResponse("INVALID_MAPPING", "Each mapping requires job_title and group_id", 400),
           req,
         );
       }
-    }
-
-    // Optional onboarding group designation. Distinguish "absent" (leave the
-    // stored value untouched) from "present" (set or clear).
-    const hasOnboardingGroup = Object.prototype.hasOwnProperty.call(
-      body,
-      "onboarding_group_id",
-    );
-    let onboardingGroupId: string | null = null;
-    if (hasOnboardingGroup) {
-      const raw = body.onboarding_group_id;
-      if (raw !== null && typeof raw !== "string") {
+      if (
+        Object.prototype.hasOwnProperty.call(m, "is_onboarding") &&
+        typeof m.is_onboarding !== "boolean"
+      ) {
         return withCors(
           errorResponse(
             "INVALID_PAYLOAD",
-            "onboarding_group_id must be a string or null",
+            "is_onboarding must be a boolean when provided",
             400,
           ),
           req,
         );
       }
-      onboardingGroupId = typeof raw === "string" && raw.trim() !== ""
-        ? raw.trim()
-        : null;
+      normalizedMappings.push({
+        job_title: m.job_title.trim(),
+        group_id: m.group_id.trim(),
+        is_onboarding: m.is_onboarding === true,
+      });
     }
 
     const adminUrl = Deno.env.get("SUPABASE_URL")!;
@@ -89,10 +82,7 @@ Deno.serve(async (req: Request) => {
       .from("tenant_settings")
       .upsert({
         tenant_id: ctx.tenantId,
-        ld_group_mappings: mappings,
-        ...(hasOnboardingGroup
-          ? { onboarding_group_id: onboardingGroupId }
-          : {}),
+        ld_group_mappings: normalizedMappings,
         updated_at: new Date().toISOString(),
       });
 
@@ -105,10 +95,10 @@ Deno.serve(async (req: Request) => {
       tableName: "tenant_settings",
       recordId: ctx.tenantId,
       after: {
-        mapping_count: mappings.length,
-        ...(hasOnboardingGroup
-          ? { onboarding_group_id: onboardingGroupId }
-          : {}),
+        mapping_count: normalizedMappings.length,
+        onboarding_group_ids: normalizedMappings
+          .filter((m) => m.is_onboarding)
+          .map((m) => m.group_id),
       },
     });
 

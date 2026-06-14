@@ -3,6 +3,51 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-13 - Onboarding completion gate revision (per-department / multi-group)
+
+Implements `docs/bmad/working-notes/2026-06-13-onboarding-gate-per-department-revision.md` §§3-7, superseding the 2026-06-12 single-group design before activation. Branch `feature/onboarding-gate-per-department` off `main`. **Not deployed; migration NOT pushed; backfill NOT executed.**
+
+### Root cause
+
+The 2026-06-12 gate used one tenant-wide `tenant_settings.onboarding_group_id`. That was the wrong model: onboarding is per-department, with each department owning its LearnDash onboarding group and curriculum. Production impact is safe because the shipped gate was inert (`onboarding_group_id` was null, no backfill was run, and no statuses were changed).
+
+### What shipped
+
+- **Migration `20260613000001_onboarding_gate_per_department.sql`** - rewrites `v_onboarding_gate` to derive gating groups from `tenant_settings.ld_group_mappings[].is_onboarding = true`, keeps the same output columns, excludes recurring-tracked courses by `(tenant_id, group_id, course_id)`, leaves `v_onboarding_training_compliance` untouched, sets `security_invoker = on`, and drops obsolete `tenant_settings.onboarding_group_id`.
+- **Resolver** - `gatherStatusInput` now reads onboarding-flagged LearnDash mappings, requires active enrollment in any flagged group, and reads `complianceView` from `v_onboarding_gate`. Missing flags, no enrollment, or missing rows fail closed to `Onboarding`. The pure `resolveEmployeeStatus` matrix is unchanged and `writeEmployeeStatus` remains the only status writer.
+- **Hire paths** - reverted the single-group auto-enroll from `process-hire` and `onboard-employee`; job-title department enrollment remains the only enrollment path.
+- **Settings** - `LdGroupMapping` now supports `is_onboarding?: boolean`; Settings -> LearnDash uses a per-row "Onboarding group" checkbox instead of a tenant-wide dropdown; `save-ld-mappings` validates/persists the flag per entry with `tenant_id` from JWT only and default false when absent.
+- **Gate card / hook / backfill** - `OnboardingGateCard` and `useOnboardingGate` still consume the same `v_onboarding_gate` columns. The backfill script still uses reset-then-resolve through `writeEmployeeStatus`, but preflights onboarding-flagged mappings instead of `onboarding_group_id`.
+
+### Tests + verification
+
+- `cd supabase/functions && deno test _shared/tests/ --allow-env --allow-net` -> **131 passed / 0 failed**, including the new two-department contract coverage: person in group A sees only group A non-recurring courses, never group B.
+- RLS suite updated to retain `v_onboarding_gate` cross-tenant coverage and the two-department gate contract. Local `npm run test:rls` type-checked the suite but skipped live assertions because Supabase test env vars are not configured in this workspace.
+- `npm run build` -> clean.
+- `npm run lint` -> still blocked by the repo-wide pre-existing lint backlog (86 problems on unrelated files). Targeted ESLint for touched frontend files -> **0 errors**, with one pre-existing React Compiler warning in `ConnectorSettingsPage.tsx` for `react-hook-form` `watch()`.
+- Static guard: no runtime `onboarding_group_id` references remain under `src`, `supabase/functions`, or `scripts`.
+
+### Karimah probe (run after migration/config sign-off; do not backfill first)
+
+```sql
+-- Probe the per-department gate for Karimah (Nurse, group 1428):
+select course_id, course_name, effective_status, has_record
+from v_onboarding_gate where person_id = 'a9e02e52-1d13-45d5-961f-1ffc2ce6d8c5';
+-- expect: her 1428 non-recurring courses, not-started ones present, Module 6 (recurring) ABSENT.
+
+-- A Caregiver (group 54) should see group-54 courses only - never Nurse courses.
+```
+
+Expected after owner flags groups `54` and `1428` as onboarding: Karimah's non-recurring group `1428` courses appear; recurring Module 6 is absent.
+
+### Next (pending owner sign-off - deploy from `main` only)
+
+1. Merge PR into `main`.
+2. Deploy order: migration -> `convert-applicant`, `process-hire`, `onboard-employee`, `save-ld-mappings`.
+3. Owner flags LearnDash groups `54` (Caregivers) and `1428` (Nurses) as onboarding groups in Settings.
+4. Run `scripts/backfill-onboarding-gate.ts` read-only first; run `--apply` only after explicit approval.
+
+---
 ## 2026-06-12 - Onboarding completion gate (fix fail-open Active) — P1 compliance correctness
 
 Implements `docs/bmad/working-notes/2026-06-07-onboarding-completion-gate-handoff.md` §4–§7. Branch `feature/onboarding-completion-gate` off `main`. **Not deployed; migration NOT pushed; backfill NOT executed** (owner runs it after configuring the Onboarding Group in Settings). Owner re-confirmed the **single** `onboarding_group_id` ruling (vs multi-select `text[]`) on 2026-06-12 before the migration was written.

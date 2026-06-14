@@ -8,8 +8,80 @@
 
 ---
 
+## 2026-06-13 | Onboarding gate revision: per-department onboarding groups, recurring stays course-based, rollback
+
+> Supersedes the 2026-06-12 single `tenant_settings.onboarding_group_id` gate before activation.
+> Implements `docs/bmad/working-notes/2026-06-13-onboarding-gate-per-department-revision.md`.
+> Migration `20260613000001_onboarding_gate_per_department.sql`.
+
+### Per-department `is_onboarding` flag
+
+**What:** Onboarding groups now live inside `tenant_settings.ld_group_mappings` as a per-entry boolean: `{ job_title, group_id, is_onboarding }`. A group gates onboarding only when `is_onboarding === true`; absent/unset defaults to false, so the resolver fails closed. The obsolete `tenant_settings.onboarding_group_id` column is dropped.
+**Why:** The agency runs department-specific onboarding curricula. Caregivers use group `54`; Nurses use group `1428`. A single tenant-wide onboarding group was the wrong abstraction and was never activated in production.
+**Alternatives:** One universal tenant group - superseded as incorrect for the current LearnDash model. Inferring onboarding from every mapped group - rejected because future non-onboarding groups must not gate lifecycle status.
+
+### Gate semantics
+
+**What:** `v_onboarding_gate` now unnests onboarding-flagged `ld_group_mappings`, joins only active `employee_group_enrollments`, active `learndash_group_courses`, and active `training_courses`, and emits the same output columns as before: `tenant_id`, `person_id`, `course_id`, `course_name`, `effective_status`, `effective_completed_at`, `has_record`. Missing records still surface as `effective_status='not_started'`. `security_invoker = on` remains.
+**Resolver wiring:** Only `gatherStatusInput` changes: it reads `ld_group_mappings`, derives onboarding group IDs from `is_onboarding === true`, checks active enrollment in any of those groups, then reads rows from `v_onboarding_gate`. The pure `resolveEmployeeStatus` Q2 matrix remains unchanged, and `writeEmployeeStatus` remains the sole writer of `people.employee_status`.
+
+### Recurring compliance stays course-based
+
+**What:** Recurring/annual training remains modeled as a course requirement via `training_compliance_rules.compliance_track='recurring'` plus recurrence metadata. It is never represented as a separate onboarding group. `v_onboarding_gate` excludes recurring-tracked courses for the specific onboarding group/course pair; `v_onboarding_training_compliance` and the recurring-compliance subsystem are not modified.
+**Why:** Annual reviews are department-specific courses inside the department groups, but recurrence is a policy attribute of the course requirement. The onboarding gate is a first-time curriculum gate, while recurring compliance remains an ongoing compliance axis.
+
+### Rollback
+
+```sql
+-- Restore the prior single-group column if the revision must be backed out.
+alter table public.tenant_settings
+  add column if not exists onboarding_group_id text;
+
+create or replace view public.v_onboarding_gate as
+select
+  ts.tenant_id,
+  ege.person_id,
+  lgc.course_id,
+  tc.course_name,
+  coalesce(votc.effective_status, 'not_started') as effective_status,
+  votc.effective_completed_at,
+  (votc.training_record_id is not null) as has_record
+from public.tenant_settings ts
+join public.employee_group_enrollments ege
+  on ege.tenant_id = ts.tenant_id
+ and ege.group_id  = ts.onboarding_group_id
+ and ege.active
+join public.learndash_group_courses lgc
+  on lgc.tenant_id = ts.tenant_id
+ and lgc.group_id  = ts.onboarding_group_id
+ and lgc.active
+join public.training_courses tc
+  on tc.tenant_id = ts.tenant_id
+ and tc.course_id = lgc.course_id
+ and tc.active
+left join public.v_onboarding_training_compliance votc
+  on votc.tenant_id = ts.tenant_id
+ and votc.person_id = ege.person_id
+ and votc.course_id = lgc.course_id
+where ts.onboarding_group_id is not null
+  and not exists (
+    select 1 from public.training_compliance_rules tcr
+    where tcr.tenant_id = ts.tenant_id
+      and tcr.course_id = lgc.course_id
+      and tcr.group_id  = ts.onboarding_group_id
+      and tcr.active
+      and tcr.compliance_track = 'recurring'
+  );
+
+alter view public.v_onboarding_gate set (security_invoker = on);
+```
+- **Code rollback:** git revert the resolver, Settings UI/save path, backfill preflight, RLS seed/test updates, and the `process-hire`/`onboard-employee` enrollment revert if the single-group model is intentionally restored.
+- **Deployment order:** revert/redeploy affected functions before changing the view back. Do not run the backfill during rollback unless an owner-approved restore script is prepared.
+
 ## 2026-06-12 | Onboarding completion gate: requirement-driven `v_onboarding_gate`, single designated group, grandfathering, rollback
 
+> Superseded on 2026-06-13 by the per-department `ld_group_mappings[].is_onboarding`
+> model above. Kept as historical context for the unactivated single-group work.
 > Implements the owner decisions LOCKED 2026-06-11 in
 > `docs/bmad/working-notes/2026-06-07-onboarding-completion-gate-handoff.md` §2.
 > Migration `20260612000001_onboarding_completion_gate.sql`. Fixes the P1 fail-open

@@ -169,8 +169,8 @@ export async function setupHarness(env: RlsEnv): Promise<Harness> {
         .delete().eq("tenant_id", t.tenantId);
       await admin.from("training_compliance_rules")
         .delete().eq("tenant_id", t.tenantId);
-      // Onboarding-gate chain (migration 20260612000001 — seeded for the
-      // v_onboarding_gate assertions). Children of people/tenants.
+      // Onboarding-gate chain (migration 20260613000001 — seeded for the
+      // v_onboarding_gate per-department assertions). Children of people/tenants.
       await admin.from("employee_group_enrollments")
         .delete().eq("tenant_id", t.tenantId);
       await admin.from("learndash_group_courses")

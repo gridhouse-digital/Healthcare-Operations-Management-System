@@ -82,7 +82,7 @@ wp_key_configured            BOOLEAN GENERATED ALWAYS AS (...) STORED
 brevo_api_key_encrypted      TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
 jotform_key_configured       BOOLEAN GENERATED ALWAYS AS (...) STORED
 active_connectors            TEXT[]     -- e.g. ARRAY['bamboohr']
-ld_group_mappings            JSONB      -- [{job_title, group_id}]
+ld_group_mappings            JSONB      -- [{job_title, group_id, is_onboarding}]
 profile_source               TEXT       -- 'bamboohr' | 'jazzhr' | 'wordpress'. Set once at connector setup.
 jotform_form_id_application  TEXT       -- JotForm form IDs per compliance form type
 jotform_form_id_emergency    TEXT
@@ -98,6 +98,7 @@ updated_at                   TIMESTAMPTZ
 **RLS:** Own tenant only.
 **Audit trigger:** `audit_tenant_settings_trigger`
 **Critical:** encrypted columns are NEVER selected to the frontend. Connector status is exposed through the generated `*_key_configured` booleans so UI status cannot drift from the encrypted values.
+**Onboarding gate:** `ld_group_mappings[].is_onboarding === true` marks department LearnDash groups that gate onboarding. Absent/unset defaults to false. There is no tenant-wide `onboarding_group_id` after migration `20260613000001`.
 
 ---
 
@@ -300,6 +301,18 @@ Joins `training_records` with latest `training_adjustments` per (person_id, cour
 
 **RLS:** Inherited from underlying tables. No additional policy needed.
 **Critical:** Query this view for all compliance reporting. Never query training_records directly for compliance values.
+
+---
+
+## v_onboarding_gate
+
+Requirement-driven per-department onboarding gate. Unnests `tenant_settings.ld_group_mappings` entries where `is_onboarding=true`, joins active `employee_group_enrollments`, active `learndash_group_courses`, and active `training_courses`, and returns one row per required onboarding course whether or not a `training_records` row exists.
+
+**Key columns:** `tenant_id`, `person_id`, `course_id`, `course_name`, `effective_status`, `effective_completed_at`, `has_record`.
+**Status source:** `effective_status`/`effective_completed_at` come from `v_onboarding_training_compliance` when a record exists; missing records surface as `effective_status='not_started'` and `has_record=false`.
+**Recurring exclusion:** Active `training_compliance_rules` rows with `compliance_track='recurring'` for the same `(tenant_id, group_id, course_id)` are excluded. Recurring compliance remains owned by the recurring-compliance subsystem.
+**RLS:** `security_invoker = on`; access is inherited from the underlying tenant-scoped tables.
+**Migration:** `20260613000001_onboarding_gate_per_department.sql`.
 
 ---
 
