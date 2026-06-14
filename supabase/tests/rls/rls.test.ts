@@ -498,47 +498,77 @@ for (const view of VIEWS) {
 }
 
 // ===========================================================================
-// 5b. v_onboarding_gate CONTRACT (handoff §7.2): the requirement-driven gate
-//     must emit one row per (person x gating course) WHETHER OR NOT a training
-//     record exists. Seed: 4 mapped courses, 1 recurring-tracked (excluded by
-//     the view), 1 completed record → expect exactly 3 rows: one 'completed'
-//     (has_record=true) and two 'not_started' (has_record=false). This is the
-//     structural fix for the fail-open Active bug — a never-started course can
-//     no longer vanish from the completeness check.
+// 5b. v_onboarding_gate CONTRACT (revision §8.2): two department onboarding
+//     groups are flagged, each with its own courses and one recurring course.
+//     A person enrolled only in Department A sees A's non-recurring courses
+//     only, never Department B's; a person enrolled in B sees B's courses.
+//     Missing records still surface as not_started.
 // ===========================================================================
 
 Deno.test({
-  name: "GATE contract: 4 mapped, 1 recurring-excluded, 1 record → 3 rows, two not_started",
+  name: "GATE contract: two departments gate by enrolled onboarding group only",
   ignore: !env, ...wrap,
   fn: async () => {
     const { h, seedA } = await ensureSetup();
-    const { data, error } = await h.tenantA.client
+
+    const { data: rowsAData, error: errorA } = await h.tenantA.client
       .from("v_onboarding_gate")
       .select("course_id, effective_status, has_record")
       .eq("person_id", seedA.personId)
       .order("course_id");
-    if (error) throw new Error(`v_onboarding_gate read error: ${error.message}`);
+    if (errorA) throw new Error(`v_onboarding_gate A read error: ${errorA.message}`);
 
-    const rows = (data ?? []) as Array<{
+    const rowsA = (rowsAData ?? []) as Array<{
       course_id: string;
       effective_status: string;
       has_record: boolean;
     }>;
-    assertEquals(rows.length, 3,
-      "gate must emit one row per non-recurring gating course (recurring course 4 excluded)");
+    assertEquals(
+      rowsA.map((r) => r.course_id),
+      seedA.gateCourseIdsA.slice(0, 2),
+      "person in Department A must see only A's non-recurring courses",
+    );
+    for (const courseId of seedA.gateCourseIdsB) {
+      assertEquals(
+        rowsA.some((r) => r.course_id === courseId),
+        false,
+        `person in Department A must never see Department B course ${courseId}`,
+      );
+    }
 
-    const completed = rows.filter((r) => r.effective_status === "completed");
-    const notStarted = rows.filter((r) => r.effective_status === "not_started");
-    assertEquals(completed.length, 1, "exactly one gating course is completed");
-    assertEquals(notStarted.length, 2,
-      "courses with NO training record must surface as not_started rows (fail-open closed)");
-    for (const r of notStarted) {
+    const completedA = rowsA.filter((r) => r.effective_status === "completed");
+    const notStartedA = rowsA.filter((r) => r.effective_status === "not_started");
+    assertEquals(completedA.length, 1, "exactly one Department A gate course is completed");
+    assertEquals(notStartedA.length, 1,
+      "Department A course with NO training record must surface as not_started");
+    for (const r of notStartedA) {
       assertEquals(r.has_record, false,
         `${r.course_id}: not_started row must come from a MISSING record`);
     }
-    for (const r of completed) {
+    for (const r of completedA) {
       assertEquals(r.has_record, true,
         `${r.course_id}: completed row must be backed by a training record`);
+    }
+
+    const { data: rowsBData, error: errorB } = await h.tenantA.client
+      .from("v_onboarding_gate")
+      .select("course_id, effective_status, has_record")
+      .eq("person_id", seedA.gatePersonBId)
+      .order("course_id");
+    if (errorB) throw new Error(`v_onboarding_gate B read error: ${errorB.message}`);
+
+    const rowsB = (rowsBData ?? []) as Array<{ course_id: string }>;
+    assertEquals(
+      rowsB.map((r) => r.course_id),
+      seedA.gateCourseIdsB.slice(0, 2),
+      "person in Department B must see only B's non-recurring courses",
+    );
+    for (const courseId of seedA.gateCourseIdsA) {
+      assertEquals(
+        rowsB.some((r) => r.course_id === courseId),
+        false,
+        `person in Department B must never see Department A course ${courseId}`,
+      );
     }
   },
 });

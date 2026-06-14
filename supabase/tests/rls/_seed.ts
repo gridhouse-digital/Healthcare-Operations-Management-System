@@ -45,12 +45,16 @@ export interface SeededIds {
    */
   complianceObjectPath: string;
   /**
-   * Designated onboarding group seeded into tenant_settings.onboarding_group_id
-   * with 4 mapped courses (1 recurring-excluded) and 1 completed record, so the
-   * v_onboarding_gate contract + isolation assertions have real rows.
-   * [Onboarding gate — migration 20260612000001]
+   * Department A onboarding group seeded into tenant_settings.ld_group_mappings
+   * with is_onboarding=true. Department B is also flagged below so the
+   * v_onboarding_gate contract can prove per-department isolation.
+   * [Onboarding gate per-department revision — migration 20260613000001]
    */
   gateGroupId: string;
+  gateGroupBId: string;
+  gatePersonBId: string;
+  gateCourseIdsA: string[];
+  gateCourseIdsB: string[];
 }
 
 async function insertOne(
@@ -166,58 +170,87 @@ export async function seedTenant(
     after: { seeded_by: "rls-test", label },
   });
 
-  // ---- Onboarding completion gate (migration 20260612000001) ----
-  // Requirement chain for v_onboarding_gate: designated group in
-  // tenant_settings → 4 mapped courses (one recurring-tracked → excluded by
-  // the view) → active enrollment → ONE completed record. Expected gate rows
-  // for this person: 3 (gate courses 1–3), one 'completed' + two 'not_started'.
-  const gateGroupId = `gate-group-${label}-${runId}`;
-  const gateCourseIds = [1, 2, 3, 4].map((n) => `gate-course-${n}-${label}-${runId}`);
+  // ---- Onboarding gate per department (migration 20260613000001) ----
+  // Requirement chain for v_onboarding_gate: two flagged department groups in
+  // ld_group_mappings → each has 3 mapped courses (one recurring-tracked,
+  // excluded by the view) → each person is enrolled in only ONE department.
+  // Expected rows:
+  //   - personId: Department A non-recurring courses only
+  //   - gatePersonBId: Department B non-recurring courses only
+  const gatePersonBId = await insertOne(admin, "people", {
+    tenant_id: tenantId,
+    email: `gate-person-b-${label}-${runId}@example.test`,
+    first_name: "Gate",
+    last_name: `PersonB-${label}`,
+    type: "employee",
+  });
 
-  for (const gateCourseId of gateCourseIds) {
-    await insertOne(admin, "training_courses", {
+  const gateGroupId = `gate-group-a-${label}-${runId}`;
+  const gateGroupBId = `gate-group-b-${label}-${runId}`;
+  const gateCourseIdsA = [1, 2, 3].map((n) => `gate-a-course-${n}-${label}-${runId}`);
+  const gateCourseIdsB = [1, 2, 3].map((n) => `gate-b-course-${n}-${label}-${runId}`);
+
+  async function seedGateGroup(groupId: string, courseIds: string[], dept: string) {
+    for (const gateCourseId of courseIds) {
+      await insertOne(admin, "training_courses", {
+        tenant_id: tenantId,
+        course_id: gateCourseId,
+        course_name: `${dept} Gate Course ${gateCourseId}`,
+        active: true,
+      });
+      await insertOne(admin, "learndash_group_courses", {
+        tenant_id: tenantId,
+        group_id: groupId,
+        course_id: gateCourseId,
+        course_name: `${dept} Gate Course ${gateCourseId}`,
+        active: true,
+      });
+    }
+
+    await insertOne(admin, "training_compliance_rules", {
       tenant_id: tenantId,
-      course_id: gateCourseId,
-      course_name: `Gate Course ${gateCourseId}`,
-      active: true,
+      rule_name: `${dept} Gate Recurring ${label}`,
+      rule_type: "annual_recurring",
+      compliance_track: "recurring",
+      course_id: courseIds[2],
+      group_id: groupId,
+      anchor_type: "group_enrollment",
     });
-    await insertOne(admin, "learndash_group_courses", {
+  }
+
+  await seedGateGroup(gateGroupId, gateCourseIdsA, "Dept A");
+  await seedGateGroup(gateGroupBId, gateCourseIdsB, "Dept B");
+
+  for (const enrollment of [
+    { person_id: personId, group_id: gateGroupId },
+    { person_id: gatePersonBId, group_id: gateGroupBId },
+  ]) {
+    await insertOne(admin, "employee_group_enrollments", {
       tenant_id: tenantId,
-      group_id: gateGroupId,
-      course_id: gateCourseId,
-      course_name: `Gate Course ${gateCourseId}`,
+      person_id: enrollment.person_id,
+      group_id: enrollment.group_id,
+      enrolled_at: "2026-06-01T00:00:00Z",
+      anchor_date: "2026-06-01",
+      anchor_source: "manual",
       active: true,
     });
   }
 
-  // Course 4 is recurring-tracked on the gate group → the view must exclude it.
-  await insertOne(admin, "training_compliance_rules", {
-    tenant_id: tenantId,
-    rule_name: `Gate Recurring ${label}`,
-    rule_type: "annual_recurring",
-    compliance_track: "recurring",
-    course_id: gateCourseIds[3],
-    group_id: gateGroupId,
-    anchor_type: "group_enrollment",
-  });
-
-  await insertOne(admin, "employee_group_enrollments", {
-    tenant_id: tenantId,
-    person_id: personId,
-    group_id: gateGroupId,
-    enrolled_at: "2026-06-01T00:00:00Z",
-    anchor_date: "2026-06-01T00:00:00Z",
-    anchor_source: "manual",
-    active: true,
-  });
-
-  // ONE completed record for gate course 1; courses 2–3 have NO record at all —
-  // the requirement-driven view must still emit them as 'not_started'.
+  // ONE completed record in each department. Course 2 has NO record at all and
+  // must still surface as not_started. Course 3 is recurring and must be absent.
   await insertOne(admin, "training_records", {
     tenant_id: tenantId,
     person_id: personId,
-    course_id: gateCourseIds[0],
-    course_name: `Gate Course ${gateCourseIds[0]}`,
+    course_id: gateCourseIdsA[0],
+    course_name: `Dept A Gate Course ${gateCourseIdsA[0]}`,
+    status: "completed",
+    completion_pct: 100,
+  });
+  await insertOne(admin, "training_records", {
+    tenant_id: tenantId,
+    person_id: gatePersonBId,
+    course_id: gateCourseIdsB[0],
+    course_name: `Dept B Gate Course ${gateCourseIdsB[0]}`,
     status: "completed",
     completion_pct: 100,
   });
@@ -225,7 +258,13 @@ export async function seedTenant(
   const { error: gateSettingsErr } = await admin
     .from("tenant_settings")
     .upsert(
-      { tenant_id: tenantId, onboarding_group_id: gateGroupId },
+      {
+        tenant_id: tenantId,
+        ld_group_mappings: [
+          { job_title: `Dept A ${label}`, group_id: gateGroupId, is_onboarding: true },
+          { job_title: `Dept B ${label}`, group_id: gateGroupBId, is_onboarding: true },
+        ],
+      },
       { onConflict: "tenant_id" },
     );
   if (gateSettingsErr) {
@@ -305,5 +344,9 @@ export async function seedTenant(
     resumeObjectPath,
     complianceObjectPath,
     gateGroupId,
+    gateGroupBId,
+    gatePersonBId,
+    gateCourseIdsA,
+    gateCourseIdsB,
   };
 }

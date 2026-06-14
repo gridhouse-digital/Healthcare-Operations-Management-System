@@ -27,6 +27,13 @@ const labelCls = "form-label";
 const helperCls = "mt-1 text-[12px] tracking-[0.01em] text-muted-foreground";
 const sectionCls = "saas-card p-5 space-y-4";
 
+function normalizeMapping(mapping: LdGroupMapping): LdGroupMapping {
+  return {
+    ...mapping,
+    is_onboarding: mapping.is_onboarding === true,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // BambooHR form
 // ---------------------------------------------------------------------------
@@ -639,7 +646,7 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
   });
 
   function onSave(values: LdGroupMapping) {
-    onEdit(values);
+    onEdit(normalizeMapping(values));
     setEditing(false);
   }
 
@@ -662,6 +669,12 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
             {...register("group_id", { required: true })}
             className={cn(inputCls, "h-8 font-mono")}
           />
+        </td>
+        <td className="px-4 py-3">
+          <label className="inline-flex items-center gap-2 text-[13px] text-foreground">
+            <input type="checkbox" {...register("is_onboarding")} />
+            <span>Onboarding group</span>
+          </label>
         </td>
         <td className="px-4 py-3">
           <div className="flex gap-2">
@@ -689,6 +702,17 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
     <tr className="border-b border-border hover:bg-muted/5 transition-colors">
       <td className="px-4 py-3 text-foreground text-[13px]">{mapping.job_title}</td>
       <td className="px-4 py-3 text-muted-foreground text-[13px] font-mono">{mapping.group_id}</td>
+      <td className="px-4 py-3">
+        <label className="inline-flex items-center gap-2 text-[13px] text-foreground">
+          <input
+            type="checkbox"
+            checked={mapping.is_onboarding === true}
+            onChange={(event) =>
+              onEdit({ ...mapping, is_onboarding: event.target.checked })}
+          />
+          <span>Onboarding group</span>
+        </label>
+      </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
           <button
@@ -739,6 +763,12 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
           placeholder="e.g. 42"
           className={cn(inputCls, "h-8 font-mono")}
         />
+      </td>
+      <td className="px-4 py-3">
+        <label className="inline-flex items-center gap-2 text-[13px] text-foreground">
+          <input type="checkbox" {...register("is_onboarding")} />
+          <span>Onboarding group</span>
+        </label>
       </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
@@ -793,7 +823,7 @@ function LdGroupMappingsSection() {
   }
 
   function handleAdd(mapping: LdGroupMapping) {
-    const next = [...displayed, mapping];
+    const next = [...displayed, normalizeMapping(mapping)];
     setLocalMappings(next);
     setAdding(false);
     void commitSave(next);
@@ -830,13 +860,16 @@ function LdGroupMappingsSection() {
               <th className="px-4 py-2.5 text-left">
                 <span className="zone-label">LearnDash Group ID</span>
               </th>
+              <th className="px-4 py-2.5 text-left">
+                <span className="zone-label">Onboarding Gate</span>
+              </th>
               <th className="px-4 py-2.5 w-24" />
             </tr>
           </thead>
           <tbody>
             {displayed.length === 0 && !adding && (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground text-[13px]">
+                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-[13px]">
                   No mappings yet. Add your first job title &rarr; group ID mapping below.
                 </td>
               </tr>

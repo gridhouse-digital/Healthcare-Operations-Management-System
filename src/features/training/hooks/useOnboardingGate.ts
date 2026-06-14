@@ -3,9 +3,9 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * Row from the requirement-driven v_onboarding_gate VIEW — one row per active
- * course mapped to the tenant's designated onboarding group, whether or not a
- * training record exists (missing record = effective_status 'not_started').
- * Recurring-tracked courses are excluded. Read-only (handoff §5d).
+ * non-recurring course in an onboarding-flagged group the employee is actively
+ * enrolled in, whether or not a training record exists (missing record =
+ * effective_status 'not_started'). Read-only (revision §7).
  */
 export interface OnboardingGateRow {
   course_id: string;

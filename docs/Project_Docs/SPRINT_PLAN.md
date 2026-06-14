@@ -636,26 +636,15 @@ fresh-apply, RLS suite, `npm run build`, GitHub Actions gate (must be GREEN). **
 
 ---
 
-## Phase 1.1 — Onboarding Completion Gate (fix fail-open Active) [IMPLEMENTED — PR pending sign-off]
+## Phase 1.1 — Onboarding Completion Gate (fix fail-open Active) [IMPLEMENTED — revision PR pending sign-off]
 
-Source: `docs/bmad/working-notes/2026-06-07-onboarding-completion-gate-handoff.md` (owner decisions
-LOCKED 2026-06-11; single-group ruling re-confirmed 2026-06-12). P1 compliance correctness — first
-concrete slice of the per-tenant compliance rule engine. Branch `feature/onboarding-completion-gate`.
-Implemented 2026-06-12. **Not deployed; migration not pushed; backfill not executed.**
+Source: `docs/bmad/working-notes/2026-06-13-onboarding-gate-per-department-revision.md`, superseding `docs/bmad/working-notes/2026-06-07-onboarding-completion-gate-handoff.md`. P1 compliance correctness. Branch `feature/onboarding-gate-per-department`. Implemented 2026-06-13. **Not deployed; migration not pushed; backfill not executed.**
 
 **Acceptance criteria → status:**
-- [x] Migration `20260612000001`: `tenant_settings.onboarding_group_id` + requirement-driven
-  `v_onboarding_gate` (`security_invoker = on`); `v_onboarding_training_compliance` unmodified.
-- [x] `gatherStatusInput` rewired to the gate view + designated-group enrollment check; pure
-  `resolveEmployeeStatus` (Q2 matrix) unchanged; `writeEmployeeStatus` still the sole status writer.
-- [x] Settings → LearnDash "Onboarding Group" select; persisted via extended `save-ld-mappings`
-  (tenant-guarded, tenant_id from JWT only).
-- [x] Hire-path idempotent auto-enroll into the designated group (`process-hire` + `onboard-employee`).
-- [x] Employee-detail read-only gate visibility (`OnboardingGateCard`, includes `not_started` rows).
-- [x] Backfill script (`scripts/backfill-onboarding-gate.ts`) — identify (read-only) +
-  reset-then-resolve via `writeEmployeeStatus`; grandfathering per §6.3. **Owner-run only.**
-- [x] Tests: `deno test _shared/tests/` 130/0 incl. named Karimah regression; RLS suite extended with
-  `v_onboarding_gate` isolation + gate contract test; `npm run build` clean; changed files lint-clean.
-- [ ] Deploy from `main` after sign-off: `db push` → function deploys → owner configures the
-  New-Hires group in Settings → owner runs the backfill (expected reset on 2026-06-12 data:
-  **Karimah Moss only** — Debbra Deo's gap was the recurring-excluded course 938; see DECISIONS).
+- [x] Migration `20260613000001`: drops `tenant_settings.onboarding_group_id`; rewrites `v_onboarding_gate` from `ld_group_mappings[].is_onboarding=true`; keeps same output columns; `security_invoker = on`; `v_onboarding_training_compliance` and recurring subsystem unmodified.
+- [x] `gatherStatusInput` rewired to flagged mappings + active enrollment in any flagged group; pure `resolveEmployeeStatus` unchanged; `writeEmployeeStatus` sole writer.
+- [x] Single-group auto-enroll reverted in `process-hire` and `onboard-employee`; existing job-title department enrollment remains.
+- [x] Settings uses per-row "Onboarding group" checkbox; `save-ld-mappings` validates/persists `is_onboarding` per mapping, tenant_id from JWT only.
+- [x] `OnboardingGateCard`/`useOnboardingGate` still consume the same view columns; backfill script keeps reset-then-resolve and preflights flagged mappings.
+- [x] Tests: `deno test _shared/tests/` 131/0; RLS suite updated with `v_onboarding_gate` cross-tenant coverage + two-department contract (live assertions skipped locally because env vars absent); `npm run build` clean; targeted touched-file ESLint 0 errors. Full `npm run lint` remains blocked by pre-existing repo lint debt (86 problems).
+- [ ] Deploy from `main` after sign-off only: migration -> `convert-applicant`, `process-hire`, `onboard-employee`, `save-ld-mappings`; owner flags groups 54 and 1428; run backfill identify first, then `--apply` only after approval.

@@ -1,18 +1,23 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Pencil, Trash2, Plus, Check, X, ShieldCheck } from "lucide-react";
+import { Pencil, Trash2, Plus, Check, X } from "lucide-react";
 import {
   useLdGroupMappings,
-  useOnboardingGroupSetting,
   useSaveLdMappings,
-  useSaveOnboardingGroup,
 } from "../hooks/useLdGroupMappings";
 import type { LdGroupMapping } from "../types/tenant-settings";
 import { cn } from "@/lib/utils";
 
 const inputCls = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/35";
 const idInputCls = `${inputCls} tracking-[0.01em]`;
+
+function normalizeMapping(mapping: LdGroupMapping): LdGroupMapping {
+  return {
+    ...mapping,
+    is_onboarding: mapping.is_onboarding === true,
+  };
+}
 
 interface MappingRowProps {
   mapping: LdGroupMapping;
@@ -25,7 +30,7 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
   const { register, handleSubmit, reset } = useForm<LdGroupMapping>({ defaultValues: mapping });
 
   function onSave(values: LdGroupMapping) {
-    onEdit(values);
+    onEdit(normalizeMapping(values));
     setEditing(false);
   }
 
@@ -42,6 +47,12 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
         </td>
         <td className="px-4 py-3">
           <input {...register("group_id", { required: true })} className={idInputCls} />
+        </td>
+        <td className="px-4 py-3">
+          <label className="inline-flex items-center gap-2 text-sm text-foreground">
+            <input type="checkbox" {...register("is_onboarding")} />
+            <span>Onboarding group</span>
+          </label>
         </td>
         <td className="px-4 py-3">
           <div className="flex gap-2">
@@ -61,6 +72,17 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
     <tr className="border-b border-border transition-colors hover:bg-secondary/65">
       <td className="px-4 py-3 text-sm tracking-[0.005em] text-foreground">{mapping.job_title}</td>
       <td className="px-4 py-3 text-sm tracking-[0.01em] text-muted-foreground">{mapping.group_id}</td>
+      <td className="px-4 py-3">
+        <label className="inline-flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            checked={mapping.is_onboarding === true}
+            onChange={(event) =>
+              onEdit({ ...mapping, is_onboarding: event.target.checked })}
+          />
+          <span>Onboarding group</span>
+        </label>
+      </td>
       <td className="px-4 py-3">
         <div className="flex gap-2">
           <button onClick={() => setEditing(true)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary" title="Edit">
@@ -92,6 +114,12 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
         <input {...register("group_id", { required: true })} placeholder="e.g. 42" className={idInputCls} />
       </td>
       <td className="px-4 py-3">
+        <label className="inline-flex items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" {...register("is_onboarding")} />
+          <span>Onboarding group</span>
+        </label>
+      </td>
+      <td className="px-4 py-3">
         <div className="flex gap-2">
           <button onClick={handleSubmit(onAdd)} className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10" title="Add">
             <Check size={14} />
@@ -102,53 +130,6 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
         </div>
       </td>
     </tr>
-  );
-}
-
-// Onboarding completion gate (handoff §5b): the tenant designates ONE official
-// onboarding group. Employees are held in Onboarding until every active course
-// mapped to this group is complete — unset means the resolver fails closed.
-function OnboardingGroupCard() {
-  const { data, isLoading } = useOnboardingGroupSetting();
-  const save = useSaveOnboardingGroup();
-
-  if (isLoading || !data?.schemaReady) return null;
-
-  function handleChange(value: string) {
-    save.mutate(value === "" ? null : value, {
-      onSuccess: () => toast.success("Onboarding group saved"),
-      onError: (err) =>
-        toast.error(err instanceof Error ? err.message : "Failed to save onboarding group"),
-    });
-  }
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <div className="space-y-3 px-4 py-4">
-        <div className="flex items-center gap-2">
-          <ShieldCheck size={15} className="text-primary" />
-          <span className="zone-label">Onboarding Group</span>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          The LearnDash group whose courses every new hire must complete before
-          their status can become Active. While this is not set, employees stay
-          in Onboarding (fail-closed).
-        </p>
-        <select
-          value={data.groupId ?? ""}
-          onChange={(e) => handleChange(e.target.value)}
-          disabled={save.isPending}
-          className={inputCls}
-        >
-          <option value="">Not configured — gate disabled (fail-closed)</option>
-          {data.options.map((o) => (
-            <option key={o.group_id} value={o.group_id}>
-              {o.label === o.group_id ? `Group ${o.group_id}` : `${o.label} (group ${o.group_id})`}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
   );
 }
 
@@ -179,7 +160,7 @@ export function LdGroupMappingsPage() {
   }
 
   function handleAdd(mapping: LdGroupMapping) {
-    const next = [...displayed, mapping];
+    const next = [...displayed, normalizeMapping(mapping)];
     setLocalMappings(next);
     setAdding(false);
     void commitSave(next);
@@ -202,21 +183,20 @@ export function LdGroupMappingsPage() {
         </p>
       </div>
 
-      <OnboardingGroupCard />
-
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
               <th className="px-4 py-3 text-left"><span className="zone-label">Job Title</span></th>
               <th className="px-4 py-3 text-left"><span className="zone-label">LearnDash Group ID</span></th>
+              <th className="px-4 py-3 text-left"><span className="zone-label">Onboarding Gate</span></th>
               <th className="w-24 px-4 py-3" />
             </tr>
           </thead>
           <tbody>
             {displayed.length === 0 && !adding && (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-muted-foreground">
                   No mappings yet. Add your first job title to group mapping below.
                 </td>
               </tr>

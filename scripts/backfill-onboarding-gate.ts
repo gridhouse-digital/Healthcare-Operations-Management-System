@@ -8,15 +8,14 @@
 // writer; this script NEVER writes a status value directly.
 //
 // PRE-REQS (owner-controlled — do not run before all three):
-//   1. Gate migration applied (v_onboarding_gate + tenant_settings.onboarding_group_id).
-//   2. The onboarding group exists in WP and has synced into HOMS
+//   1. Gate migration applied (v_onboarding_gate + ld_group_mappings.is_onboarding).
+//   2. The onboarding groups exist in WP and have synced into HOMS
 //      (learndash_group_courses rows present).
-//   3. The owner selected it in Settings → LearnDash (onboarding_group_id set).
+//   3. The owner flagged each onboarding group in Settings → LearnDash.
 //
 // GRANDFATHERING (owner-approved, handoff §6.3): Active employees with ZERO
-// gate rows (not enrolled in the designated group — e.g. employees complete
-// against their current role group during the WP restructure window) are NOT
-// touched. Only Active employees WITH ≥1 incomplete gating course are reset.
+// gate rows (not enrolled in any onboarding-flagged group) are NOT touched.
+// Only Active employees WITH ≥1 incomplete gating course are reset.
 //
 // USAGE (from prolific-hr-app/):
 //   # Step 1 — identify only (READ-ONLY, default). Paste this output in the PR.
@@ -62,21 +61,32 @@ interface GateRow {
 // ---------------------------------------------------------------------------
 const { data: settings, error: settingsErr } = await admin
   .from("tenant_settings")
-  .select("onboarding_group_id")
+  .select("ld_group_mappings")
   .eq("tenant_id", TENANT_ID)
   .maybeSingle();
 if (settingsErr) {
   console.error(`tenant_settings read failed: ${settingsErr.message}`);
   Deno.exit(1);
 }
-if (!settings?.onboarding_group_id) {
+const mappings = Array.isArray(settings?.ld_group_mappings)
+  ? settings.ld_group_mappings as Array<{ group_id?: unknown; is_onboarding?: unknown }>
+  : [];
+const onboardingGroupIds = [
+  ...new Set(
+    mappings
+      .filter((m) => m?.is_onboarding === true)
+      .map((m) => typeof m.group_id === "string" ? m.group_id.trim() : "")
+      .filter((groupId) => groupId.length > 0),
+  ),
+];
+if (onboardingGroupIds.length === 0) {
   console.error(
-    "tenant_settings.onboarding_group_id is NOT set for this tenant. " +
-      "Configure the Onboarding Group in Settings → LearnDash first (handoff §6 pre-req).",
+    "No ld_group_mappings entries are flagged is_onboarding=true for this tenant. " +
+      "Flag the department onboarding groups in Settings → LearnDash first (revision §7 pre-req).",
   );
   Deno.exit(1);
 }
-console.log(`Designated onboarding group: ${settings.onboarding_group_id}\n`);
+console.log(`Onboarding group ids: ${onboardingGroupIds.join(", ")}\n`);
 
 // ---------------------------------------------------------------------------
 // Step 1 — IDENTIFY (read-only): Active employees with ≥1 gating course not
@@ -145,7 +155,7 @@ for (const p of activePeople ?? []) {
 console.log("=== Step 1: identify (read-only) ===");
 console.log(`Active employees checked: ${activePeople?.length ?? 0}`);
 console.log(
-  `Grandfathered (no gate rows — not enrolled in designated group): ${grandfathered.length}` +
+  `Grandfathered (no gate rows — not enrolled in onboarding-flagged groups): ${grandfathered.length}` +
     (grandfathered.length ? ` → ${grandfathered.join(", ")}` : ""),
 );
 console.log(`Reset candidates (≥1 incomplete gating course): ${candidates.length}`);
