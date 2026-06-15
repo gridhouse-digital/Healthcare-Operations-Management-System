@@ -33,8 +33,11 @@ alter default privileges in schema public grant execute on functions to anon, au
 -- reachability, but it must not reopen sensitive/internal RPCs that prior
 -- migrations explicitly removed from public-facing roles. Re-apply those
 -- exceptions as the final operation in this migration.
-revoke execute on function public.pgp_sym_decrypt_text(text, text) from anon;
+revoke execute on function public.pgp_sym_decrypt_text(text, text) from anon, authenticated;
 revoke execute on function public.pgp_sym_encrypt_text(text, text) from anon, authenticated;
+-- Auth-claims hook (custom_access_token_hook) is invoked by the auth system, never
+-- through the Data API. Keep it revoked from the public-facing roles to match prod.
+revoke execute on function public.custom_access_token_hook(jsonb) from anon, authenticated, public;
 
 do $$
 declare
