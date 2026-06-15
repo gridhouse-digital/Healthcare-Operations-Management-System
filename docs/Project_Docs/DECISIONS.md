@@ -8,6 +8,24 @@
 
 ---
 
+## 2026-06-15 | RLS isolation CI: temporary local Data API auto-grants; durable explicit GRANT migration required
+
+### Temporary CI/local-stack measure
+
+**What:** The local Supabase config sets `api.auto_expose_new_tables = true` so a fresh local `supabase db reset` grants Data API table/view privileges to the API roles (`anon`, `authenticated`, `service_role`) as the legacy local stack did. This makes the `rls-isolation` CI job exercise RLS policies through PostgREST instead of failing during shared setup with `permission denied for table tenants`.
+
+**Why:** Latest Supabase CLI/local-stack behavior follows the new cloud default introduced on 2026-05-30: migration-created public tables are not automatically exposed to Data API roles. With that default, even a valid `SERVICE_ROLE_KEY` JWT authenticated as `service_role`, but `service_role` lacked table privileges on `public.tenants`, so the RLS suite failed before any tenant-isolation assertions ran. Restoring local auto-exposure is a CI unblocker; RLS still enforces tenant isolation because table grants are only reachability, not row visibility.
+
+**Clock:** `api.auto_expose_new_tables` is deprecated and scheduled for removal on 2026-10-30. This is intentionally temporary.
+
+### Durable fix
+
+**What:** Before 2026-10-30, replace this config dependency with explicit GRANT statements in a migration for the Data API roles that should reach each table/view/function. At minimum the RLS harness setup path needs `service_role` privileges on tenant-scoped setup tables, while authenticated/anon reachability must be granted only where RLS policies and product behavior require it.
+
+**Why:** Explicit grants make fresh databases, CI, and future Supabase local/cloud defaults deterministic. They also document the intended API surface directly in schema history instead of relying on a deprecated local-stack compatibility flag.
+
+**Rollback:** If `auto_expose_new_tables = true` causes an unexpected local-only exposure issue, revert the config change and add the explicit grants migration before re-enabling the blocking `rls-isolation` gate.
+
 ## 2026-06-13 | Onboarding gate revision: per-department onboarding groups, recurring stays course-based, rollback
 
 > Supersedes the 2026-06-12 single `tenant_settings.onboarding_group_id` gate before activation.
