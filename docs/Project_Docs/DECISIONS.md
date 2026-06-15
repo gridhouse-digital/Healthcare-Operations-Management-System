@@ -18,13 +18,15 @@
 
 **Clock:** `api.auto_expose_new_tables` is deprecated and scheduled for removal on 2026-10-30. This is intentionally temporary.
 
-### Durable fix
+### Durable fix — IMPLEMENTED 2026-06-15 (migration `20260615000001_explicit_data_api_grants`)
 
-**What:** Before 2026-10-30, replace this config dependency with explicit GRANT statements in a migration for the Data API roles that should reach each table/view/function. At minimum the RLS harness setup path needs `service_role` privileges on tenant-scoped setup tables, while authenticated/anon reachability must be granted only where RLS policies and product behavior require it.
+**What:** The migration grants the Data API roles (`anon`, `authenticated`, `service_role`) `ALL` on existing public tables/sequences + `EXECUTE` on functions, plus matching `ALTER DEFAULT PRIVILEGES` for future objects. `auto_expose_new_tables` is removed from `supabase/config.toml` (left unset → new always-revoked default). Fresh DBs / CI now get grants from the migration, not the flag — and the `rls-isolation` gate passes without the flag.
 
-**Why:** Explicit grants make fresh databases, CI, and future Supabase local/cloud defaults deterministic. They also document the intended API surface directly in schema history instead of relying on a deprecated local-stack compatibility flag.
+**Decision — faithful replication, NOT re-scoping (chosen 2026-06-15):** Production was audited and already grants `ALL` on every public table to all three Data API roles (the standard Supabase broad-GRANT + RLS-as-guard model the app was built on), with matching default privileges for future objects. The migration replicates that **exactly** — zero behavior change, zero prod/CI grant drift, idempotent no-op on prod. We deliberately did **not** scope `anon`/`authenticated` down per-table: that would diverge from prod, risk 403-ing the frontend, and is a separate least-privilege hardening project (needs per-table + UI regression testing), not a flag swap. RLS remains the enforced isolation layer (verified by the `rls-isolation` CI gate).
 
-**Rollback:** If `auto_expose_new_tables = true` causes an unexpected local-only exposure issue, revert the config change and add the explicit grants migration before re-enabling the blocking `rls-isolation` gate.
+**Why:** Explicit grants make fresh databases, CI, and future Supabase defaults deterministic, and document the intended API surface in schema history instead of relying on a deprecated compatibility flag.
+
+**Rollback:** Revert the migration + restore `auto_expose_new_tables = true` in `config.toml`. Grants are idempotent; reverting the migration does not drop prod grants (which predate it).
 
 ## 2026-06-13 | Onboarding gate revision: per-department onboarding groups, recurring stays course-based, rollback
 
