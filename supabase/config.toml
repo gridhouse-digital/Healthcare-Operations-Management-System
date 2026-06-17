@@ -28,9 +28,11 @@ extra_search_path = ["public", "extensions"]
 max_rows = 1000
 # Controls whether new tables, views, sequences and functions created in the `public` schema by
 # `postgres` are reachable through the Data API roles (`anon`, `authenticated`, `service_role`)
-# without explicit GRANTs. The RLS integration suite exercises policies through PostgREST, so the
-# local stack must preserve legacy Data API grants; RLS still enforces tenant isolation.
-auto_expose_new_tables = true
+# without explicit GRANTs. We intentionally do NOT rely on this flag: migration
+# 20260615000001_explicit_data_api_grants grants the Data API roles explicitly (matching prod),
+# so fresh databases / CI are deterministic regardless of this default — which Supabase removes
+# on 2026-10-30. Left unset to use the new (always-revoked) default. RLS still enforces isolation.
+# auto_expose_new_tables = false
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.

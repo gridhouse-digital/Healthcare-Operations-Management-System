@@ -3,6 +3,27 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-15 - Explicit Data API grants fresh-reset validation (PR #21)
+
+Continued draft branch `chore/explicit-data-api-grants` to replace the temporary `api.auto_expose_new_tables = true` workaround with an explicit grants migration. **Local only; no `db push`, deploy, or merge.**
+
+### Finding
+
+The leading hypothesis was false for tables: after a fresh `supabase db reset` without `auto_expose_new_tables`, the explicit migration's table grants survived (`service_role` retained `INSERT`/`SELECT` on `public.tenants`, and `anon`/`authenticated` retained SELECT reachability for Data API tables). The draft PR failure was instead caused by the migration's broad `GRANT EXECUTE ON ALL FUNCTIONS`, which ran after the earlier function-hardening migrations and reopened `pgp_sym_encrypt_text(text,text)` to `anon`/`authenticated`.
+
+### What changed
+
+- Updated migration `20260615000001_explicit_data_api_grants.sql` to keep broad table/sequence grants and function default reachability, then re-apply the existing function `EXECUTE` exceptions for sensitive/internal RPCs: `pgp_sym_*`, audit trigger functions, trigger-only helper functions, `storage_obj_in_caller_tenant` for `anon`, and legacy role helpers.
+- Left `supabase/config.toml` with `auto_expose_new_tables` unset; the durable path now passes locally without the temporary flag.
+- Did not touch feature code, onboarding/recurring-compliance behavior, or other migrations.
+
+### Tests + verification
+
+- Clean validation checkout + `npx supabase db reset` with `auto_expose_new_tables` unset -> reset completed through `20260615000001_explicit_data_api_grants.sql`.
+- Post-reset grant probe: `has_table_privilege('service_role','public.tenants','INSERT') = true`; `anon`/`authenticated` cannot execute `pgp_sym_encrypt_text(text,text)`; `service_role` still can.
+- `deno task test:rls` with local Supabase env mapped from CLI status -> **68 passed / 0 failed**.
+
+---
 ## 2026-06-13 - Onboarding completion gate revision (per-department / multi-group)
 
 Implements `docs/bmad/working-notes/2026-06-13-onboarding-gate-per-department-revision.md` §§3-7, superseding the 2026-06-12 single-group design before activation. Branch `feature/onboarding-gate-per-department` off `main`. **Not deployed; migration NOT pushed; backfill NOT executed.**
