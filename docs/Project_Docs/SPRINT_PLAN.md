@@ -205,6 +205,17 @@
 - Adjustment modal works from detail page and refreshes both detail + list queries
 - Status: [x] Complete - 2026-03-09
 
+### Enhancement (unplanned) - Training Compliance dashboard rebuild [2026-06-18]
+
+> No story ID — unscheduled UI rebuild enhancing Stories 4.3 / 4.3.1. Tracked here against its functional area rather than as a new story.
+
+- Rebuilt the onboarding tab into a compliance directory: clickable summary cards, multi-facet toolbar (status / course / onboarding-gate / adjustments), client-side pagination, mobile list, and an employee compliance drawer overlay.
+- Integrated per-person onboarding-gate state via new `useOnboardingGateSummaries` (reads `v_onboarding_gate`, reusing the Phase 1.1 per-department gate).
+- `EmployeeTrainingDetailPage` gained an embedded mode so it renders both as a full page and inside the drawer.
+- **Routing change (revisits 4.3.1):** `/training/:employeeId?` now shows the list with an optional drawer overlay; the full detail page moved to `/training/employee/:employeeId`.
+- Removed now-dead `TrainingStatsCards` / `TrainingEmployeeTable`.
+- Status: [~] In review — PR #22 on branch `feat/training-compliance-dashboard`; frontend only, no DB/EF changes; `npm run build` clean. See PROJECT_LOG 2026-06-18.
+
 ### Story 4.4 - pg_cron + infrastructure fixes
 
 **AC:**
