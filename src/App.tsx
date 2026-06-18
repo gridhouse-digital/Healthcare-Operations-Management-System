@@ -48,8 +48,8 @@ function App() {
               <Route path="offers" element={<OfferList />} />
               <Route path="offers/new" element={<OfferEditor />} />
               <Route path="employees" element={<EmployeeList />} />
-              <Route path="training" element={<TrainingPage />} />
-              <Route path="training/:employeeId" element={<EmployeeTrainingDetailPage />} />
+              <Route path="training/employee/:employeeId" element={<EmployeeTrainingDetailPage />} />
+              <Route path="training/:employeeId?" element={<TrainingPage />} />
               <Route element={<ProtectedRoute allowedRoles={['platform_admin', 'tenant_admin']} />}>
                 <Route path="settings/connectors" element={<ConnectorSettingsPage />} />
                 <Route path="settings/training-rules" element={<TrainingComplianceRulesPage />} />

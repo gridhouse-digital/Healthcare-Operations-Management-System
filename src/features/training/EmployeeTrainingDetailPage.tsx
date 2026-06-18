@@ -174,8 +174,19 @@ function getEventOccurredAt(
   return getPayloadString(event.payload, 'adjusted_at') ?? event.created_at;
 }
 
-export function EmployeeTrainingDetailPage() {
-  const { employeeId } = useParams<{ employeeId: string }>();
+interface EmployeeTrainingDetailPageProps {
+  embedded?: boolean;
+  employeeId?: string;
+  onClose?: () => void;
+}
+
+export function EmployeeTrainingDetailPage({
+  embedded = false,
+  employeeId: employeeIdProp,
+  onClose,
+}: EmployeeTrainingDetailPageProps) {
+  const { employeeId: routeEmployeeId } = useParams<{ employeeId: string }>();
+  const employeeId = employeeIdProp ?? routeEmployeeId;
   const navigate = useNavigate();
   const [adjustRecord, setAdjustRecord] = useState<TrainingComplianceRecord | null>(null);
 
@@ -255,15 +266,27 @@ export function EmployeeTrainingDetailPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <div className="space-y-5">
-        <Button
-          onClick={() => navigate('/training')}
-          variant="ghost"
-          size="sm"
-          className="px-0 text-muted-foreground hover:text-foreground"
-        >
-          <ChevronLeft size={16} strokeWidth={2} />
-          Back to Compliance
-        </Button>
+        {!embedded ? (
+          <Button
+            onClick={() => navigate('/training')}
+            variant="ghost"
+            size="sm"
+            className="px-0 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft size={16} strokeWidth={2} />
+            Back to Compliance
+          </Button>
+        ) : onClose ? (
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="sm"
+            className="px-0 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft size={16} strokeWidth={2} />
+            Back to directory
+          </Button>
+        ) : null}
 
         <div className="saas-card space-y-5 p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
