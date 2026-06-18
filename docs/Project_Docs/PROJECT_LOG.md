@@ -3,6 +3,30 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-18 - Training Compliance dashboard rebuild (onboarding directory)
+
+Rebuilds the onboarding tab of the Training Compliance page into a richer compliance directory. Authored in the working tree by another tool/session; reviewed, verified (clean `npm run build`), and committed to branch `feat/training-compliance-dashboard` (commit `365048f`). **Not deployed; not merged to `main`; no DB or EF changes.**
+
+### What changed
+
+- **`TrainingPage.tsx`** - replaces the search + flat `TrainingEmployeeTable` with: `TrainingComplianceSummary` cards (clickable summary filters), `TrainingComplianceToolbar` (status/course/onboarding-gate/adjustments facets), client-side pagination (`PAGE_SIZE = 25`), a `TrainingComplianceMobileList`, and an `EmployeeComplianceDrawer` overlay. Active onboarding/recurring tab is now URL-driven via the `mode` search param.
+- **Onboarding-gate integration** - new `useOnboardingGateSummaries(personIds)` hook fetches per-person gate state from `v_onboarding_gate`; `utils/compliancePresentation.ts` centralizes gate/adjustment/needs-action presentation helpers. Reuses the per-department gate from the 2026-06-13 work.
+- **`EmployeeTrainingDetailPage.tsx`** - adds an embedded mode (props `embedded` / `employeeId` / `onClose`) so it renders both as a full page and inside the drawer; route param remains the fallback when no prop is supplied.
+- **Routing (`App.tsx`)** - split into `/training/:employeeId?` (list with optional drawer overlay) and `/training/employee/:employeeId` (full detail page).
+- **New components** - `ComplianceStatusBadge`, `EmployeeComplianceDrawer`, `TrainingComplianceSkeleton`, `TrainingComplianceSummary`, `TrainingComplianceTable` (+ mobile list), `TrainingComplianceToolbar`.
+- **Now unused** - `TrainingStatsCards.tsx` and `TrainingEmployeeTable.tsx` are no longer imported anywhere (kept in tree for now; the latter still references the old `/training/<id>` route, but is dead code).
+
+### Tests + verification
+
+- `npm run build` (tsc -b + vite build) -> clean, 2371 modules, no new errors.
+- Grepped for `/training/<id>` links affected by the route split -> only live caller is the intended drawer-opening `navigate()` in `TrainingPage.tsx`; the stale link sits in orphaned `TrainingEmployeeTable.tsx`.
+
+### Follow-ups
+
+- Delete dead `TrainingStatsCards.tsx` / `TrainingEmployeeTable.tsx` in a cleanup pass.
+- Push branch / open PR pending sign-off.
+
+---
 ## 2026-06-15 - Explicit Data API grants fresh-reset validation (PR #21)
 
 Continued draft branch `chore/explicit-data-api-grants` to replace the temporary `api.auto_expose_new_tables = true` workaround with an explicit grants migration. **Local only; no `db push`, deploy, or merge.**
