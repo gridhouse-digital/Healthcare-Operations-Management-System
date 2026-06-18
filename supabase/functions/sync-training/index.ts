@@ -3,6 +3,7 @@ import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
+import { writeEmployeeStatus } from "../_shared/employee-status-resolver.ts";
 import {
   currentDateOnly,
   resolveReentryAnchor,
@@ -70,15 +71,6 @@ interface GroupEnrollmentRow {
 interface GroupCourseRecord {
   courseId: string;
   courseName: string;
-}
-
-function isMissingSchema(error: { code?: string; message?: string } | null | undefined): boolean {
-  const code = error?.code;
-  const message = String(error?.message ?? "");
-  return code === "42P01" ||
-    code === "PGRST205" ||
-    /relation .* does not exist/i.test(message) ||
-    /schema cache/i.test(message);
 }
 
 function bestPersonAnchorDate(person: Pick<PersonWithWp, "hired_at" | "created_at">): string {
@@ -613,65 +605,12 @@ async function reconcileGroupCourseMappings(
   }
 }
 
-async function resolveEmployeeStatus(
-  admin: any,
-  tenantId: string,
-  personId: string,
-): Promise<"Onboarding" | "Active" | null> {
-  const onboardingQuery = await admin
-    .from("v_onboarding_training_compliance")
-    .select("effective_status")
-    .eq("tenant_id", tenantId)
-    .eq("person_id", personId);
-
-  if (onboardingQuery.error && isMissingSchema(onboardingQuery.error)) {
-    const fallbackQuery = await admin
-      .from("training_records")
-      .select("status")
-      .eq("tenant_id", tenantId)
-      .eq("person_id", personId);
-
-    if (fallbackQuery.error) {
-      throw new Error(`Failed to load fallback onboarding records: ${fallbackQuery.error.message}`);
-    }
-
-    const rows = (fallbackQuery.data ?? []) as Array<{ status: string }>;
-    const allDone = rows.length > 0 && rows.every((row) => row.status === "completed");
-    return allDone ? "Active" : "Onboarding";
-  }
-
-  if (onboardingQuery.error) {
-    throw new Error(`Failed to load onboarding training view: ${onboardingQuery.error.message}`);
-  }
-
-  const rows = (onboardingQuery.data ?? []) as Array<{ effective_status: string }>;
-  const allDone = rows.length > 0 && rows.every((row) => row.effective_status === "completed");
-  return allDone ? "Active" : "Onboarding";
-}
-
-async function refreshEmployeeStatus(
-  admin: any,
-  tenantId: string,
-  personId: string,
-): Promise<void> {
-  const nextStatus = await resolveEmployeeStatus(admin, tenantId, personId);
-  if (!nextStatus) return;
-
-  const { error } = await admin
-    .from("people")
-    .update({
-      employee_status: nextStatus,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("tenant_id", tenantId)
-    .eq("id", personId)
-    .eq("type", "employee")
-    .neq("employee_status", "Terminated");
-
-  if (error) {
-    throw new Error(`Failed to refresh employee status: ${error.message}`);
-  }
-}
+// Employee-status resolution is centralized in _shared/employee-status-resolver.ts
+// (writeEmployeeStatus). sync-training previously had its own copy that read the
+// record-driven v_onboarding_training_compliance view — which re-introduced the
+// onboarding fail-open (and ignored the per-department gate + Q2 matrix), silently
+// healing Onboarding employees back to Active every nightly run. Do NOT reintroduce
+// a second status resolver here; call writeEmployeeStatus(admin, personId) only.
 
 // ── fetchAllCourseProgress (paginated) ──────────────────────────────
 
@@ -932,7 +871,7 @@ async function processTenant(
         }
 
         if (progress.length === 0) {
-          await refreshEmployeeStatus(admin, config.tenant_id, emp.id);
+          await writeEmployeeStatus(admin, emp.id);
           skipped++;
           continue;
         }
@@ -1019,7 +958,7 @@ async function processTenant(
           }
         }
 
-        await refreshEmployeeStatus(admin, config.tenant_id, emp.id);
+        await writeEmployeeStatus(admin, emp.id);
       } catch (empError) {
         const msg = empError instanceof Error ? empError.message : String(empError);
         console.error(`Error syncing employee ${emp.email}: ${msg}`);
