@@ -8,6 +8,18 @@
 
 ---
 
+## 2026-06-18 | Employee-status resolution must live ONLY in writeEmployeeStatus (no second copy)
+
+**What:** `sync-training` had its own inline `resolveEmployeeStatus`/`refreshEmployeeStatus` that read the record-driven `v_onboarding_training_compliance` view and wrote `people.employee_status` directly. Replaced both with the shared `writeEmployeeStatus` from `_shared/employee-status-resolver.ts`.
+
+**Why:** The duplicate copy was never updated when the onboarding gate shipped (PR #18/#19), so the daily 07:00 `sync-training-daily` cron silently re-resolved Onboarding employees back to `Active` using the old fail-open logic (it counts only *started* courses; Karimah's 2 of 6 both complete → "done" → Active). It ignored the per-department `v_onboarding_gate`, the fail-closed Q2 matrix, and "established Active stays Active". Net effect: the backfill set status correctly, and a stale divergent job overwrote it every night. Root-caused via audit_log (`Onboarding→Active` at exactly 07:00, actor null) cross-referenced with `cron.job` (`sync-training-daily` = `0 7 * * *`).
+
+**Rule:** Status resolution is centralized. Any function that needs to (re)compute `people.employee_status` MUST call `writeEmployeeStatus(admin, personId)` — never reimplement the logic or write `employee_status` from its own query. The only legitimate direct writes are the initial-default on insert (`sync-wp-users` new-row `Onboarding`) and HR-driven terminal transitions.
+
+**Deploy note:** Any change to `_shared/employee-status-resolver.ts` must redeploy EVERY function that calls `writeEmployeeStatus` — currently `convert-applicant` and `sync-training`. Missing one re-introduces drift.
+
+**Alternatives considered:** Just redeploy `sync-training` with the (already-correct) shared resolver — rejected because it had its OWN copy, not the shared one, so a redeploy alone would not have changed its behavior; the code had to be unified.
+
 ## 2026-06-15 | RLS isolation CI: temporary local Data API auto-grants; durable explicit GRANT migration required
 
 ### Temporary CI/local-stack measure
