@@ -47,6 +47,7 @@ function App() {
               <Route path="applicants/:id" element={<ApplicantDetailsPage />} />
               <Route path="offers" element={<OfferList />} />
               <Route path="offers/new" element={<OfferEditor />} />
+              <Route path="offers/:id/edit" element={<OfferEditor />} />
               <Route path="employees" element={<EmployeeList />} />
               <Route path="training/employee/:employeeId" element={<EmployeeTrainingDetailPage />} />
               <Route path="training/:employeeId?" element={<TrainingPage />} />
