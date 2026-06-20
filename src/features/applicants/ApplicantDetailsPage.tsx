@@ -178,8 +178,20 @@ export function ApplicantDetailsPage() {
     };
 
     // Status Update Logic
+    // Statuses an HR user may set MANUALLY. 'Offer' and 'Hired' are deliberately
+    // excluded — they are system-driven outcomes ('Offer' ← Send Offer creates the
+    // offer record; 'Hired' ← Move to Employees / hire detection creates the
+    // employee record). Setting them by hand would mark an applicant Hired/Offer
+    // with no backing record, so the manual path must never produce that state.
+    const MANUAL_STATUSES = ['New', 'Screening', 'Interview', 'Rejected'];
+
     const handleStatusUpdate = async (newStatus: string) => {
         if (!applicant) return;
+
+        if (!MANUAL_STATUSES.includes(newStatus)) {
+            toast.error(`"${newStatus}" can't be set manually — use Send Offer or Move to Employees.`);
+            return;
+        }
 
         try {
             const { error } = await supabase

@@ -21,14 +21,10 @@ export const applicantService = {
 
         if (error) throw error;
         return data as Applicant;
-    },
-
-    async updateStatus(id: string, status: string) {
-        const { error } = await supabase
-            .from('applicants')
-            .update({ status })
-            .eq('id', id);
-
-        if (error) throw error;
     }
+    // NOTE: no updateStatus here by design. Applicant status is either an
+    // HR-set pipeline stage (handled in ApplicantDetailsPage.handleStatusUpdate,
+    // which only permits New/Screening/Interview/Rejected) or a system-driven
+    // outcome — 'Offer' via sendOffer, 'Hired' via convert-applicant / hire
+    // detection / WP-link. Never write 'Hired'/'Offer' from the client.
 };
