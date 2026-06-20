@@ -7,6 +7,28 @@
 > Format: ## [DATE] Title | What | Why | Alternatives considered
 
 ---
+## 2026-06-20 | Per-tenant offer-letter template foundation
+
+**What:** Offer-letter identity and default body now live on the tenant-owned `tenant_settings` row: `offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, and `offer_letter_template`. The Settings UI edits those fields through the real `tenant_settings` path. Offer previews, the public token view, AI offer drafting context, and the dormant `sendOffer` email template use those fields with neutral fallback values only.
+
+**Why:** The offer flow was still carrying single-tenant identity strings in multiple offer paths. That is incompatible with HOMS as a multi-tenant platform and creates a risk that one agency's legal/company identity appears in another tenant's offer letter.
+
+**Rendering rule:** Merge fields are `{{candidate}}`, `{{position}}`, `{{rate}}`, `{{start_date}}`, `{{company}}`, `{{signatory}}`, `{{signatory_title}}`, and `{{accept_url}}`. Frontend preview rendering escapes template text and merge values before HTML injection.
+
+**Public candidate view:** A token-based `get_public_offer(token_arg)` SECURITY DEFINER function returns only non-sensitive offer/applicant/template fields needed by `/offer/:token`. It does not expose encrypted columns or broad tenant settings.
+
+**Alternatives considered:** Keep company/signatory in frontend constants - rejected because it repeats the single-tenant bug. Add a separate `offer_templates` table - deferred; one default template per tenant is sufficient for this foundation phase. Store rendered letter on send - deferred to Phase 3 so the send/delivery refactor stays separate.
+
+**Rollback:**
+```sql
+DROP FUNCTION IF EXISTS public.get_public_offer(text);
+ALTER TABLE public.tenant_settings
+  DROP COLUMN IF EXISTS offer_company_name,
+  DROP COLUMN IF EXISTS offer_signatory_name,
+  DROP COLUMN IF EXISTS offer_signatory_title,
+  DROP COLUMN IF EXISTS offer_letter_template;
+```
+Code rollback is a git revert of the Phase 2 branch changes. Do not run the Phase 3 delivery refactor as part of this rollback.
 
 ## 2026-06-18 | Employee-status resolution must live ONLY in writeEmployeeStatus (no second copy)
 

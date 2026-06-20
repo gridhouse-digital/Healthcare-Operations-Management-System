@@ -9,6 +9,10 @@ import { handleCors, withCors } from '../_shared/cors.ts'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const PGCRYPTO_KEY = Deno.env.get('PGCRYPTO_ENCRYPTION_KEY') ?? ''
+const OFFER_SENDER_EMAIL = Deno.env.get('OFFER_SENDER_EMAIL') ?? 'no-reply@example.com'
+const DEFAULT_OFFER_COMPANY_NAME = 'Your Organization'
+const DEFAULT_OFFER_SIGNATORY_NAME = 'Hiring Team'
+const DEFAULT_OFFER_SIGNATORY_TITLE = 'Hiring Representative'
 
 type SendOfferBody = {
   jotformSubmissionId?: string
@@ -30,6 +34,11 @@ async function decryptBrevoKey(
   })
   if (error) throw new Error(`Brevo key decrypt failed: ${error.message}`)
   return data as string
+}
+
+function clean(value: string | null | undefined, fallback: string): string {
+  const trimmed = value?.trim()
+  return trimmed ? trimmed : fallback
 }
 
 Deno.serve(async (req: Request) => {
@@ -123,7 +132,6 @@ Deno.serve(async (req: Request) => {
         salary,
         start_date: startDate,
         status: 'Pending_Approval',
-        secure_token: crypto.randomUUID(),
         created_by: ctx.userId,
       })
       .select()
@@ -134,7 +142,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: tenantSettings } = await admin
       .from('tenant_settings')
-      .select('brevo_api_key_encrypted, logo_light')
+      .select('brevo_api_key_encrypted, logo_light, offer_company_name, offer_signatory_name, offer_signatory_title')
       .eq('tenant_id', ctx.tenantId)
       .single()
 
@@ -144,6 +152,10 @@ Deno.serve(async (req: Request) => {
     if (tenantSettings?.brevo_api_key_encrypted) {
       brevoApiKey = await decryptBrevoKey(admin, tenantSettings.brevo_api_key_encrypted)
     }
+
+    const companyName = clean(tenantSettings?.offer_company_name, DEFAULT_OFFER_COMPANY_NAME)
+    const signatoryName = clean(tenantSettings?.offer_signatory_name, DEFAULT_OFFER_SIGNATORY_NAME)
+    const signatoryTitle = clean(tenantSettings?.offer_signatory_title, DEFAULT_OFFER_SIGNATORY_TITLE)
 
     if (brevoApiKey) {
       const emailResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -155,19 +167,22 @@ Deno.serve(async (req: Request) => {
         },
         body: JSON.stringify({
           sender: {
-            name: 'Prolific Homecare HR',
-            email: 'admin@prolifichcs.com',
+            name: `${companyName} HR`,
+            email: OFFER_SENDER_EMAIL,
           },
           to: [{ email: normalizedEmail, name: `${firstName ?? ''} ${lastName ?? ''}`.trim() }],
-          subject: `Job Offer: ${position ?? 'Position'} at Prolific Homecare`,
+          subject: `Job Offer: ${position ?? 'Position'} at ${companyName}`,
           htmlContent: await render(
             React.createElement(OfferEmail, {
               applicantName: `${firstName ?? ''} ${lastName ?? ''}`.trim(),
               position,
               startDate,
               dailyRate: salary,
-              offerUrl: `https://prolific-hr.com/offers/${offer.secure_token}`,
+              offerUrl: `${Deno.env.get('PUBLIC_APP_URL') ?? 'https://example.com'}/offer/${offer.secure_token}`,
               logoUrl: logoUrl || undefined,
+              companyName,
+              signatoryName,
+              signatoryTitle,
             }),
           ),
         }),

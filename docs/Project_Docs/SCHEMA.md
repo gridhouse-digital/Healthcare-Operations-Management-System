@@ -3,7 +3,7 @@
 > **Hierarchy rank:** 5 (current — authoritative for table structure / RLS notes).
 > Registered by the 2026-05-29 doc audit.
 
-> Canonical table reference. Updated: 2026-03-11.
+> Canonical table reference. Updated: 2026-06-20.
 > All tables have RLS enabled. Tenant-scoped MVP tables have audit triggers. `tenant_access_requests` is the intentional pre-tenant exception because `audit_log` requires a tenant context.
 
 ---
@@ -91,6 +91,10 @@ jotform_form_id_vaccination  TEXT
 jotform_form_id_licenses     TEXT
 jotform_form_id_background   TEXT
 logo_light                   TEXT       -- URL to tenant logo (used in emails)
+offer_company_name           TEXT       -- tenant company name for offer letters
+offer_signatory_name         TEXT       -- signatory name for offer letters
+offer_signatory_title        TEXT       -- signatory title for offer letters
+offer_letter_template        TEXT       -- body template with offer merge fields
 created_at                   TIMESTAMPTZ
 updated_at                   TIMESTAMPTZ
 ```
@@ -99,7 +103,15 @@ updated_at                   TIMESTAMPTZ
 **Audit trigger:** `audit_tenant_settings_trigger`
 **Critical:** encrypted columns are NEVER selected to the frontend. Connector status is exposed through the generated `*_key_configured` booleans so UI status cannot drift from the encrypted values.
 **Onboarding gate:** `ld_group_mappings[].is_onboarding === true` marks department LearnDash groups that gate onboarding. Absent/unset defaults to false. There is no tenant-wide `onboarding_group_id` after migration `20260613000001`.
+**Offer letters:** `offer_letter_template` supports `{{candidate}}`, `{{position}}`, `{{rate}}`, `{{start_date}}`, `{{company}}`, `{{signatory}}`, `{{signatory_title}}`, and `{{accept_url}}`. Blank values fall back to neutral defaults in code, never tenant-specific literals.
 
+---
+
+## get_public_offer(token_arg text)
+
+SECURITY DEFINER RPC used by the public `/offer/:token` candidate page. Returns one JSON object for the token containing non-sensitive offer fields, applicant display fields, and offer-letter settings (`offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, `offer_letter_template`, `logo_light`).
+
+**RLS/security:** Granted to `anon`, `authenticated`, and `service_role`; protected by unguessable `offers.secure_token`. Does not return encrypted tenant settings columns or arbitrary tenant data.
 ---
 
 ## people

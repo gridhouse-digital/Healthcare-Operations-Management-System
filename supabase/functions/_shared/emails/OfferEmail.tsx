@@ -29,6 +29,9 @@ interface OfferEmailProps {
     employmentClassification?: string;
     offerUrl: string;
     logoUrl?: string;
+    companyName?: string;
+    signatoryName?: string;
+    signatoryTitle?: string;
 }
 
 export const OfferEmail = ({
@@ -44,13 +47,16 @@ export const OfferEmail = ({
     totalHoursPerDay = "12",
     hourlyEquivalent = "25.00",
     employmentClassification = "1099 contractor",
-    offerUrl = "https://prolific-hr.com/offers/123",
-    logoUrl = "https://placehold.co/150x50/png?text=Prolific+Homecare",
+    offerUrl = "https://example.com/offer/123",
+    logoUrl,
+    companyName = "Your Organization",
+    signatoryName = "Hiring Team",
+    signatoryTitle = "Hiring Representative",
 }: OfferEmailProps) => {
     return (
         <Html>
             <Head />
-            <Preview>Your Offer from Prolific Homecare</Preview>
+            <Preview>Your Offer from {companyName}</Preview>
             <Tailwind>
                 <Body className="bg-white my-auto mx-auto font-sans">
                     <Container className="border border-solid border-[#eaeaea] rounded my-[40px] mx-auto p-[20px] max-w-[600px]">
@@ -60,7 +66,7 @@ export const OfferEmail = ({
                                     src={logoUrl}
                                     width="150"
                                     height="50"
-                                    alt="Prolific Homecare"
+                                    alt={companyName}
                                     className="mx-auto object-contain"
                                 />
                             </Section>
@@ -77,7 +83,7 @@ export const OfferEmail = ({
                                 Dear {applicantName},
                             </Text>
                             <Text className="text-black text-[14px] leading-[24px]">
-                                We are pleased to offer you the position of <strong>{position}</strong> with Prolific Homecare LLC, contingent upon completion of all required onboarding documentation and clearances.
+                                We are pleased to offer you the position of <strong>{position}</strong> with {companyName}, contingent upon completion of all required onboarding documentation and clearances.
                             </Text>
 
                             <Heading as="h3" className="text-black text-[16px] font-bold mt-[20px] mb-[10px]">
@@ -132,7 +138,7 @@ export const OfferEmail = ({
                                 Employment Classification
                             </Heading>
                             <Text className="text-black text-[14px] leading-[24px]">
-                                Your employment with Prolific Homecare LLC. is considered <strong>{employmentClassification}</strong>. Nothing in this offer letter should be construed as a contract guaranteeing employment for any specific duration.
+                                Your employment with {companyName} is considered <strong>{employmentClassification}</strong>. Nothing in this offer letter should be construed as a contract guaranteeing employment for any specific duration.
                             </Text>
 
                             <Heading as="h3" className="text-black text-[16px] font-bold mt-[20px] mb-[10px]">
@@ -152,11 +158,11 @@ export const OfferEmail = ({
                             <Text className="text-black text-[14px] leading-[24px] mt-[20px]">
                                 Warm regards,
                                 <br />
-                                <strong>Adeola Otusile</strong>
+                                <strong>{signatoryName}</strong>
                                 <br />
-                                [Your Title]
+                                {signatoryTitle}
                                 <br />
-                                Prolific Homecare LLC.
+                                {companyName}
                             </Text>
 
                             <Hr className="border-gray-300 my-[30px]" />

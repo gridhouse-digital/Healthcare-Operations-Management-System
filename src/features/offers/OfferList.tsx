@@ -11,6 +11,11 @@ import { toast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/button';
+import {
+    buildOfferLetterValues,
+    getOfferLetterSettings,
+    renderOfferLetterHtml,
+} from './renderOfferLetter';
 
 type OfferTab = 'Draft' | 'Pending Approval' | 'Sent' | 'Accepted' | 'Declined';
 
@@ -122,6 +127,24 @@ export function OfferList() {
         if (tab === 'Pending Approval' && o.status === 'Pending_Approval') return true;
         return o.status === tab;
     }).length;
+
+    const offerLetterSettings = getOfferLetterSettings(null);
+    const candidateName = (offer: Offer) =>
+        `${offer.applicant?.first_name ?? ''} ${offer.applicant?.last_name ?? ''}`.trim() || 'Candidate';
+    const offerRate = (offer: Offer) => `$${Number(offer.salary).toLocaleString()}`;
+    const offerAcceptUrl = (offer: Offer) => `${window.location.origin}/offer/${offer.secure_token}`;
+    const offerLetterHtml = (offer: Offer) =>
+        renderOfferLetterHtml(
+            offerLetterSettings.template,
+            buildOfferLetterValues({
+                offer,
+                settings: null,
+                candidateName: candidateName(offer),
+                rate: offerRate(offer),
+                startDate: format(new Date(offer.start_date), 'MMMM d, yyyy'),
+                acceptUrl: offerAcceptUrl(offer),
+            }),
+        );
 
     if (loading) return (
         <div className="flex items-center justify-center py-20">
@@ -288,26 +311,18 @@ export function OfferList() {
                                 <div className="text-center mb-6">
                                     <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.03em' }}
                                         className="text-foreground mb-1">
-                                        Prolific Homecare LLC
+                                        {offerLetterSettings.companyName}
                                     </h2>
                                     <p className="zone-label">Employment Offer Letter</p>
                                 </div>
 
                                 <div className="space-y-4 text-[13px] text-foreground leading-relaxed">
-                                    <p>Dear {selectedOffer.applicant?.first_name},</p>
-
-                                    <p>
-                                        We are pleased to offer you the position of <strong className="font-semibold">{selectedOffer.position_title}</strong> at
-                                        Prolific Homecare LLC. We believe your skills and experience will be a valuable
-                                        addition to our team.
-                                    </p>
-
                                     <div className="bg-primary/[0.04] border border-primary/15 rounded-md p-4 my-4">
                                         <p className="zone-label mb-3">Offer Details</p>
                                         <div className="space-y-2">
                                             {[
                                                 { k: 'Position', v: selectedOffer.position_title },
-                                                { k: 'Pay Rate', v: `$${selectedOffer.salary.toLocaleString()}` },
+                                                { k: 'Pay Rate', v: offerRate(selectedOffer) },
                                                 { k: 'Start Date', v: format(new Date(selectedOffer.start_date), 'MMMM d, yyyy') },
                                                 { k: 'Employment Type', v: 'Full-time' },
                                             ].map(({ k, v }) => (
@@ -319,21 +334,12 @@ export function OfferList() {
                                         </div>
                                     </div>
 
-                                    <p>
-                                        This position reports to the Director of Nursing and will be based at our
-                                        main facility. Your primary responsibilities will include providing direct
-                                        patient care and maintaining accurate documentation.
-                                    </p>
-
-                                    <p>
-                                        Benefits include health insurance, paid time off, and continuing education
-                                        opportunities. Please review the attached benefits guide for complete details.
-                                    </p>
+                                    <div dangerouslySetInnerHTML={{ __html: offerLetterHtml(selectedOffer) }} />
 
                                     <div className="mt-8 pt-6 border-t border-border">
                                         <p className="text-[13px] text-muted-foreground">Sincerely,</p>
-                                        <p className="mt-3 text-[18px]" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.03em' }}>Jane Wilson</p>
-                                        <p className="text-[12px] text-muted-foreground">HR Director — Prolific Homecare LLC</p>
+                                        <p className="mt-3 text-[18px]" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.03em' }}>{offerLetterSettings.signatoryName}</p>
+                                        <p className="text-[12px] text-muted-foreground">{offerLetterSettings.signatoryTitle} - {offerLetterSettings.companyName}</p>
                                     </div>
                                 </div>
                             </div>

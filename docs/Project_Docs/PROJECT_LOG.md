@@ -3,6 +3,34 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-20 - Offers feature completion - Phase 2: per-tenant template foundation
+
+Second phased PR for the offers feature completion. Branch `feat/offers-template-foundation` off current `main` after confirming latest commits `#25`, `#24`, and `#23`. **Not deployed; migration not pushed; Phase 3 send delivery not started.**
+
+### What changed
+
+- **Migration `20260620000001_offer_letter_template_settings.sql`** - adds `tenant_settings.offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, and `offer_letter_template`; adds token-based `get_public_offer(token_arg)` RPC that returns only non-sensitive offer/applicant/template fields for the public candidate page.
+- **Settings -> System** - adds an "Offer Letter" section with company/signatory/template fields and merge-field legend. Saves through the real `tenant_settings` row, not the legacy `settingsService` stub.
+- **Settings compatibility** - shared tenant settings reads remain connector-safe and do not request Phase 2 offer columns. The System Settings "Offer Letter" section uses an explicit offer-settings hook; if the Phase 2 migration is missing, only that section shows a disabled migration-required state.
+- **Offer rendering** - adds `src/features/offers/renderOfferLetter.ts` with neutral defaults, merge-field rendering, and escaping before HTML preview injection.
+- **Offer surfaces de-hardcoded** - `OfferList`, `OfferPublicView`, `OfferLetterDraftPanel`, AI offer prompt, `sendOffer`, and `OfferEmail` now use tenant-configured values or neutral fallback values. `sendOffer` no longer supplies a manual `secure_token`; the DB default remains authoritative.
+- **CI guard** - `.github/workflows/ci.yml` now fails if forbidden tenant literals appear in offer-related paths.
+
+### Tests + verification
+
+- `npm run build` -> clean (Vite chunk-size/dynamic-import warnings only, pre-existing pattern).
+- `npm run lint` -> still blocked by the repo-wide pre-existing lint backlog (86 problems, including `.agent/.agents/.claude` plugin-rule failures and legacy `any`/React Compiler findings). Targeted ESLint on changed offer/settings files -> 0 errors, 1 pre-existing `autoDraft` effect warning in `OfferLetterDraftPanel`.
+- `npm run test:rls` -> command exits 0, but live assertions skipped because local Supabase env keys are not configured in this workspace (68 ignored / 1 skip-control pass).
+- `cd supabase/functions && deno task check` -> clean.
+- `cd supabase/functions && deno test _shared/tests/ --allow-env --allow-net` -> 131 passed / 0 failed.
+- Static guards -> no forbidden offer tenant literals and no manual `secure_token: crypto.randomUUID` generation.
+- Direct `deno check sendOffer/index.ts` -> not a reliable gate in current repo config; fails on existing React Email JSX intrinsic typing for `OfferEmail.tsx` and existing Supabase generic RPC typing in `sendOffer`.
+
+### Follow-ups
+
+- Phase 3 remains separate: wire real Brevo delivery, store the sent letter, and remove the current UI status-only send behavior.
+
+---
 ## 2026-06-20 - Offers feature completion — Phase 1: edit route (PR 1)
 
 First of four phased PRs completing the half-built offers feature (per `docs/bmad/working-notes/2026-06-20-offers-feature-completion-handoff.md`). **Local only; no DB or EF changes; not merged.** Branch `feat/offers-edit-route` off `main`.

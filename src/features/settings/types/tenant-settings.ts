@@ -13,6 +13,7 @@ export interface LdGroupMapping {
 export interface TenantSettings {
   tenant_id: string;
   wp_site_url: string | null;
+  logo_light: string | null;
   bamboohr_subdomain: string | null;
   // API keys are NEVER returned — only a masked indicator is shown
   bamboohr_key_configured: boolean;
@@ -23,6 +24,13 @@ export interface TenantSettings {
   active_connectors: ConnectorSource[];
   ld_group_mappings: LdGroupMapping[];
   profile_source: ConnectorSource | null;
+}
+
+export interface OfferLetterTenantSettings {
+  offer_company_name: string | null;
+  offer_signatory_name: string | null;
+  offer_signatory_title: string | null;
+  offer_letter_template: string | null;
 }
 
 export type ConnectorStatus = "active" | "not_configured" | "failed";

@@ -122,7 +122,7 @@ export const aiClient = {
     draftOfferLetter: async (details: any) => {
         return callAI<OfferLetter>(
             'ai-draft-offer-letter',
-            AIPrompts.draftOfferLetter(),
+            AIPrompts.draftOfferLetter(details?.offerContext),
             details
         );
     },
