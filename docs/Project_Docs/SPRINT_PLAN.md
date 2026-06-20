@@ -17,6 +17,10 @@
 
 ## Operational Hotfixes
 
+- **2026-06-20 — Offers feature completion (4 phased PRs).** Completing the half-built offers feature per `docs/bmad/working-notes/2026-06-20-offers-feature-completion-handoff.md`. Phases: (1) edit route, (2) per-tenant offer-letter template foundation + de-hardcode + CI guard, (3) real Brevo delivery via refactored `sendOffer` EF (no false success), (4) AI reconnect to fill the tenant template. Each ships as its own PR after review.
+  - Phase 1 — edit route: Done (code complete on branch `feat/offers-edit-route`; `npm run build` + lint clean). Adds missing `offers/:id/edit` route in `App.tsx`. Awaiting review/merge.
+  - Phases 2–4: Not started.
+
 - **2026-06-15 - Durable Data API grants for RLS isolation CI.** [~] Draft PR #21 on branch `chore/explicit-data-api-grants` replaces the temporary `api.auto_expose_new_tables = true` local-stack compatibility flag with explicit Data API grants in migration `20260615000001_explicit_data_api_grants.sql`. Fresh local reset without the flag now preserves table grants and keeps the existing hardened function RPC exceptions; local `deno task test:rls` passes **68/0** after reset. Awaiting pushed branch CI / reviewer verification; no `db push` or deploy from this branch.
 
 - **2026-06-07 — `onConflict` target regression (P1).** [~] Code complete on branch `hotfix/onconflict-email-normalized`; **deploy pending sign-off.** Four EFs (`sync-wp-users`, `detect-hires-bamboohr`, `detect-hires-jazzhr`, `listApplicants`) upserted `people`/`applicants` with the stale `onConflict: "tenant_id,email"` after migration `20260528000002` moved uniqueness to `(tenant_id, email_normalized)` → `42P10` (silent data loss in WP sync; latent throw in hire detectors). Fixed target at 6 sites + hardened `sync-wp-users` swallowed-error path; added contract test. `deno test` 118/0, `npm run build` clean, live probe flip confirmed. See PROJECT_LOG 2026-06-07 and DECISIONS 2026-06-07. Deploy step (4 functions) + Ida confirmation outstanding.

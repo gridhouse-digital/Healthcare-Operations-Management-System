@@ -3,6 +3,24 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-20 - Offers feature completion — Phase 1: edit route (PR 1)
+
+First of four phased PRs completing the half-built offers feature (per `docs/bmad/working-notes/2026-06-20-offers-feature-completion-handoff.md`). **Local only; no DB or EF changes; not merged.** Branch `feat/offers-edit-route` off `main`.
+
+### What changed
+
+- **`src/App.tsx`** — added the missing `offers/:id/edit` route (`<Route path="offers/:id/edit" element={<OfferEditor />} />`) next to `offers/new`. `OfferList.handleEdit` already navigates to `/offers/:id/edit` and `OfferEditor` already supports edit mode (`useParams id` → `loadOffer` → `updateOffer`); only the route registration was missing, so the edit button was a dead route.
+
+### Tests + verification
+
+- `npm run build` (tsc -b + vite build) → clean, 2371 modules, no new errors (chunk-size/dynamic-import warnings are pre-existing).
+- `npx eslint src/App.tsx` → clean (exit 0).
+
+### Follow-ups
+
+- Phases 2–4 (per-tenant template foundation, real Brevo delivery, AI reconnect) tracked in the handoff doc; each ships as its own PR after review.
+
+---
 ## 2026-06-18 - Training Compliance dashboard rebuild (onboarding directory)
 
 Rebuilds the onboarding tab of the Training Compliance page into a richer compliance directory. Authored in the working tree by another tool/session; reviewed, verified (clean `npm run build`), and committed to branch `feat/training-compliance-dashboard` (commit `365048f`). **Not deployed; not merged to `main`; no DB or EF changes.**
