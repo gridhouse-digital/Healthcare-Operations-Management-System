@@ -5,6 +5,14 @@
 - **Type:** Feature completion — the offers feature is half-built. **Ship as FOUR separate PRs** (one per phase) so each is small and reviewable. Route each back for review before the next.
 - **Deploy:** from `main` only. Phases 2–3 include a migration + EF redeploys.
 
+## CTO addendum - 2026-06-21 transactional email provider strategy
+
+This addendum supersedes Brevo-specific wording below for Phase 3. Brevo remains a current/legacy integration in the repo (`tenant_settings.brevo_api_key_encrypted`, `PLATFORM_BREVO_API_KEY`, and direct Brevo calls in existing EFs), but Phase 3 must not add a new Brevo-only offer delivery path.
+
+Phase 3 must start by adding a transactional email provider abstraction. Resend is acceptable for MVP non-PHI offer email; AWS SES is the regulated-platform target before any workflow sends ePHI/PHI, patient-specific, credential, clinical, or medical-content email. Email bodies must stay minimal and link back to secure HOMS pages. The no-false-success rule remains unchanged: mark `Sent` only after the selected provider accepts the message.
+
+Phase status after CTO review: Phase 1 is done/merged as PR #25. Phase 2 is PR #26, code approved with comments and awaiting CTO review/merge. Phase 3 is blocked until explicit CTO approval after Phase 2 / PR #26 is merged. Phase 4 is blocked until explicit CTO approval after Phase 3.
+
 ---
 
 ## 0. Confirmed problems (evidence)
@@ -28,7 +36,7 @@
 - **Merge fields:** `{{candidate}}`, `{{position}}`, `{{rate}}`, `{{start_date}}`, `{{company}}`, `{{signatory}}`, `{{signatory_title}}`, `{{accept_url}}`.
 - **Single render source of truth:** the SEND path renders the final letter from the tenant template + offer values, **stores** the rendered HTML on the offer (`offer_letter_url`/`letter_html`), emails it, and the public accept view shows the **stored** letter (so the candidate sees exactly what was sent). Live editor preview may render client-side for WYSIWYG, but the sent/stored copy is authoritative.
 - **Creation vs sending are separated:** creation stays client-side (`offerService.createOffer`, `Draft`); **sending is the `sendOffer` EF**, refactored to *send an existing offer by id* (load it, render template, email, store letter, set `Sent`) — NOT create a new one.
-- **No false success:** "Send" reports success only if the EF confirms the email was accepted by Brevo. If the tenant has no Brevo key or Brevo rejects, surface an actionable error and do NOT mark `Sent`.
+- **No false success:** "Send" reports success only if the EF confirms the selected email provider accepted the message. If the tenant has no configured provider/key or the provider rejects, surface an actionable error and do NOT mark `Sent`.
 - **De-hardcode completely:** zero "Prolific Homecare"/"Jane Wilson" literals may remain in offer code paths after Phase 2. Add a CI invariant-guard grep for these literals under `src/features/offers`, `components/ai/OfferLetterDraftPanel`, and `supabase/functions/sendOffer`.
 
 ---
@@ -71,11 +79,11 @@ alter table public.tenant_settings add column if not exists offer_letter_templat
 
 ## 4. Phase 3 — Real delivery (wire "Send" to email)
 
-- **Refactor `sendOffer` EF** to: `tenantGuard` first; take an existing `offerId`; load the offer + applicant (tenant-scoped); read `tenant_settings` template/company/signatory + decrypt Brevo key; build `accept_url` from `secure_token`; render the letter via the merge util; **store** the rendered HTML on the offer (`offer_letter_url`/`letter_html`); send via Brevo with a per-tenant sender/subject; on Brevo failure throw a typed error (NO status change); on success set `status='Sent'`. Remove all hardcoded sender/company/subject.
+- **Add a transactional email provider abstraction first** (Resend acceptable for MVP non-PHI; AWS SES target for regulated/ePHI-capable delivery; Brevo legacy-compatible only). Then refactor `sendOffer` EF to: `tenantGuard` first; take an existing `offerId`; load the offer + applicant (tenant-scoped); read `tenant_settings` template/company/signatory + selected provider config; build `accept_url` from `secure_token`; render the letter via the merge util; **store** the rendered HTML on the offer (`offer_letter_url`/`letter_html`); send through the provider abstraction with a per-tenant sender/subject; on provider failure throw a typed error (NO status change); on success set `status='Sent'`. Remove all hardcoded sender/company/subject.
 - **Wire the UI:** `OfferList.handleSend` calls `supabase.functions.invoke('sendOffer', { body: { offerId } })`, checks BOTH the network error AND `data.error`, only toasts success when the EF confirms delivery, then reloads.
 - **`OfferPublicView`** reads the **stored** letter HTML (what was sent), falling back to template render for legacy offers.
-- **Guardrail:** if the tenant has no Brevo key configured, the UI must say "configure email delivery in Settings → Connectors" rather than silently succeeding.
-- **Verify (live, test data):** create a draft → Send → confirm Brevo accepted (check `sendOffer` logs / a real inbox), `offers.status='Sent'`, stored letter present, and the public accept link renders the sent letter and `respond_to_offer` still works. Confirm a no-Brevo tenant gets an error, not a false success.
+- **Guardrail:** if the tenant has no selected email provider/key configured, the UI must say "configure email delivery in Settings → Connectors" rather than silently succeeding.
+- **Verify (live, test data):** create a draft → Send → confirm the selected provider accepted the message (check `sendOffer` logs / a real inbox), `offers.status='Sent'`, stored letter present, and the public accept link renders the sent letter and `respond_to_offer` still works. Confirm a no-provider tenant gets an error, not a false success.
 
 ---
 

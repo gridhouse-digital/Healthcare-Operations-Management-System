@@ -3,6 +3,40 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-21 - CTO review: transactional email provider direction
+
+Reviewed the current Brevo footprint before Phase 3 offer delivery work. **Docs-only; no code, migration, db push, deploy, or provider secret changes.**
+
+### Phase status
+
+- Phase 1 is done and merged as PR #25.
+- Phase 2 is PR #26 on `feat/offers-template-foundation`; code is approved with comments and awaiting CTO review/merge.
+- Phase 3 is **blocked** until explicit CTO approval after Phase 2 / PR #26 is merged.
+- Phase 4 is **blocked** until explicit CTO approval after Phase 3.
+
+### Findings
+
+- Brevo is still present in current configuration and code:
+  - `.env.example` documents `PLATFORM_BREVO_API_KEY` for platform request-access notifications.
+  - `tenant_settings.brevo_api_key_encrypted` remains the current tenant-scoped email credential column.
+  - `request-access`, `sendRequirementRequest`, `onboard-employee`, and `sendOffer` call Brevo directly.
+- PR #26 Phase 2 still has no Phase 3 delivery wiring; `OfferList.handleSend` remains the known status-only path until the separate Phase 3 PR.
+
+### CTO direction
+
+- Phase 3 must not add a new Brevo-only offer delivery implementation.
+- Implement a transactional email provider boundary first; support Resend for fast MVP non-PHI offer email and AWS SES as the regulated/ePHI-capable default target.
+- Keep email bodies minimal and non-clinical; send secure HOMS links instead of sensitive letter/detail payloads where possible.
+- Preserve the headline guardrail: no false success. `Sent` is allowed only after the selected provider returns acceptance.
+
+### Docs updated
+
+- `DECISIONS.md` - added the transactional email provider strategy decision.
+- `SPRINT_PLAN.md` - changed Phase 3 from Brevo-specific delivery to provider-abstraction delivery and marked Phase 3/4 blocked behind review gates.
+- `INTEGRATIONS.md`, `RUNBOOK.md`, `SCHEMA.md` - documented the current Brevo footprint and the target migration direction.
+- `docs/bmad/working-notes/2026-06-20-offers-feature-completion-handoff.md` - added the CTO provider-strategy addendum and phase approval gates.
+
+---
 ## 2026-06-20 - Offers feature completion - Phase 2: per-tenant template foundation
 
 Second phased PR for the offers feature completion. Branch `feat/offers-template-foundation` off current `main` after confirming latest commits `#25`, `#24`, and `#23`. **Not deployed; migration not pushed; Phase 3 send delivery not started.**
@@ -29,7 +63,7 @@ Second phased PR for the offers feature completion. Branch `feat/offers-template
 
 ### Follow-ups
 
-- Phase 3 remains separate: wire real Brevo delivery, store the sent letter, and remove the current UI status-only send behavior.
+- Phase 3 remains separate: add the email provider abstraction, wire real delivery, store the sent letter, and remove the current UI status-only send behavior. Do not add new Brevo-only offer delivery.
 
 ---
 ## 2026-06-20 - Offers feature completion — Phase 1: edit route (PR 1)
@@ -47,7 +81,7 @@ First of four phased PRs completing the half-built offers feature (per `docs/bma
 
 ### Follow-ups
 
-- Phases 2–4 (per-tenant template foundation, real Brevo delivery, AI reconnect) tracked in the handoff doc; each ships as its own PR after review.
+- Phases 2–4 (per-tenant template foundation, provider-backed real delivery, AI reconnect) tracked in the handoff doc; each ships as its own PR after review.
 
 ---
 ## 2026-06-18 - Training Compliance dashboard rebuild (onboarding directory)

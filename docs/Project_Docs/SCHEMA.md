@@ -79,7 +79,7 @@ bamboohr_api_key_encrypted   TEXT       -- pgp_sym_encrypt. NEVER select to fron
 jazzhr_key_configured        BOOLEAN GENERATED ALWAYS AS (...) STORED
 jazzhr_api_key_encrypted     TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
 wp_key_configured            BOOLEAN GENERATED ALWAYS AS (...) STORED
-brevo_api_key_encrypted      TEXT       -- pgp_sym_encrypt. NEVER select to frontend.
+brevo_api_key_encrypted      TEXT       -- legacy/current Brevo email key; pgp_sym_encrypt. NEVER select to frontend.
 jotform_key_configured       BOOLEAN GENERATED ALWAYS AS (...) STORED
 active_connectors            TEXT[]     -- e.g. ARRAY['bamboohr']
 ld_group_mappings            JSONB      -- [{job_title, group_id, is_onboarding}]
@@ -104,6 +104,7 @@ updated_at                   TIMESTAMPTZ
 **Critical:** encrypted columns are NEVER selected to the frontend. Connector status is exposed through the generated `*_key_configured` booleans so UI status cannot drift from the encrypted values.
 **Onboarding gate:** `ld_group_mappings[].is_onboarding === true` marks department LearnDash groups that gate onboarding. Absent/unset defaults to false. There is no tenant-wide `onboarding_group_id` after migration `20260613000001`.
 **Offer letters:** `offer_letter_template` supports `{{candidate}}`, `{{position}}`, `{{rate}}`, `{{start_date}}`, `{{company}}`, `{{signatory}}`, `{{signatory_title}}`, and `{{accept_url}}`. Blank values fall back to neutral defaults in code, never tenant-specific literals.
+**Transactional email:** `brevo_api_key_encrypted` documents the current/legacy tenant email credential. Phase 3 offer delivery is blocked until explicit CTO approval after PR #26 is merged; when approved, new offer delivery work must add a provider abstraction before introducing Resend or AWS SES configuration. Do not add new Brevo-only offer paths.
 
 ---
 

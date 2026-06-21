@@ -7,6 +7,22 @@
 > Format: ## [DATE] Title | What | Why | Alternatives considered
 
 ---
+## 2026-06-21 | Transactional email provider strategy: abstraction first, Resend short term, SES regulated default
+
+**What:** Phase 3 offer delivery must not be implemented as a Brevo-only path. The next delivery PR must introduce an internal transactional email provider boundary before wiring `OfferList` to real delivery. The provider boundary should support `resend`, `ses`, and legacy `brevo` as provider ids, with no false success: the caller may mark an offer `Sent` only after the selected provider returns an accepted message id/status.
+
+**Current Brevo footprint:** Brevo is still configured in the repo today. Tenant-scoped delivery uses `tenant_settings.brevo_api_key_encrypted`; platform request-access notifications use `PLATFORM_BREVO_API_KEY`; `sendOffer`, `sendRequirementRequest`, `onboard-employee`, and `request-access` call the Brevo API directly. These are current-state facts, not the future target.
+
+**Recommendation:** Use Resend as the fastest clean MVP provider for non-PHI transactional offer emails because it has a simple developer API and fits the existing React Email direction. Use AWS SES as the regulated-platform default before any workflow sends ePHI/PHI, patient-specific, clinical, credential, or medical-content email; SES is the stronger long-term compliance fit when paired with an AWS BAA and correct configuration. Brevo remains legacy-compatible only until email delivery is migrated behind the provider boundary.
+
+**Content rule:** Email bodies must stay minimal and non-clinical. Send only transactional context and a secure HOMS link; the canonical offer letter and any sensitive applicant/employee details remain inside HOMS behind token/auth controls.
+
+**Why:** HOMS is a healthcare operations platform. Vendor lock-in at the `sendOffer` layer would make compliance and deliverability decisions harder later. Brevo is a broad marketing/CRM platform and is already hardcoded into several EFs; Phase 3 is the right moment to stop adding more direct Brevo coupling.
+
+**Phase 3 implementation direction:** Phase 3 remains blocked until explicit CTO approval after Phase 2 / PR #26 is merged. When approved, add a shared `_shared/email-provider` style module or equivalent service boundary; store provider response metadata; log failed sends to `integration_log`; surface missing provider configuration as an actionable UI error; and keep `Sent` status changes atomic with provider acceptance.
+
+**Rollback:** If the provider abstraction causes regressions, disable the new offer send UI path and leave existing status/edit/public-accept behavior intact. Do not remove existing Brevo-backed non-offer functions until each has its own migration plan and test evidence.
+
 ## 2026-06-20 | Per-tenant offer-letter template foundation
 
 **What:** Offer-letter identity and default body now live on the tenant-owned `tenant_settings` row: `offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, and `offer_letter_template`. The Settings UI edits those fields through the real `tenant_settings` path. Offer previews, the public token view, AI offer drafting context, and the dormant `sendOffer` email template use those fields with neutral fallback values only.

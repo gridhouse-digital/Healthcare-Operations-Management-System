@@ -39,7 +39,7 @@ JOTFORM_API_KEY=<JotForm API key>
 ANTHROPIC_API_KEY=<Anthropic API key>
 ALLOWED_ORIGIN_1=<your deployed frontend URL>
 SUPABASE_SERVICE_ROLE_KEY=<from Dashboard → Settings → API>
-PLATFORM_BREVO_API_KEY=<platform Brevo key for public request-access notifications>
+PLATFORM_BREVO_API_KEY=<current legacy platform Brevo key for public request-access notifications>
 REQUEST_ACCESS_NOTIFICATION_TO=<comma-separated ops/admin recipient emails>
 REQUEST_ACCESS_FROM_EMAIL=<verified sender email for request-access notifications>
 REQUEST_ACCESS_FROM_NAME=<optional sender display name>
@@ -47,6 +47,18 @@ REQUEST_ACCESS_RATE_LIMIT_WINDOW_MINUTES=<optional, default 60>
 REQUEST_ACCESS_RATE_LIMIT_MAX_PER_EMAIL=<optional, default 3>
 REQUEST_ACCESS_RATE_LIMIT_MAX_PER_IP=<optional, default 10>
 ```
+
+### Transactional email provider direction
+
+Current code still has Brevo-backed email paths. Do not remove `PLATFORM_BREVO_API_KEY` or tenant `brevo_api_key_encrypted` values until each caller has been migrated and verified.
+
+CTO direction as of 2026-06-21:
+- Phase 3 offer delivery remains blocked until explicit CTO approval after Phase 2 / PR #26 is merged.
+- New Phase 3 offer delivery must use an internal transactional email provider abstraction, not a new Brevo-only implementation.
+- Resend is acceptable for MVP non-PHI offer email.
+- AWS SES is the regulated-platform target before sending ePHI/PHI, patient-specific, credential, clinical, or medical-content email.
+- Email bodies must stay minimal and link back to secure HOMS pages for sensitive content.
+- No send path may toast/report success or mark `Sent` until the selected provider accepts the message.
 
 ---
 
@@ -192,7 +204,7 @@ VALUES (
 - Local dev note: loopback origins like `http://localhost:5173`, `http://localhost:5174`, and `http://127.0.0.1:*` should be allowed by the shared CORS helper after redeploying the function code.
 
 ### Request-access submission returns 502 notification failure
-- Cause: The request row was saved, but platform-level email secrets are missing or Brevo rejected the send.
+- Cause: The request row was saved, but platform-level email secrets are missing or the current provider rejected the send. Today this path still uses Brevo.
 - Fix: Verify `PLATFORM_BREVO_API_KEY`, `REQUEST_ACCESS_NOTIFICATION_TO`, and `REQUEST_ACCESS_FROM_EMAIL`, then re-submit or manually recover the retained row from `tenant_access_requests`.
 
 ### Request-access returns 429 rate limited
