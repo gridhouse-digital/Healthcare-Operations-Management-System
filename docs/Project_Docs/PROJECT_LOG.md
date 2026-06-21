@@ -13,6 +13,7 @@ Second phased PR for the offers feature completion. Branch `feat/offers-template
 - **Settings -> System** - adds an "Offer Letter" section with company/signatory/template fields and merge-field legend. Saves through the real `tenant_settings` row, not the legacy `settingsService` stub.
 - **Settings compatibility** - shared tenant settings reads remain connector-safe and do not request Phase 2 offer columns. The System Settings "Offer Letter" section uses an explicit offer-settings hook; if the Phase 2 migration is missing, only that section shows a disabled migration-required state.
 - **Offer rendering** - adds `src/features/offers/renderOfferLetter.ts` with neutral defaults, merge-field rendering, and escaping before HTML preview injection.
+- **Offer settings consumption** - `OfferList` preview and `OfferLetterDraftPanel` use the explicit offer-settings hook for tenant template/signatory/company data, with neutral migration-required fallback. `useTenantSettings()` remains connector-safe for unrelated settings pages.
 - **Offer surfaces de-hardcoded** - `OfferList`, `OfferPublicView`, `OfferLetterDraftPanel`, AI offer prompt, `sendOffer`, and `OfferEmail` now use tenant-configured values or neutral fallback values. `sendOffer` no longer supplies a manual `secure_token`; the DB default remains authoritative.
 - **CI guard** - `.github/workflows/ci.yml` now fails if forbidden tenant literals appear in offer-related paths.
 

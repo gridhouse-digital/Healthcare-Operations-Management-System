@@ -112,10 +112,11 @@ async function fetchOfferLetterSettings(): Promise<OfferLetterSettingsQueryResul
   }
 }
 
-export function useOfferLetterSettings() {
+export function useOfferLetterSettings(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: QK.offerLetterSettings,
     queryFn: fetchOfferLetterSettings,
+    enabled: options?.enabled ?? true,
   });
 }
 

@@ -84,14 +84,27 @@ export function SystemSettingsPage() {
 
   async function handleSave() {
     try {
+      await settingsService.updateSettings(settingsMap);
+
+      if (offerLetterSettingsLoading) {
+        toast.warning("General settings saved. Offer Letter settings are still loading and were not saved.");
+        return;
+      }
+
       if (offerLetterSettingsError) {
-        throw offerLetterSettingsError;
+        toast.warning("General settings saved. Offer Letter settings were not saved because they failed to load.");
+        return;
       }
-      const saves: Promise<unknown>[] = [settingsService.updateSettings(settingsMap)];
-      if (!offerLetterSettingsError && offerLetterSettings?.migrationRequired === false) {
-        saves.push(saveOfferLetterSettings.mutateAsync(offerForm));
+
+      if (offerLetterSettings?.migrationRequired === true) {
+        toast.warning("General settings saved. Apply the Phase 2 migration before saving Offer Letter settings.");
+        return;
       }
-      await Promise.all(saves);
+
+      if (offerLetterSettings?.migrationRequired === false) {
+        await saveOfferLetterSettings.mutateAsync(offerForm);
+      }
+
       toast.success("Settings saved");
     } catch (err) {
       console.error("Save failed", err);
@@ -386,11 +399,7 @@ export function SystemSettingsPage() {
       <div className="flex justify-end">
         <Button
           onClick={() => void handleSave()}
-          disabled={
-            saveOfferLetterSettings.isPending ||
-            offerLetterSettingsLoading ||
-            Boolean(offerLetterSettingsError)
-          }
+          disabled={saveOfferLetterSettings.isPending}
           size="sm"
         >
           <Save size={13} />

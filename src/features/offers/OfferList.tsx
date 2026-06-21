@@ -11,6 +11,7 @@ import { toast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Button } from '@/components/ui/button';
+import { useOfferLetterSettings } from '@/features/settings/hooks/useTenantSettings';
 import {
     buildOfferLetterValues,
     getOfferLetterSettings,
@@ -29,6 +30,11 @@ export function OfferList() {
 
     const [activeTab, setActiveTab] = useState<OfferTab>('Pending Approval');
     const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+    const {
+        data: offerSettingsData,
+        isLoading: offerSettingsLoading,
+        error: offerSettingsError,
+    } = useOfferLetterSettings({ enabled: Boolean(selectedOffer) });
 
     const tabs: OfferTab[] = ['Draft', 'Pending Approval', 'Sent', 'Accepted', 'Declined'];
 
@@ -128,7 +134,9 @@ export function OfferList() {
         return o.status === tab;
     }).length;
 
-    const offerLetterSettings = getOfferLetterSettings(null);
+    const offerSettingsSource =
+        offerSettingsData && !offerSettingsData.migrationRequired ? offerSettingsData : null;
+    const offerLetterSettings = getOfferLetterSettings(offerSettingsSource);
     const candidateName = (offer: Offer) =>
         `${offer.applicant?.first_name ?? ''} ${offer.applicant?.last_name ?? ''}`.trim() || 'Candidate';
     const offerRate = (offer: Offer) => `$${Number(offer.salary).toLocaleString()}`;
@@ -138,7 +146,7 @@ export function OfferList() {
             offerLetterSettings.template,
             buildOfferLetterValues({
                 offer,
-                settings: null,
+                settings: offerSettingsSource,
                 candidateName: candidateName(offer),
                 rate: offerRate(offer),
                 startDate: format(new Date(offer.start_date), 'MMMM d, yyyy'),
@@ -308,6 +316,21 @@ export function OfferList() {
                         {/* Letter preview */}
                         <div className="border border-border rounded-lg p-6 bg-background min-h-[500px]">
                             <div className="max-w-xl mx-auto space-y-5">
+                                {offerSettingsLoading && (
+                                    <div className="rounded-md border border-border bg-muted/15 p-3 text-[12px] text-muted-foreground">
+                                        Loading offer letter settings...
+                                    </div>
+                                )}
+                                {offerSettingsData?.migrationRequired && (
+                                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-[12px] text-amber-800 dark:text-amber-200">
+                                        Phase 2 offer-letter settings migration is required. Showing neutral template fallback.
+                                    </div>
+                                )}
+                                {offerSettingsError && (
+                                    <div className="rounded-md border border-destructive/20 bg-destructive/8 p-3 text-[12px] text-destructive">
+                                        Failed to load offer letter settings: {offerSettingsError instanceof Error ? offerSettingsError.message : 'Unknown error'}
+                                    </div>
+                                )}
                                 <div className="text-center mb-6">
                                     <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.03em' }}
                                         className="text-foreground mb-1">

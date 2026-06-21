@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAIOfferLetter } from '@/hooks/useAI';
 import { FileText, Copy, Check, Edit3, Send } from 'lucide-react';
-import { useTenantSettings } from '@/features/settings/hooks/useTenantSettings';
+import { useOfferLetterSettings, useTenantSettings } from '@/features/settings/hooks/useTenantSettings';
 import { escapeHtml, getOfferLetterSettings } from '@/features/offers/renderOfferLetter';
 
 interface OfferLetterDraftPanelProps {
@@ -46,7 +46,14 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
     const [validationError, setValidationError] = useState<string | null>(null);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
     const { data: tenantSettings } = useTenantSettings();
-    const offerSettings = getOfferLetterSettings(null);
+    const {
+        data: offerSettingsData,
+        isLoading: offerSettingsLoading,
+        error: offerSettingsError,
+    } = useOfferLetterSettings();
+    const offerSettingsSource =
+        offerSettingsData && !offerSettingsData.migrationRequired ? offerSettingsData : null;
+    const offerSettings = getOfferLetterSettings(offerSettingsSource);
     const companyLogoUrl = tenantSettings?.logo_light ?? null;
 
     const handleDraft = async () => {
@@ -54,6 +61,11 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
         const validation = validateOfferDetails(employeeDetails);
         if (!validation.isValid) {
             setValidationError(`Please fill in the following required fields: ${validation.missingFields.join(', ')}`);
+            return;
+        }
+        if (offerSettingsError) {
+            const message = offerSettingsError instanceof Error ? offerSettingsError.message : 'Unknown error';
+            setValidationError(`Offer letter settings failed to load: ${message}`);
             return;
         }
 
@@ -214,10 +226,10 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
     };
 
     React.useEffect(() => {
-        if (autoDraft && !data && !loading && !error) {
+        if (autoDraft && !data && !loading && !error && !offerSettingsLoading) {
             handleDraft();
         }
-    }, [autoDraft]);
+    }, [autoDraft, offerSettingsLoading]);
 
     const handleCopy = () => {
         if (data) {
@@ -240,11 +252,26 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
                         <p className="text-sm text-yellow-700 dark:text-yellow-300">{validationError}</p>
                     </div>
                 )}
+                {offerSettingsData?.migrationRequired && (
+                    <div className="mb-4 p-3 border border-yellow-200 rounded-md bg-yellow-50 dark:bg-yellow-900/10">
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                            Phase 2 offer-letter settings migration is required. Using neutral template fallback.
+                        </p>
+                    </div>
+                )}
+                {offerSettingsError && (
+                    <div className="mb-4 p-3 border border-red-200 rounded-md bg-red-50 dark:bg-red-900/10">
+                        <p className="text-sm text-red-700 dark:text-red-300">
+                            Offer letter settings failed to load: {offerSettingsError instanceof Error ? offerSettingsError.message : 'Unknown error'}
+                        </p>
+                    </div>
+                )}
                 <button
                     onClick={handleDraft}
+                    disabled={offerSettingsLoading || Boolean(offerSettingsError)}
                     className="px-6 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
                 >
-                    Draft Offer Letter
+                    {offerSettingsLoading ? 'Loading Settings...' : 'Draft Offer Letter'}
                 </button>
             </div>
         );
