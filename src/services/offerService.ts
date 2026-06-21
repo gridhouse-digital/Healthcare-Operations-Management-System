@@ -84,15 +84,12 @@ export const offerService = {
     },
 
     async getOfferByToken(token: string) {
-        const tenantId = await getTenantId();
-        const { data, error } = await supabase
-            .from('offers')
-            .select('*, applicant:applicants(*)')
-            .eq('tenant_id', tenantId)
-            .eq('secure_token', token)
-            .single();
+        const { data, error } = await supabase.rpc('get_public_offer', {
+            token_arg: token
+        });
 
         if (error) throw error;
+        if (!data) throw new Error('Offer not found');
         return data as Offer;
     },
 

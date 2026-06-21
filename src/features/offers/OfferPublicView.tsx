@@ -1,16 +1,35 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { offerService } from '@/services/offerService';
-import type { Offer } from '@/types';
+import type { ApplicantStatus, Offer } from '@/types';
 import { format } from 'date-fns';
 import { CheckCircle, XCircle, FileText } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 import { useConfirm } from '@/hooks/useConfirm';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+    buildOfferLetterValues,
+    getOfferLetterSettings,
+    renderOfferLetterHtml,
+    type OfferLetterSettingsLike,
+} from './renderOfferLetter';
+
+type PublicOffer = Omit<Offer, 'secure_token' | 'applicant'> & {
+    applicant?: {
+        id: string;
+        first_name: string;
+        last_name: string;
+        position_applied?: string | null;
+        status: ApplicantStatus;
+        created_at: string;
+        updated_at?: string | null;
+    } | null;
+    offer_settings?: OfferLetterSettingsLike | null;
+};
 
 export function OfferPublicView() {
     const { token } = useParams<{ token: string }>();
-    const [offer, setOffer] = useState<Offer | null>(null);
+    const [offer, setOffer] = useState<PublicOffer | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
@@ -26,7 +45,7 @@ export function OfferPublicView() {
     const loadOffer = async (t: string) => {
         try {
             const data = await offerService.getOfferByToken(t);
-            setOffer(data);
+            setOffer(data as PublicOffer);
         } catch (err) {
             setError('Invalid or expired offer link.');
             console.error(err);
@@ -56,8 +75,9 @@ export function OfferPublicView() {
                     ? 'Congratulations! You have accepted the offer.'
                     : 'You have declined the offer.'
             );
-        } catch (err: any) {
-            toast.error(`Failed to update offer status: ${err.message || err}`);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            toast.error(`Failed to update offer status: ${message}`);
             console.error(err);
         } finally {
             setActionLoading(false);
@@ -68,6 +88,23 @@ export function OfferPublicView() {
     if (error) return <div className="flex h-screen items-center justify-center text-red-600">{error}</div>;
     if (!offer) return null;
 
+    const offerSettings = getOfferLetterSettings(offer.offer_settings);
+    const candidateName = `${offer.applicant?.first_name ?? ''} ${offer.applicant?.last_name ?? ''}`.trim() || 'Candidate';
+    const rate = `$${Number(offer.salary).toLocaleString()}`;
+    const startDate = format(new Date(offer.start_date), 'MMMM d, yyyy');
+    const acceptUrl = token ? `${window.location.origin}/offer/${token}` : '';
+    const renderedLetter = renderOfferLetterHtml(
+        offerSettings.template,
+        buildOfferLetterValues({
+            offer,
+            settings: offer.offer_settings,
+            candidateName,
+            rate,
+            startDate,
+            acceptUrl,
+        }),
+    );
+
     return (
         <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl">
@@ -76,7 +113,7 @@ export function OfferPublicView() {
                         Job Offer
                     </h1>
                     <p className="mt-2 text-lg text-slate-600">
-                        Prolific Homecare LLC
+                        {offerSettings.companyName}
                     </p>
                 </div>
 
@@ -126,21 +163,15 @@ export function OfferPublicView() {
                                         </dd>
                                     </div>
                                     <div className="rounded-lg border border-slate-200 p-4">
-                                        <dt className="text-sm font-medium text-slate-500">Salary</dt>
+                                        <dt className="text-sm font-medium text-slate-500">Pay Rate</dt>
                                         <dd className="mt-1 text-lg font-semibold text-slate-900">
-                                            ${offer.salary.toLocaleString()} / year
+                                            {rate}
                                         </dd>
                                     </div>
                                 </div>
 
                                 <div className="prose prose-slate max-w-none text-slate-600">
-                                    <p>
-                                        We are pleased to offer you the position of <strong>{offer.position_title}</strong> at Prolific Homecare LLC.
-                                        This offer is contingent upon the successful completion of our pre-employment screening process.
-                                    </p>
-                                    <p>
-                                        Please review the details above. By clicking "Accept Offer", you agree to the terms and conditions of employment.
-                                    </p>
+                                    <div dangerouslySetInnerHTML={{ __html: renderedLetter }} />
                                 </div>
 
                                 <div className="flex items-center justify-center gap-4 pt-4">

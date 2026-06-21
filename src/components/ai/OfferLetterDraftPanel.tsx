@@ -1,16 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useAIOfferLetter } from '@/hooks/useAI';
 import { FileText, Copy, Check, Edit3, Send } from 'lucide-react';
-import { settingsService } from '@/services/settingsService';
+import { useOfferLetterSettings, useTenantSettings } from '@/features/settings/hooks/useTenantSettings';
+import { escapeHtml, getOfferLetterSettings } from '@/features/offers/renderOfferLetter';
 
 interface OfferLetterDraftPanelProps {
-    employeeDetails: any;
+    employeeDetails: OfferDraftDetails;
     onSend?: (content: string) => void;
     autoDraft?: boolean;
 }
 
+interface OfferDraftDetails {
+    name?: string;
+    position?: string;
+    rate?: string;
+    startDate?: string;
+    offerContext?: {
+        companyName?: string;
+        signatoryName?: string;
+        signatoryTitle?: string;
+        template?: string;
+    };
+    [key: string]: unknown;
+}
+
 // Helper function to validate required fields
-function validateOfferDetails(details: any): { isValid: boolean; missingFields: string[] } {
+function validateOfferDetails(details: OfferDraftDetails): { isValid: boolean; missingFields: string[] } {
     const missingFields: string[] = [];
 
     if (!details.name || details.name === '') missingFields.push('Applicant Name');
@@ -30,37 +45,49 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
     const [editableBody, setEditableBody] = useState('');
     const [validationError, setValidationError] = useState<string | null>(null);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
-    const [companyLogoUrl, setCompanyLogoUrl] = useState<string | null>(null);
+    const { data: tenantSettings } = useTenantSettings();
+    const {
+        data: offerSettingsData,
+        isLoading: offerSettingsLoading,
+        error: offerSettingsError,
+    } = useOfferLetterSettings();
+    const offerSettingsSource = useMemo(
+        () => offerSettingsData && !offerSettingsData.migrationRequired ? offerSettingsData : null,
+        [offerSettingsData],
+    );
+    const offerSettings = useMemo(
+        () => getOfferLetterSettings(offerSettingsSource),
+        [offerSettingsSource],
+    );
+    const companyLogoUrl = tenantSettings?.logo_light ?? null;
 
-    // Fetch company logo from settings
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                const settings = await settingsService.getSettings();
-                if (settings.logo_light) {
-                    setCompanyLogoUrl(settings.logo_light);
-                }
-            } catch (err) {
-                console.error('Failed to load settings:', err);
-            }
-        };
-        loadSettings();
-    }, []);
-
-    const handleDraft = async () => {
+    const handleDraft = useCallback(async () => {
         // Validate form fields before drafting
         const validation = validateOfferDetails(employeeDetails);
         if (!validation.isValid) {
             setValidationError(`Please fill in the following required fields: ${validation.missingFields.join(', ')}`);
             return;
         }
+        if (offerSettingsError) {
+            const message = offerSettingsError instanceof Error ? offerSettingsError.message : 'Unknown error';
+            setValidationError(`Offer letter settings failed to load: ${message}`);
+            return;
+        }
 
         setValidationError(null);
-        const result = await generate(employeeDetails);
+        const result = await generate({
+            ...employeeDetails,
+            offerContext: {
+                companyName: offerSettings.companyName,
+                signatoryName: offerSettings.signatoryName,
+                signatoryTitle: offerSettings.signatoryTitle,
+                template: offerSettings.template,
+            },
+        });
         if (result) {
             setEditableBody(result.body);
         }
-    };
+    }, [employeeDetails, generate, offerSettings, offerSettingsError]);
 
     // Helper function to convert letter body to HTML for iframe
     const getLetterHTML = () => {
@@ -184,9 +211,9 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
             <body>
                 <div class="container">
                     <div class="logo-section">
-                        ${companyLogoUrl ? `<img src="${companyLogoUrl}" alt="Prolific Homecare LLC" class="logo" />` : ''}
-                        <h1 class="company-name">Prolific Homecare LLC</h1>
-                        <p class="tagline">Compassionate Care, Exceptional Service</p>
+                        ${companyLogoUrl ? `<img src="${escapeHtml(companyLogoUrl)}" alt="${escapeHtml(offerSettings.companyName)}" class="logo" />` : ''}
+                        <h1 class="company-name">${escapeHtml(offerSettings.companyName)}</h1>
+                        <p class="tagline">Employment Offer Letter</p>
                     </div>
 
                     <div class="content">
@@ -194,7 +221,7 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
                     </div>
 
                     <div class="footer">
-                        <p>Prolific Homecare LLC | Professional Healthcare Services</p>
+                        <p>${escapeHtml(offerSettings.companyName)} | Employment Offer Letter</p>
                         <p style="margin-top: 8px;">This is a confidential offer letter. Please do not share without authorization.</p>
                     </div>
                 </div>
@@ -204,10 +231,10 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
     };
 
     React.useEffect(() => {
-        if (autoDraft && !data && !loading && !error) {
-            handleDraft();
+        if (autoDraft && !data && !loading && !error && !offerSettingsLoading) {
+            void handleDraft();
         }
-    }, [autoDraft]);
+    }, [autoDraft, data, error, handleDraft, loading, offerSettingsLoading]);
 
     const handleCopy = () => {
         if (data) {
@@ -230,11 +257,26 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
                         <p className="text-sm text-yellow-700 dark:text-yellow-300">{validationError}</p>
                     </div>
                 )}
+                {offerSettingsData?.migrationRequired && (
+                    <div className="mb-4 p-3 border border-yellow-200 rounded-md bg-yellow-50 dark:bg-yellow-900/10">
+                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                            Phase 2 offer-letter settings migration is required. Using neutral template fallback.
+                        </p>
+                    </div>
+                )}
+                {offerSettingsError && (
+                    <div className="mb-4 p-3 border border-red-200 rounded-md bg-red-50 dark:bg-red-900/10">
+                        <p className="text-sm text-red-700 dark:text-red-300">
+                            Offer letter settings failed to load: {offerSettingsError instanceof Error ? offerSettingsError.message : 'Unknown error'}
+                        </p>
+                    </div>
+                )}
                 <button
                     onClick={handleDraft}
+                    disabled={offerSettingsLoading || Boolean(offerSettingsError)}
                     className="px-6 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
                 >
-                    Draft Offer Letter
+                    {offerSettingsLoading ? 'Loading Settings...' : 'Draft Offer Letter'}
                 </button>
             </div>
         );

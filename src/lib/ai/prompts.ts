@@ -8,7 +8,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 
 // Helper to convert Zod schema to a JSON schema string for the prompt
 function getSchemaString(schema: z.ZodTypeAny): string {
-    const jsonSchema = zodToJsonSchema(schema as any);
+    const jsonSchema = zodToJsonSchema(schema as unknown as Parameters<typeof zodToJsonSchema>[0]);
     return JSON.stringify(jsonSchema, null, 2);
 }
 
@@ -27,7 +27,7 @@ const EEO_GUARDRAIL = `
 
 export const AIPrompts = {
     summarizeApplicant: () => `
-    You are an expert HR Assistant for Prolific Homecare, a healthcare staffing company.
+    You are an expert HR Assistant for a healthcare staffing company.
 
     ${EEO_GUARDRAIL}
 
@@ -68,45 +68,56 @@ export const AIPrompts = {
     ${getSchemaString(ApplicantRankingSchema)}
   `,
 
-    draftOfferLetter: () => `
-    You are an expert HR Administrator for Prolific Homecare LLC.
+    draftOfferLetter: (context?: {
+      companyName?: string;
+      signatoryName?: string;
+      signatoryTitle?: string;
+      template?: string;
+    }) => {
+    const companyName = context?.companyName?.trim() || "the hiring organization";
+    const signatoryName = context?.signatoryName?.trim() || "Hiring Team";
+    const signatoryTitle = context?.signatoryTitle?.trim() || "Hiring Representative";
+    const template = context?.template?.trim() || `
+    Dear {{candidate}},
+
+    We are pleased to offer you the position of {{position}} with {{company}}.
+
+    Offer details:
+    - Position: {{position}}
+    - Pay rate: {{rate}}
+    - Start date: {{start_date}}
+
+    Sincerely,
+    {{signatory}}
+    {{signatory_title}}`;
+
+    return `
+    You are an expert HR Administrator for ${companyName}.
     Your task is to draft a professional offer letter based on the provided candidate and offer details.
 
-    IMPORTANT: Use the following template structure for the offer letter body:
+    IMPORTANT: Use the tenant's offer-letter template as the structure for the offer letter body.
+    Replace merge fields with the candidate and offer details:
+    {{candidate}}, {{position}}, {{rate}}, {{start_date}}, {{company}}, {{signatory}}, {{signatory_title}}, {{accept_url}}.
 
-    Dear [Applicant Name],
+    Tenant offer-letter identity:
+    - Company: ${companyName}
+    - Signatory: ${signatoryName}
+    - Signatory title: ${signatoryTitle}
 
-    We are pleased to offer you the position of [Position] with Prolific Homecare LLC, contingent upon completion of all required onboarding documentation and clearances.
-
-    **Position & Work Schedule**
-    You will be assigned to provide patient care. Your typical schedule will be determined based on patient needs and availability.
-
-    **Compensation Structure**
-    Your compensation will be: $[Rate/Salary] [per hour/per day/per year as appropriate]
-
-    **Employment Classification**
-    Your employment with Prolific Homecare LLC is considered at-will employment.
-
-    **Start Date**
-    Your anticipated start date is [Start Date], pending all onboarding requirements.
-
-    **Acknowledgment & Acceptance**
-    Please review this offer letter carefully. We look forward to having you as part of our team and believe your skills will be an asset to our company and the patients we serve.
-
-    Warm regards,
-    Adeola Otusile
-    Prolific Homecare LLC
+    Tenant template:
+    ${template}
 
     You MUST respond with valid JSON only matching this exact schema:
     {
-      "subject": "string - Email subject line (e.g., 'Offer Letter - [Position] at Prolific Homecare')",
+      "subject": "string - Email subject line (e.g., 'Offer Letter - [Position] at [Company]')",
       "body": "string - The full offer letter text following the template above. Do NOT include a separate recipient name/address block at the top - start directly with 'Dear [Name]'",
       "key_terms": ["array of key terms like 'Start Date: [date]', 'Salary: $[amount]', 'Position: [title]'"],
       "tone": "string - The tone used (e.g., 'Professional and Welcoming')"
     }
 
     Respond with ONLY the JSON object, no other text or markdown formatting.
-  `,
+  `;
+    },
 
     onboardingSummary: () => `
     You are an Onboarding Specialist.

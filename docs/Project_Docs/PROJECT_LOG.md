@@ -3,6 +3,69 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-06-21 - CTO review: transactional email provider direction
+
+Reviewed the current Brevo footprint before Phase 3 offer delivery work. **Docs-only; no code, migration, db push, deploy, or provider secret changes.**
+
+### Phase status
+
+- Phase 1 is done and merged as PR #25.
+- Phase 2 is PR #26 on `feat/offers-template-foundation`; code is approved with comments and awaiting CTO review/merge.
+- Phase 3 is **blocked** until explicit CTO approval after Phase 2 / PR #26 is merged.
+- Phase 4 is **blocked** until explicit CTO approval after Phase 3.
+
+### Findings
+
+- Brevo is still present in current configuration and code:
+  - `.env.example` documents `PLATFORM_BREVO_API_KEY` for platform request-access notifications.
+  - `tenant_settings.brevo_api_key_encrypted` remains the current tenant-scoped email credential column.
+  - `request-access`, `sendRequirementRequest`, `onboard-employee`, and `sendOffer` call Brevo directly.
+- PR #26 Phase 2 still has no Phase 3 delivery wiring; `OfferList.handleSend` remains the known status-only path until the separate Phase 3 PR.
+
+### CTO direction
+
+- Phase 3 must not add a new Brevo-only offer delivery implementation.
+- Implement a transactional email provider boundary first; support Resend for fast MVP non-PHI offer email and AWS SES as the regulated/ePHI-capable default target.
+- Keep email bodies minimal and non-clinical; send secure HOMS links instead of sensitive letter/detail payloads where possible.
+- Preserve the headline guardrail: no false success. `Sent` is allowed only after the selected provider returns acceptance.
+
+### Docs updated
+
+- `DECISIONS.md` - added the transactional email provider strategy decision.
+- `SPRINT_PLAN.md` - changed Phase 3 from Brevo-specific delivery to provider-abstraction delivery and marked Phase 3/4 blocked behind review gates.
+- `INTEGRATIONS.md`, `RUNBOOK.md`, `SCHEMA.md` - documented the current Brevo footprint and the target migration direction.
+- `docs/bmad/working-notes/2026-06-20-offers-feature-completion-handoff.md` - added the CTO provider-strategy addendum and phase approval gates.
+
+---
+## 2026-06-20 - Offers feature completion - Phase 2: per-tenant template foundation
+
+Second phased PR for the offers feature completion. Branch `feat/offers-template-foundation` off current `main` after confirming latest commits `#25`, `#24`, and `#23`. **Not deployed; migration not pushed; Phase 3 send delivery not started.**
+
+### What changed
+
+- **Migration `20260620000001_offer_letter_template_settings.sql`** - adds `tenant_settings.offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, and `offer_letter_template`; adds token-based `get_public_offer(token_arg)` RPC that returns only non-sensitive offer/applicant-display/template fields for unexpired public candidate pages and does not return `secure_token`, applicant email, or applicant phone.
+- **Settings -> System** - adds an "Offer Letter" section with company/signatory/template fields and merge-field legend. Saves through the real `tenant_settings` row, not the legacy `settingsService` stub.
+- **Settings compatibility** - shared tenant settings reads remain connector-safe and do not request Phase 2 offer columns. The System Settings "Offer Letter" section uses an explicit offer-settings hook; if the Phase 2 migration is missing, only that section shows a disabled migration-required state.
+- **Offer rendering** - adds `src/features/offers/renderOfferLetter.ts` with neutral defaults, merge-field rendering, and escaping before HTML preview injection.
+- **Offer settings consumption** - `OfferList` preview and `OfferLetterDraftPanel` use the explicit offer-settings hook for tenant template/signatory/company data, with neutral migration-required fallback. `useTenantSettings()` remains connector-safe for unrelated settings pages.
+- **Offer surfaces de-hardcoded** - `OfferList`, `OfferPublicView`, `OfferLetterDraftPanel`, AI offer prompt, `sendOffer`, and `OfferEmail` now use tenant-configured values or neutral fallback values. `sendOffer` no longer supplies a manual `secure_token`; the DB default remains authoritative.
+- **CI guard** - `.github/workflows/ci.yml` now fails if forbidden tenant literals appear in offer-related paths.
+
+### Tests + verification
+
+- `npm run build` -> clean (Vite chunk-size/dynamic-import warnings only, pre-existing pattern).
+- `npm run lint` -> still blocked by the repo-wide pre-existing lint backlog (86 problems, including `.agent/.agents/.claude` plugin-rule failures and legacy `any`/React Compiler findings). Targeted ESLint on changed offer/settings files -> 0 errors, 1 pre-existing `autoDraft` effect warning in `OfferLetterDraftPanel`.
+- `npm run test:rls` -> command exits 0, but live assertions skipped because local Supabase env keys are not configured in this workspace (68 ignored / 1 skip-control pass).
+- `cd supabase/functions && deno task check` -> clean.
+- `cd supabase/functions && deno test _shared/tests/ --allow-env --allow-net` -> 131 passed / 0 failed.
+- Static guards -> no forbidden offer tenant literals and no manual `secure_token: crypto.randomUUID` generation.
+- Direct `deno check sendOffer/index.ts` -> not a reliable gate in current repo config; fails on existing React Email JSX intrinsic typing for `OfferEmail.tsx` and existing Supabase generic RPC typing in `sendOffer`.
+
+### Follow-ups
+
+- Phase 3 remains separate: add the email provider abstraction, wire real delivery, store the sent letter, and remove the current UI status-only send behavior. Do not add new Brevo-only offer delivery.
+
+---
 ## 2026-06-20 - Offers feature completion — Phase 1: edit route (PR 1)
 
 First of four phased PRs completing the half-built offers feature (per `docs/bmad/working-notes/2026-06-20-offers-feature-completion-handoff.md`). **Local only; no DB or EF changes; not merged.** Branch `feat/offers-edit-route` off `main`.
@@ -18,7 +81,7 @@ First of four phased PRs completing the half-built offers feature (per `docs/bma
 
 ### Follow-ups
 
-- Phases 2–4 (per-tenant template foundation, real Brevo delivery, AI reconnect) tracked in the handoff doc; each ships as its own PR after review.
+- Phases 2–4 (per-tenant template foundation, provider-backed real delivery, AI reconnect) tracked in the handoff doc; each ships as its own PR after review.
 
 ---
 ## 2026-06-18 - Training Compliance dashboard rebuild (onboarding directory)

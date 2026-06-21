@@ -115,6 +115,35 @@
 
 ---
 
+## Transactional Email
+
+> Current-state inventory reviewed 2026-06-21 during the offers Phase 2/3 gate.
+
+| Property | Value |
+|---|---|
+| Current tenant credential | `tenant_settings.brevo_api_key_encrypted` (pgp_sym_encrypt; never select to frontend) |
+| Current platform credential | `PLATFORM_BREVO_API_KEY` Edge Function secret for pre-tenant request-access notifications |
+| Current direct Brevo callers | `request-access`, `sendRequirementRequest`, `onboard-employee`, `sendOffer` |
+| Phase 3 status | Blocked until explicit CTO approval after Phase 2 / PR #26 is merged |
+| Phase 3 direction | Add a transactional email provider abstraction before wiring offers to real send |
+| Approved MVP provider | Resend for non-PHI transactional offer email when speed/developer experience is the priority |
+| Regulated target provider | AWS SES for ePHI/PHI-capable workflows after AWS BAA and correct account/domain configuration |
+| Legacy status | Brevo remains current/legacy-compatible only; do not add new Brevo-only offer delivery |
+
+**Rules:**
+- Every send path must return the real provider result and must not report success until the provider accepted the message.
+- Failed sends must be logged durably (`integration_log` or the owning table's failure fields) with enough context for retry/recovery.
+- Email bodies must remain minimal and non-clinical. Prefer a secure HOMS link over embedding sensitive applicant, employee, patient, credential, or medical details.
+- Tenant-facing delivery settings must derive tenant context from JWT `app_metadata.tenant_id`; no request-body tenant selection.
+
+**Phase 3 offer-delivery requirement:**
+- Refactor `sendOffer` to send an existing offer by id through the provider abstraction.
+- Render and store the sent letter before/with send metadata.
+- Mark `offers.status='Sent'` only after provider acceptance.
+- Surface missing provider configuration as an actionable UI error, not a success toast.
+
+---
+
 ## Cloudflare Workers AI Gateway
 
 | Property | Value |
