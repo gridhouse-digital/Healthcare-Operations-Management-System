@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useAIOfferLetter } from '@/hooks/useAI';
 import { FileText, Copy, Check, Edit3, Send } from 'lucide-react';
 import { useOfferLetterSettings, useTenantSettings } from '@/features/settings/hooks/useTenantSettings';
@@ -51,12 +51,17 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
         isLoading: offerSettingsLoading,
         error: offerSettingsError,
     } = useOfferLetterSettings();
-    const offerSettingsSource =
-        offerSettingsData && !offerSettingsData.migrationRequired ? offerSettingsData : null;
-    const offerSettings = getOfferLetterSettings(offerSettingsSource);
+    const offerSettingsSource = useMemo(
+        () => offerSettingsData && !offerSettingsData.migrationRequired ? offerSettingsData : null,
+        [offerSettingsData],
+    );
+    const offerSettings = useMemo(
+        () => getOfferLetterSettings(offerSettingsSource),
+        [offerSettingsSource],
+    );
     const companyLogoUrl = tenantSettings?.logo_light ?? null;
 
-    const handleDraft = async () => {
+    const handleDraft = useCallback(async () => {
         // Validate form fields before drafting
         const validation = validateOfferDetails(employeeDetails);
         if (!validation.isValid) {
@@ -82,7 +87,7 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
         if (result) {
             setEditableBody(result.body);
         }
-    };
+    }, [employeeDetails, generate, offerSettings, offerSettingsError]);
 
     // Helper function to convert letter body to HTML for iframe
     const getLetterHTML = () => {
@@ -227,9 +232,9 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
 
     React.useEffect(() => {
         if (autoDraft && !data && !loading && !error && !offerSettingsLoading) {
-            handleDraft();
+            void handleDraft();
         }
-    }, [autoDraft, offerSettingsLoading]);
+    }, [autoDraft, data, error, handleDraft, loading, offerSettingsLoading]);
 
     const handleCopy = () => {
         if (data) {
