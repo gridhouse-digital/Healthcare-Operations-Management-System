@@ -15,7 +15,7 @@
 
 **Rendering rule:** Merge fields are `{{candidate}}`, `{{position}}`, `{{rate}}`, `{{start_date}}`, `{{company}}`, `{{signatory}}`, `{{signatory_title}}`, and `{{accept_url}}`. Frontend preview rendering escapes template text and merge values before HTML injection.
 
-**Public candidate view:** A token-based `get_public_offer(token_arg)` SECURITY DEFINER function returns only non-sensitive offer/applicant/template fields needed by `/offer/:token`. It does not expose encrypted columns or broad tenant settings.
+**Public candidate view:** A token-based `get_public_offer(token_arg)` SECURITY DEFINER function returns only non-sensitive offer/applicant-display/template fields needed by `/offer/:token` for unexpired offers (`expires_at IS NULL OR expires_at >= now()`). It does not expose encrypted columns, broad tenant settings, `secure_token`, applicant email, or applicant phone.
 
 **Alternatives considered:** Keep company/signatory in frontend constants - rejected because it repeats the single-tenant bug. Add a separate `offer_templates` table - deferred; one default template per tenant is sufficient for this foundation phase. Store rendered letter on send - deferred to Phase 3 so the send/delivery refactor stays separate.
 

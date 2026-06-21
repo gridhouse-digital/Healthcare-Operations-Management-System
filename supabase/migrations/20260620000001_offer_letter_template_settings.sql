@@ -34,7 +34,6 @@ begin
     'start_date', o.start_date,
     'salary', o.salary,
     'offer_letter_url', o.offer_letter_url,
-    'secure_token', o.secure_token,
     'created_at', o.created_at,
     'updated_at', o.updated_at,
     'expires_at', o.expires_at,
@@ -42,8 +41,6 @@ begin
       'id', a.id,
       'first_name', a.first_name,
       'last_name', a.last_name,
-      'email', a.email,
-      'phone', a.phone,
       'position_applied', a.position_applied,
       'status', a.status,
       'created_at', a.created_at,
@@ -64,14 +61,15 @@ begin
    and a.tenant_id = o.tenant_id
   left join public.tenant_settings ts
     on ts.tenant_id = o.tenant_id
-  where o.secure_token = token_arg;
+  where o.secure_token = token_arg
+    and (o.expires_at is null or o.expires_at >= now());
 
   return result;
 end;
 $$;
 
 comment on function public.get_public_offer(text) is
-  'Public token-based offer reader. Returns only non-sensitive offer, applicant, and offer-letter settings fields for candidate acceptance pages.';
+  'Public token-based offer reader. Returns only non-sensitive offer, applicant display, and offer-letter settings fields for unexpired candidate acceptance pages; does not return the secure token or applicant contact fields.';
 
 revoke all on function public.get_public_offer(text) from public;
 grant execute on function public.get_public_offer(text) to anon, authenticated, service_role;

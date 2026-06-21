@@ -109,9 +109,9 @@ updated_at                   TIMESTAMPTZ
 
 ## get_public_offer(token_arg text)
 
-SECURITY DEFINER RPC used by the public `/offer/:token` candidate page. Returns one JSON object for the token containing non-sensitive offer fields, applicant display fields, and offer-letter settings (`offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, `offer_letter_template`, `logo_light`).
+SECURITY DEFINER RPC used by the public `/offer/:token` candidate page. Returns one JSON object for an unexpired token (`expires_at IS NULL OR expires_at >= now()`) containing non-sensitive offer fields, applicant display fields, and offer-letter settings (`offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, `offer_letter_template`, `logo_light`). It does not return `secure_token`, applicant email, or applicant phone.
 
-**RLS/security:** Granted to `anon`, `authenticated`, and `service_role`; protected by unguessable `offers.secure_token`. Does not return encrypted tenant settings columns or arbitrary tenant data.
+**RLS/security:** Granted to `anon`, `authenticated`, and `service_role`; protected by unguessable `offers.secure_token` lookup plus expiry filtering. Does not return encrypted tenant settings columns, arbitrary tenant data, the token itself, or applicant contact fields.
 ---
 
 ## people

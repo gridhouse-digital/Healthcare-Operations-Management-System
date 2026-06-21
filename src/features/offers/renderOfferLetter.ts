@@ -1,5 +1,3 @@
-import type { Offer } from "@/types";
-
 export const OFFER_MERGE_FIELDS = [
   "{{candidate}}",
   "{{position}}",
@@ -57,6 +55,10 @@ export interface NormalizedOfferLetterSettings {
   template: string;
 }
 
+export interface OfferLetterOfferLike {
+  position_title: string;
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -104,7 +106,7 @@ export function renderOfferLetterHtml(
 }
 
 export function buildOfferLetterValues(params: {
-  offer: Offer;
+  offer: OfferLetterOfferLike;
   settings?: OfferLetterSettingsLike | null;
   candidateName: string;
   rate: string;

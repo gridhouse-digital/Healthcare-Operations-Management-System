@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { offerService } from '@/services/offerService';
-import type { Offer } from '@/types';
+import type { ApplicantStatus, Offer } from '@/types';
 import { format } from 'date-fns';
 import { CheckCircle, XCircle, FileText } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
@@ -14,7 +14,16 @@ import {
     type OfferLetterSettingsLike,
 } from './renderOfferLetter';
 
-type PublicOffer = Offer & {
+type PublicOffer = Omit<Offer, 'secure_token' | 'applicant'> & {
+    applicant?: {
+        id: string;
+        first_name: string;
+        last_name: string;
+        position_applied?: string | null;
+        status: ApplicantStatus;
+        created_at: string;
+        updated_at?: string | null;
+    } | null;
     offer_settings?: OfferLetterSettingsLike | null;
 };
 

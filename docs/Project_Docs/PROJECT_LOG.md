@@ -9,7 +9,7 @@ Second phased PR for the offers feature completion. Branch `feat/offers-template
 
 ### What changed
 
-- **Migration `20260620000001_offer_letter_template_settings.sql`** - adds `tenant_settings.offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, and `offer_letter_template`; adds token-based `get_public_offer(token_arg)` RPC that returns only non-sensitive offer/applicant/template fields for the public candidate page.
+- **Migration `20260620000001_offer_letter_template_settings.sql`** - adds `tenant_settings.offer_company_name`, `offer_signatory_name`, `offer_signatory_title`, and `offer_letter_template`; adds token-based `get_public_offer(token_arg)` RPC that returns only non-sensitive offer/applicant-display/template fields for unexpired public candidate pages and does not return `secure_token`, applicant email, or applicant phone.
 - **Settings -> System** - adds an "Offer Letter" section with company/signatory/template fields and merge-field legend. Saves through the real `tenant_settings` row, not the legacy `settingsService` stub.
 - **Settings compatibility** - shared tenant settings reads remain connector-safe and do not request Phase 2 offer columns. The System Settings "Offer Letter" section uses an explicit offer-settings hook; if the Phase 2 migration is missing, only that section shows a disabled migration-required state.
 - **Offer rendering** - adds `src/features/offers/renderOfferLetter.ts` with neutral defaults, merge-field rendering, and escaping before HTML preview injection.
