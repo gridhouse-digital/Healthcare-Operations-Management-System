@@ -578,9 +578,9 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 
 ## 2026-11-05 - Role and tenant are read from the JWT in the frontend
 
-**Decision:** the frontend reads role and tenant from the access token through `sessionClaims`, falling back to `session.user.app_metadata`.
+**Decision:** the frontend reads role and tenant from the access token through `sessionClaims`. `tenant_id` comes only from the token. `role` may fall back to `session.user.app_metadata`.
 
-**Why:** `custom_access_token_hook` writes these claims from `tenant_users`, and the stored auth metadata can be empty. The JWT is the documented source of truth. This affects display and routing only; RLS and Edge Functions enforce access.
+**Why:** `custom_access_token_hook` writes these claims from `tenant_users`, and the stored auth metadata can be empty. The JWT is the documented source of truth. `offerService` and offer letter settings use `tenant_id` to scope reads and writes, so a session whose token lacks it fails with "Missing tenant context" rather than using stored metadata. `role` only drives routing and display; RLS and Edge Functions enforce access.
 
 **Rollback:** revert `src/lib/sessionClaims.ts` and its callers. No schema change is involved.
 

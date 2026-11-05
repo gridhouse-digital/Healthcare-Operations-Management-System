@@ -52,6 +52,8 @@ export const platformService = {
         const { data, error } = await supabase.functions.invoke<PlatformOverview>('platform-overview');
         if (error) throw error;
         if (!data) throw new Error('Agency overview returned no data');
+        const bodyError = (data as { error?: { message?: string } }).error;
+        if (bodyError) throw new Error(bodyError.message ?? 'Agency overview failed');
         /* The function deploys separately, so a field it doesn't send yet must not break the page */
         return {
             ...data,

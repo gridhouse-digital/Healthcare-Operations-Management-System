@@ -4,7 +4,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useEffect, useState } from 'react';
 import { settingsService } from '@/services/settingsService';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { navGroups, visibleNavItems } from './Sidebar';
+import { navGroups, visibleNavItems } from './navigation';
 import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
 import defaultLogoDark from '@/assets/logo-dark.png';
