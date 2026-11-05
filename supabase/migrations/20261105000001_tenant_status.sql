@@ -14,6 +14,11 @@ alter table public.tenants
 alter table public.tenants
   add constraint tenants_status_check check (status in ('active', 'suspended'));
 
+-- The browser only reads this table. Without this, a platform_admin token could
+-- change status through the Data API and skip manage-tenant's checks and audit.
+revoke insert, update, delete, truncate, references, trigger
+  on public.tenants from anon, authenticated;
+
 -- Changes the status and writes its audit row in one transaction, so a status
 -- change can never go unrecorded. Called only by the manage-tenant Edge Function.
 create or replace function public.set_tenant_status(

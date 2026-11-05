@@ -598,8 +598,8 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 
 ## 2026-11-05 - Agency suspension blocks tokens, not live requests
 
-**Decision:** suspending sets `tenants.status`. `custom_access_token_hook` then refuses new tokens, so sign-in and refresh both fail, and scheduled jobs skip the agency. Records are kept. Platform admins are exempt, and cannot suspend their own agency. `manage-tenant` takes the target agency from the request body, a deliberate exception limited to verified platform admins.
+**Decision:** suspending sets `tenants.status`, and only `set_tenant_status` can change it: `anon` and `authenticated` lose all write access to `tenants`, which the browser only reads. `custom_access_token_hook` then refuses new tokens, so sign-in and refresh both fail, and scheduled jobs skip the agency. Records are kept. Platform admins are exempt, and cannot suspend their own agency. `manage-tenant` takes the target agency from the request body, a deliberate exception limited to verified platform admins.
 
 **Why:** the 29 Edge Functions use a guard that reads only the token, and RLS deliberately stays on `tenant_id` from the JWT. Checking status on every request would change all of them. A token is therefore honoured until it expires.
 
-**Rollback:** set every agency active, deploy the jobs without the skip, then run: restore `custom_access_token_hook` from `20260304000002_mvp_people_integration_audit.sql`, `drop function public.set_tenant_status(uuid, text, text, uuid)`, and drop `status`, `status_reason`, `status_changed_at` and `status_changed_by` from `tenants`.
+**Rollback:** set every agency active, deploy the jobs without the skip, then run: `grant insert, update, delete, truncate, references, trigger on public.tenants to anon, authenticated`, restore `custom_access_token_hook` from `20260304000002_mvp_people_integration_audit.sql`, `drop function public.set_tenant_status(uuid, text, text, uuid)`, and drop `status`, `status_reason`, `status_changed_at` and `status_changed_by` from `tenants`.

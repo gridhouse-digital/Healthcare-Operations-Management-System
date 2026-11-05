@@ -317,16 +317,15 @@ Deno.test({
 });
 
 Deno.test({
-  name: "RLS: a tenant user cannot update their own agency status",
+  name: "RLS: authenticated role has no write access to tenants",
   ignore: !env, ...wrap,
   fn: async () => {
     const { h } = await ensureSetup();
-    const { data } = await h.tenantA.client
+    const { error } = await h.tenantA.client
       .from("tenants")
-      .update({ status: "active", status_reason: "changed" })
-      .eq("id", h.tenantA.tenantId)
-      .select("id");
-    assertEquals(data ?? [], [], "tenants: tenant user changed its own status");
+      .update({ status: "suspended", status_reason: "changed" })
+      .eq("id", h.tenantB.tenantId);
+    assertEquals(error?.code, "42501", "tenants: authenticated must be denied, whatever the JWT role");
   },
 });
 

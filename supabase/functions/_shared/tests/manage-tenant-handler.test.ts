@@ -1,6 +1,6 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals, assertRejects } from "jsr:@std/assert";
 import { TenantGuardError } from "../tenant-guard.ts";
-import { withoutSuspended } from "../tenant-status.ts";
+import { suspendedTenantIds, withoutSuspended } from "../tenant-status.ts";
 import {
   handleManageTenant,
   type ManageTenantDeps,
@@ -121,6 +121,43 @@ Deno.test("a failed status change returns an opaque 500", async () => {
   const res = await handleManageTenant(request(suspend), stub);
   assertEquals(res.status, 500);
   assertEquals((await res.text()).includes("secret detail"), false);
+});
+
+function tenantsClient(total: number, failAt?: number) {
+  const pages: number[] = [];
+  const all = Array.from({ length: total }, (_, index) => ({ id: `tenant-${index}` }));
+  const query = {
+    select: () => query,
+    eq: () => query,
+    order: () => query,
+    range: (from: number, to: number) => {
+      pages.push(from);
+      return Promise.resolve(
+        from === failAt
+          ? { data: null, error: new Error("boom") }
+          : { data: all.slice(from, to + 1), error: null },
+      );
+    },
+  };
+  // deno-lint-ignore no-explicit-any
+  return { client: { from: () => query } as any, pages };
+}
+
+Deno.test("suspended lookup reads past the 1,000-row cap", async () => {
+  const { client, pages } = tenantsClient(1001);
+  assertEquals((await suspendedTenantIds(client)).size, 1001);
+  assertEquals(pages, [0, 1000]);
+});
+
+Deno.test("suspended lookup stops on an exact last page", async () => {
+  const { client, pages } = tenantsClient(1000);
+  assertEquals((await suspendedTenantIds(client)).size, 1000);
+  assertEquals(pages, [0, 1000]);
+});
+
+Deno.test("a failed suspended lookup throws, so jobs do not run agencies blind", async () => {
+  const { client } = tenantsClient(1001, 1000);
+  await assertRejects(() => suspendedTenantIds(client));
 });
 
 Deno.test("scheduled work leaves out suspended agencies", () => {
