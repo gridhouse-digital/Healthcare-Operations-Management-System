@@ -84,6 +84,15 @@ Deno.test("empty agency is no_data, not zero and not healthy", () => {
   assertEquals(agency.lastSyncAt, null);
 });
 
+Deno.test("connector saved but never synced is no_data, not healthy", () => {
+  const agency = summarizeAgency(raw({
+    employees: 0, employeesActive: 0, employeesOnboarding: 0, applicants: 0,
+    trainingRecords: 0, trainingCompleted: 0, recurringTotal: 0,
+    sources: [source({ lastSuccessAt: null, everRan: false })],
+  }));
+  assertEquals(agency.status, "no_data");
+});
+
 Deno.test("agency with staff but no connector is not_connected", () => {
   assertEquals(summarizeAgency(raw({ sources: [idle("jazzhr")] })).status, "not_connected");
 });
@@ -127,12 +136,12 @@ Deno.test("completed percent is null when only recurring rows exist", () => {
 });
 
 Deno.test("completed percent rounds", () => {
-  assertEquals(summarizeAgency(raw()).training?.completedPct, 75);
+  assertEquals(summarizeAgency(raw({ trainingRecords: 3, trainingCompleted: 2 })).training?.completedPct, 67);
 });
 
 Deno.test("last sync is the newest success across sources", () => {
   const agency = summarizeAgency(raw({
-    sources: [source(), source({ source: "wordpress", lastSuccessAt: "2026-11-03T10:00:00Z" })],
+    sources: [source({ source: "wordpress", lastSuccessAt: "2026-11-03T10:00:00Z" }), source()],
   }));
   assertEquals(agency.lastSyncAt, "2026-11-03T10:00:00Z");
 });
@@ -153,7 +162,33 @@ Deno.test("totals add up and untracked agencies add nothing", () => {
   });
 });
 
-Deno.test("summary carries no personal or payload fields", () => {
-  const keys = Object.keys(summarizeAgency(raw()));
+Deno.test("failed syncs add up across agencies", () => {
+  const totals = summarizeTotals([
+    summarizeAgency(raw({ sources: [source({ failedLastWindow: 2 })] })),
+    summarizeAgency(raw({ sources: [source({ failedLastWindow: 1 })] })),
+  ], 0);
+  assertEquals(totals.failedSyncs, 3);
+});
+
+Deno.test("overdue total is unknown when no agency tracks training", () => {
+  const untracked = summarizeAgency(raw({ trainingRecords: 0, recurringTotal: 0 }));
+  assertEquals(summarizeTotals([untracked], 0).recurringOverdue, null);
+});
+
+Deno.test("overdue total stays zero when tracked agencies have none overdue", () => {
+  assertEquals(summarizeTotals([summarizeAgency(raw())], 0).recurringOverdue, 0);
+});
+
+function allKeys(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(allKeys);
+  if (value && typeof value === "object") {
+    return Object.entries(value).flatMap(([key, child]) => [key, ...allKeys(child)]);
+  }
+  return [];
+}
+
+Deno.test("summary carries no personal or payload fields at any depth", () => {
+  const sensitive = { ...source(), email: "a@example.test", payload: { first_name: "A" } };
+  const keys = allKeys(summarizeAgency(raw({ sources: [sensitive] })));
   assertEquals(keys.filter((key) => /email|first_name|last_name|payload/i.test(key)), []);
 });

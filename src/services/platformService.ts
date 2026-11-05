@@ -38,7 +38,7 @@ export interface PlatformOverview {
         needingAttention: number;
         employees: number;
         employeesOnboarding: number;
-        recurringOverdue: number;
+        recurringOverdue: number | null;
         failedSyncs: number;
         openAccessRequests: number;
     };

@@ -141,6 +141,8 @@ export function PlatformOverviewPage() {
         queryKey: ['platform-overview'],
         queryFn: platformService.getOverview,
         retry: false,
+        /* Cross-agency totals must not outlive the page, or reach a later session */
+        gcTime: 0,
     });
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const { sortedRows, sortProps } = useTableSort(data?.agencies ?? [], SORT_COLUMNS);
@@ -180,7 +182,12 @@ export function PlatformOverviewPage() {
             <div className="tally tally-5">
                 <StatsCard title="Agencies" value={totals.agencies} subtitle={totals.needingAttention === 1 ? '1 needs attention' : `${totals.needingAttention} need attention`} />
                 <StatsCard title="Employees" value={totals.employees} subtitle={`${totals.employeesOnboarding} onboarding`} />
-                <StatsCard title="Overdue Renewals" value={totals.recurringOverdue} subtitle="HOMS records" intent={totals.recurringOverdue > 0 ? 'warning' : 'default'} />
+                <StatsCard
+                    title="Overdue Renewals"
+                    value={totals.recurringOverdue ?? '—'}
+                    subtitle={totals.recurringOverdue === null ? 'Not tracked yet' : 'HOMS records'}
+                    intent={totals.recurringOverdue ? 'warning' : 'default'}
+                />
                 <StatsCard title="Sync Errors" value={totals.failedSyncs} subtitle={`Last ${syncWindowDays} days`} intent={totals.failedSyncs > 0 ? 'danger' : 'default'} />
                 <StatsCard title="Open Requests" value={totals.openAccessRequests} subtitle="Waiting for review" />
             </div>

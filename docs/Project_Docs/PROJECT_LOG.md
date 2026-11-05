@@ -22,7 +22,8 @@ Platform admins now land on an all-agencies overview at `/`. Everyone else keeps
 - New Edge Function `platform-overview` with pure logic in `_shared/platform-overview.ts`. It returns totals only and audits each read as `platform_overview_read`.
 - New `PlatformOverviewPage`, `HomePage` and `platformService`. The header shows "Viewing: agency" for platform admins on Offers, Employees, Training and Settings. Applicants can span agencies, and Access Requests and the AI dashboard are not limited to one, so they show no label.
 - Sync errors count partial failures and completed runs with `error_count > 0`, not only `failed`. Overdue renewals outrank "Not connected".
-- Tests: 21 Deno tests in `_shared/tests/platform-overview.test.ts`.
+- The access flow lives in `platform-overview/handler.ts`, so it is tested without a server. A failed audit insert withholds the data. Tenant and settings reads page past the 1,000-row cap, and agencies load five at a time.
+- Tests: `_shared/tests/platform-overview.test.ts` and `_shared/tests/platform-overview-handler.test.ts`.
 
 ### Not verified
 

@@ -566,7 +566,7 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 
 ## 2026-11-05 - Platform overview reads across agencies on the server
 
-**Decision:** the `platform-overview` Edge Function uses the service role to read counts across every tenant. This is a deliberate exception to reading one tenant from the JWT. RLS policies are not changed. It returns totals only, never personal fields or `integration_log.payload`, and each read is audited.
+**Decision:** the `platform-overview` Edge Function uses the service role to read counts across every tenant. This is a deliberate exception to reading one tenant from the JWT. RLS policies are not changed. It returns totals only, never personal fields or `integration_log.payload`. Each read writes `audit_log` directly and fails if that insert fails, unlike the fire-and-forget `logAudit`, because this read must not go unrecorded.
 
 **Why:** platform admins need to oversee all agencies. Loosening RLS on `people` or `offers` would expose individual records to the browser, while totals from one guarded function do not.
 

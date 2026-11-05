@@ -68,7 +68,8 @@ export interface OverviewTotals {
   needingAttention: number;
   employees: number;
   employeesOnboarding: number;
-  recurringOverdue: number;
+  /** null when no agency tracks training, which must not read as zero overdue */
+  recurringOverdue: number | null;
   failedSyncs: number;
   openAccessRequests: number;
 }
@@ -102,7 +103,7 @@ export function summarizeAgency(raw: RawAgencyCounts): AgencySummary {
   return {
     id: raw.id,
     name: raw.name,
-    status: agencyStatus(raw, connections.length, failedSyncs),
+    status: agencyStatus(raw, connections.length, failedSyncs, lastSyncAt !== null),
     employees: raw.employees,
     employeesActive: raw.employeesActive,
     employeesOnboarding: raw.employeesOnboarding,
@@ -115,10 +116,16 @@ export function summarizeAgency(raw: RawAgencyCounts): AgencySummary {
   };
 }
 
-function agencyStatus(raw: RawAgencyCounts, connections: number, failedSyncs: number): AgencyStatus {
+function agencyStatus(
+  raw: RawAgencyCounts,
+  connections: number,
+  failedSyncs: number,
+  synced: boolean,
+): AgencyStatus {
   /* Checked first: a known problem must outrank a missing connection */
   if (failedSyncs > 0 || raw.recurringOverdue > 0) return "attention";
-  if (raw.employees === 0 && raw.applicants === 0 && connections === 0) return "no_data";
+  /* A connector saved before its first import has delivered nothing yet */
+  if (raw.employees === 0 && raw.applicants === 0 && !synced) return "no_data";
   if (connections === 0) return "not_connected";
   return "ok";
 }
@@ -129,7 +136,9 @@ export function summarizeTotals(agencies: AgencySummary[], openAccessRequests: n
     needingAttention: agencies.filter((agency) => agency.status === "attention").length,
     employees: agencies.reduce((sum, agency) => sum + agency.employees, 0),
     employeesOnboarding: agencies.reduce((sum, agency) => sum + agency.employeesOnboarding, 0),
-    recurringOverdue: agencies.reduce((sum, agency) => sum + (agency.training?.recurringOverdue ?? 0), 0),
+    recurringOverdue: agencies.some((agency) => agency.training)
+      ? agencies.reduce((sum, agency) => sum + (agency.training?.recurringOverdue ?? 0), 0)
+      : null,
     failedSyncs: agencies.reduce((sum, agency) => sum + agency.failedSyncs, 0),
     openAccessRequests,
   };

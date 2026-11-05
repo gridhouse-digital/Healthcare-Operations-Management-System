@@ -1,10 +1,7 @@
 import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { tenantGuard } from "../_shared/tenant-guard.ts";
-import { errorResponse, handleError } from "../_shared/error-response.ts";
-import { handleCors, withCors } from "../_shared/cors.ts";
-import { logAudit } from "../_shared/audit-logger.ts";
+import { handlePlatformOverview } from "./handler.ts";
 import {
-  decidePlatformAccess,
   summarizeAgency,
   summarizeTotals,
   SYNC_ERROR_FILTER,
@@ -19,6 +16,9 @@ import {
 // one-agency rule: see DECISIONS.md. Selects counts only, never personal fields
 // or integration_log.payload.
 
+const PAGE_SIZE = 1000;
+const AGENCY_BATCH_SIZE = 5;
+
 interface CountResult {
   count: number | null;
   error: unknown;
@@ -28,6 +28,19 @@ async function countOf(query: PromiseLike<CountResult>): Promise<number> {
   const { count, error } = await query;
   if (error) throw error instanceof Error ? error : new Error("Count query failed");
   return count ?? 0;
+}
+
+/* The API caps a response at max_rows with no error, so read until a short page */
+async function fetchAll<Row>(
+  page: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: unknown }>,
+): Promise<Row[]> {
+  const rows: Row[] = [];
+  for (let from = 0;; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error("Agency lookup failed");
+    rows.push(...(data ?? []));
+    if ((data?.length ?? 0) < PAGE_SIZE) return rows;
+  }
 }
 
 function head(admin: SupabaseClient, table: string) {
@@ -123,91 +136,73 @@ async function loadAgency(
   };
 }
 
-Deno.serve(async (req: Request) => {
-  const preflight = handleCors(req);
-  if (preflight) return preflight;
+async function loadOverview(admin: SupabaseClient) {
+  const since = new Date(Date.now() - SYNC_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  try {
-    const ctx = tenantGuard(req);
+  const [tenants, settings, openAccessRequests] = await Promise.all([
+    fetchAll<{ id: string; name: string }>((from, to) =>
+      admin.from("tenants").select("id, name").order("name").order("id").range(from, to)
+    ),
+    fetchAll<{ tenant_id: string; active_connectors: string[] | null }>((from, to) =>
+      admin.from("tenant_settings").select("tenant_id, active_connectors").order("tenant_id").range(from, to)
+    ),
+    countOf(head(admin, "tenant_access_requests").in("status", ["submitted", "under_review"])),
+  ]);
 
-    const forbidden = () =>
-      withCors(errorResponse("FORBIDDEN", "Platform admin access required", 403), req);
+  const connectorsByTenant = new Map<string, string[]>(
+    settings.map((row) => [row.tenant_id, row.active_connectors ?? []]),
+  );
 
-    if (ctx.role !== "platform_admin") return forbidden();
+  /* Each agency runs about 26 queries, so a few at a time */
+  const raw: RawAgencyCounts[] = [];
+  for (let start = 0; start < tenants.length; start += AGENCY_BATCH_SIZE) {
+    raw.push(
+      ...await Promise.all(
+        tenants.slice(start, start + AGENCY_BATCH_SIZE).map((tenant) =>
+          loadAgency(admin, tenant, connectorsByTenant.get(tenant.id) ?? [], since)
+        ),
+      ),
+    );
+  }
 
-    const token = req.headers.get("Authorization")!.slice(7);
-    const { data: verified, error: verifyError } = await ctx.supabase.auth.getUser(token);
+  const agencies = raw.map(summarizeAgency);
+  return { totals: summarizeTotals(agencies, openAccessRequests), agencies };
+}
 
-    const admin = createClient(
+Deno.serve((req: Request) => {
+  /* Created on first use, so nothing runs before tenantGuard inside the handler */
+  let client: SupabaseClient | null = null;
+  const admin = () =>
+    client ??= createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       { auth: { persistSession: false } },
     );
 
-    const verifiedUserId = verifyError ? null : verified.user?.id ?? null;
-    const activePlatformAdminRows = verifiedUserId
-      ? await countOf(
-        head(admin, "tenant_users")
-          .eq("user_id", verifiedUserId)
+  return handlePlatformOverview(req, {
+    guard: tenantGuard,
+    verifyUserId: async (ctx, token) => {
+      const { data, error } = await ctx.supabase.auth.getUser(token);
+      return error ? null : data.user?.id ?? null;
+    },
+    countActiveAdminRows: (userId) =>
+      countOf(
+        head(admin(), "tenant_users")
+          .eq("user_id", userId)
           .eq("role", "platform_admin")
           .eq("status", "active"),
-      )
-      : 0;
-
-    const access = decidePlatformAccess({
-      claimedRole: ctx.role,
-      verifiedUserId,
-      claimedUserId: ctx.userId,
-      activePlatformAdminRows,
-    });
-
-    if (access === "unauthenticated") {
-      return withCors(errorResponse("INVALID_JWT", "Session could not be verified", 401), req);
-    }
-    if (access === "forbidden") return forbidden();
-
-    const since = new Date(Date.now() - SYNC_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
-
-    const [tenants, settings, openAccessRequests] = await Promise.all([
-      admin.from("tenants").select("id, name").order("name"),
-      admin.from("tenant_settings").select("tenant_id, active_connectors"),
-      countOf(head(admin, "tenant_access_requests").in("status", ["submitted", "under_review"])),
-    ]);
-
-    if (tenants.error || settings.error) throw new Error("Agency lookup failed");
-
-    const connectorsByTenant = new Map<string, string[]>(
-      (settings.data ?? []).map((row) => [row.tenant_id, row.active_connectors ?? []]),
-    );
-
-    const raw = await Promise.all(
-      (tenants.data ?? []).map((tenant) =>
-        loadAgency(admin, tenant, connectorsByTenant.get(tenant.id) ?? [], since)
       ),
-    );
-    const agencies = raw.map(summarizeAgency);
-
-    await logAudit({
-      tenantId: ctx.tenantId,
-      actorId: ctx.userId,
-      action: "platform_overview_read",
-      tableName: "tenants",
-      after: { agencies: agencies.length },
-    });
-
-    return withCors(
-      new Response(
-        JSON.stringify({
-          generatedAt: new Date().toISOString(),
-          syncWindowDays: SYNC_WINDOW_DAYS,
-          totals: summarizeTotals(agencies, openAccessRequests),
-          agencies,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-      req,
-    );
-  } catch (err) {
-    return withCors(handleError(err), req);
-  }
+    loadOverview: () => loadOverview(admin()),
+    /* Written directly: logAudit swallows failures, and this read must not go unrecorded */
+    writeAudit: async (ctx, agencies) => {
+      const { error } = await admin().from("audit_log").insert({
+        tenant_id: ctx.tenantId,
+        actor_id: ctx.userId,
+        action: "platform_overview_read",
+        table_name: "tenants",
+        after: { agencies },
+      });
+      if (error) throw new Error("Audit insert failed");
+    },
+  });
 });

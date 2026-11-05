@@ -46,7 +46,8 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
             const { data: { session } } = await supabase.auth.getSession();
             const tenantId = session?.user.app_metadata?.tenant_id as string | undefined;
             if (!tenantId) return null;
-            const { data } = await supabase.from('tenants').select('name').eq('id', tenantId).maybeSingle();
+            const { data, error } = await supabase.from('tenants').select('name').eq('id', tenantId).maybeSingle();
+            if (error) throw error;
             return data?.name ?? null;
         },
     });
@@ -143,7 +144,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                 {/* Right: notifications + profile */}
                 <div className="flex items-center gap-1">
                     {showsOneAgency && viewingAgency && (
-                        <span className="mr-2 hidden max-w-56 truncate text-xs text-muted-foreground sm:inline">
+                        <span className="mr-2 min-w-0 max-w-36 truncate text-xs text-muted-foreground sm:max-w-56">
                             Viewing: {viewingAgency}
                         </span>
                     )}
