@@ -31,11 +31,11 @@ export function RecentActivity({ activities }: RecentActivityProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
                 <div className="flex items-center gap-2.5">
-                    <Activity size={14} strokeWidth={2} className="text-muted-foreground/60" />
-                    <h3 className="text-[13px] font-semibold text-foreground">Activity Feed</h3>
+                    <Activity size={14} strokeWidth={2} className="text-muted-foreground" />
+                    <h3 className="text-[13px] font-medium text-foreground">Activity Feed</h3>
                 </div>
                 {activities.length > 0 && (
-                    <span className="text-[11px] font-medium text-muted-foreground/50">
+                    <span className="text-xs font-medium text-muted-foreground">
                         Last {activities.length} events
                     </span>
                 )}
@@ -45,7 +45,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
             <div className="divide-y divide-border/40">
                 {activities.length === 0 ? (
                     <div className="px-5 py-8 text-center">
-                        <p className="text-[13px] text-muted-foreground/50 font-medium">No recent activity</p>
+                        <p className="text-[13px] text-muted-foreground font-medium">No recent activity</p>
                     </div>
                 ) : (
                     activities.map((activity, i) => {
@@ -70,11 +70,11 @@ export function RecentActivity({ activities }: RecentActivityProps) {
                                         {activity.message}
                                     </p>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[10px] font-semibold uppercase tracking-[0.03em] text-muted-foreground/50">
+                                        <span className="text-xs font-medium text-muted-foreground">
                                             {cfg.label}
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground/40">·</span>
-                                        <span className="text-[11px] text-muted-foreground/50 font-medium tabular-nums">
+                                        <span className="text-xs text-muted-foreground">·</span>
+                                        <span className="text-xs text-muted-foreground font-medium tabular-nums">
                                             {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                                         </span>
                                     </div>

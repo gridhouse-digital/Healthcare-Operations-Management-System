@@ -4,8 +4,8 @@ import { Shield, User, Mail, Briefcase, Building2 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/hooks/useToast';
 
-const inputCls = 'w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50 disabled:opacity-50 disabled:cursor-not-allowed';
-const labelCls = 'form-label';
+const inputCls = "saas-input";
+const labelCls = "form-label";
 
 export function ProfilePage() {
     const [loading, setLoading] = useState(true);
@@ -101,7 +101,7 @@ export function ProfilePage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <span className="text-[13px] tracking-[0.02em] text-muted-foreground">Loading profile...</span>
+                <span className="text-sm text-muted-foreground">Loading profile…</span>
             </div>
         );
     }
@@ -117,7 +117,7 @@ export function ProfilePage() {
 
     return (
         <div className="space-y-5">
-            <div className="pl-1">
+            <div>
                 <h1 className="page-header-title">My Profile</h1>
                 <p className="page-header-meta">Personal information, workspace context, and security settings</p>
             </div>
@@ -128,39 +128,39 @@ export function ProfilePage() {
                         <div className="flex flex-col items-center text-center">
                             <div
                                 className="mb-4 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full"
-                                style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)' }}
+                                style={{ background: 'color-mix(in oklab, var(--primary) 16%, transparent)' }}
                             >
                                 <Avatar className="h-full w-full">
                                     <AvatarFallback
-                                        className="text-lg font-semibold"
+                                        className="text-lg font-medium"
                                         style={{ background: 'transparent', color: 'var(--primary)' }}
                                     >
                                         {initials}
                                     </AvatarFallback>
                                 </Avatar>
                             </div>
-                            <h2 className="text-[15px] font-semibold text-foreground">{fullName}</h2>
-                            <p className="mt-0.5 text-[13px] tracking-[0.01em] text-muted-foreground">
+                            <h2 className="text-[15px] font-medium text-foreground">{fullName}</h2>
+                            <p className="mt-0.5 text-sm text-muted-foreground">
                                 {String(role).replace('_', ' ')}
                             </p>
                         </div>
 
                         <div className="space-y-3 border-t border-border pt-4">
                             <div className="flex items-center gap-2.5">
-                                <Mail size={13} className="shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                                <span className="truncate text-[13px] text-foreground">{formData.email}</span>
+                                <Mail size={14} className="shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
+                                <span className="truncate text-sm text-foreground">{formData.email}</span>
                             </div>
                             <div className="flex items-center gap-2.5">
-                                <Briefcase size={13} className="shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                                <span className="text-[13px] capitalize text-foreground">{String(role).replace('_', ' ')}</span>
+                                <Briefcase size={14} className="shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
+                                <span className="text-sm capitalize text-foreground">{String(role).replace('_', ' ')}</span>
                             </div>
                             <div className="flex items-center gap-2.5">
-                                <Building2 size={13} className="shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                                <span className="text-[13px] capitalize text-foreground">{tenantUser?.tenant?.name || 'Tenant'}</span>
+                                <Building2 size={14} className="shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
+                                <span className="text-sm capitalize text-foreground">{tenantUser?.tenant?.name || 'Tenant'}</span>
                             </div>
                             <div className="flex items-center gap-2.5">
-                                <User size={13} className="shrink-0 text-muted-foreground" strokeWidth={1.75} />
-                                <span className="text-[13px] text-muted-foreground">Since {new Date(user?.created_at).toLocaleDateString()}</span>
+                                <User size={14} className="shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
+                                <span className="text-sm text-muted-foreground">Since {new Date(user?.created_at).toLocaleDateString()}</span>
                             </div>
                         </div>
                     </div>
@@ -170,10 +170,10 @@ export function ProfilePage() {
                     <div className="saas-card p-5">
                         <div className="mb-5 flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                                <User size={14} className="shrink-0 text-primary" strokeWidth={2} />
+                                <User size={14} className="shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
                                 <div>
-                                    <p className="text-[13px] font-semibold text-foreground">Personal Information</p>
-                                    <p className="text-[12px] tracking-[0.01em] text-muted-foreground">Update your account profile metadata</p>
+                                    <p className="text-sm font-medium text-foreground">Personal Information</p>
+                                    <p className="text-xs text-muted-foreground">Update your account profile metadata</p>
                                 </div>
                             </div>
                         </div>
@@ -194,9 +194,9 @@ export function ProfilePage() {
                                 <button
                                     type="submit"
                                     disabled={savingProfile}
-                                    className="inline-flex h-8 items-center rounded-md bg-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                    className="inline-flex h-9 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-accent-hi disabled:opacity-50"
                                 >
-                                    {savingProfile ? 'Saving...' : 'Save Changes'}
+                                    {savingProfile ? 'Saving…' : 'Save Changes'}
                                 </button>
                             </div>
                         </form>
@@ -204,10 +204,10 @@ export function ProfilePage() {
 
                     <div className="saas-card p-5">
                         <div className="mb-5 flex items-center gap-2.5">
-                            <Shield size={14} className="shrink-0 text-primary" strokeWidth={2} />
+                            <Shield size={14} className="shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
                             <div>
-                                <p className="text-[13px] font-semibold text-foreground">Security Settings</p>
-                                <p className="text-[12px] tracking-[0.01em] text-muted-foreground">Update your password</p>
+                                <p className="text-sm font-medium text-foreground">Security Settings</p>
+                                <p className="text-xs text-muted-foreground">Update your password</p>
                             </div>
                         </div>
 
@@ -226,9 +226,9 @@ export function ProfilePage() {
                                 <button
                                     type="submit"
                                     disabled={passwordLoading}
-                                    className="inline-flex h-8 items-center rounded-md bg-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-primary/90 disabled:opacity-50"
+                                    className="inline-flex h-9 items-center rounded-full border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-55"
                                 >
-                                    {passwordLoading ? 'Updating...' : 'Update Password'}
+                                    {passwordLoading ? 'Updating…' : 'Update Password'}
                                 </button>
                             </div>
                         </form>

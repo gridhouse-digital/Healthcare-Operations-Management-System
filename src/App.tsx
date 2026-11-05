@@ -30,7 +30,7 @@ import { Toaster } from 'sonner';
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark" storageKey="prolific-theme">
+    <ThemeProvider defaultTheme="light" storageKey="prolific-theme">
       <Toaster position="top-right" richColors closeButton />
       <Router>
         <Routes>

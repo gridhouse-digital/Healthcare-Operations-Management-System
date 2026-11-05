@@ -72,29 +72,29 @@ export function TrainingAdjustmentModal({ record, employeeName, onClose }: Train
   if (!record) return null;
 
   const showWarning = COMPLIANCE_WARNING_FIELDS.includes(form.field);
-  const inputCls = 'w-full h-9 rounded-md border border-border bg-card px-3 text-[13px] text-foreground transition-shadow focus:outline-none focus:ring-1 focus:ring-primary/35 [&_option]:bg-card [&_option]:text-foreground';
+  const inputCls = 'w-full h-9 rounded-md border border-border bg-card px-3 text-sm text-foreground transition-shadow [&_option]:bg-card [&_option]:text-foreground';
   const labelCls = 'form-label';
 
   return (
     <>
-      <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[60] bg-shade/60" onClick={onClose} />
 
       <div
         className="fixed left-1/2 top-1/2 z-[70] w-full max-w-[560px] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-xl"
-        style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: '0 20px 60px hsl(0 0% 0% / 0.6)' }}
+        style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-2xl)' }}
       >
         <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <div>
-            <h3 className="text-[15px] font-semibold tracking-[-0.015em] text-foreground">Add Adjustment</h3>
-            <p className="mt-0.5 text-[12px] tracking-[0.01em] text-muted-foreground">
+            <h3 className="text-[15px] font-medium text-foreground">Add Adjustment</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {employeeName} - {record.course_name ?? `Course #${record.course_id}`}
             </p>
           </div>
           <button
             onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-          >
-            <X size={16} strokeWidth={1.75} />
+           aria-label="Close">
+            <X size={16} strokeWidth={1.75} aria-hidden="true" />
           </button>
         </div>
 
@@ -116,7 +116,7 @@ export function TrainingAdjustmentModal({ record, employeeName, onClose }: Train
                 value={form.value}
                 onValueChange={value => setForm({ ...form, value })}
                 options={[
-                  { value: '', label: 'Select status...' },
+                  { value: '', label: 'Select status…' },
                   { value: 'not_started', label: 'Not Started' },
                   { value: 'in_progress', label: 'In Progress' },
                   { value: 'completed', label: 'Completed' },
@@ -145,10 +145,10 @@ export function TrainingAdjustmentModal({ record, employeeName, onClose }: Train
           {showWarning && (
             <div
               className="flex items-start gap-2.5 rounded-md p-3"
-              style={{ background: 'hsl(38 96% 48% / 0.06)', border: '1px solid hsl(38 96% 48% / 0.18)' }}
+              style={{ background: 'color-mix(in oklab, var(--color-accent-2) 6%, transparent)', border: '1px solid color-mix(in oklab, var(--color-accent-2) 18%, transparent)' }}
             >
-              <AlertTriangle size={13} strokeWidth={2} className="mt-0.5 shrink-0" style={{ color: 'hsl(38 90% 56%)' }} />
-              <p className="text-[12px] leading-snug tracking-[0.005em]" style={{ color: 'hsl(38 90% 60%)' }}>
+              <AlertTriangle size={14} strokeWidth={1.75} className="mt-0.5 shrink-0" style={{ color: 'var(--color-accent-2)' }} aria-hidden="true" />
+              <p className="text-xs leading-snug" style={{ color: 'var(--color-accent-2)' }}>
                 This overrides the value synced from LearnDash. The adjustment will be logged and auditable.
               </p>
             </div>
@@ -161,7 +161,7 @@ export function TrainingAdjustmentModal({ record, employeeName, onClose }: Train
               onChange={e => setForm({ ...form, reason: e.target.value })}
               rows={3}
               placeholder="Why is this adjustment being made?"
-              className="w-full resize-none rounded-md border border-border bg-transparent px-3 py-2 text-[13px] text-foreground transition-shadow placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/35"
+              className="w-full resize-none rounded-md border border-border bg-transparent px-3 py-2 text-sm text-foreground transition-shadow placeholder:text-muted-foreground"
             />
           </div>
 
@@ -169,15 +169,15 @@ export function TrainingAdjustmentModal({ record, employeeName, onClose }: Train
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="inline-flex h-9 flex-1 items-center justify-center rounded-md bg-primary px-4 text-[13px] font-semibold tracking-[0.01em] text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-9 flex-1 items-center justify-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-accent-hi disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {mutation.isPending ? 'Saving...' : 'Save Adjustment'}
+              {mutation.isPending ? 'Saving…' : 'Save Adjustment'}
             </button>
             <button
               type="button"
               onClick={onClose}
               disabled={mutation.isPending}
-              className="inline-flex h-9 flex-1 items-center justify-center rounded-md border border-border px-4 text-[13px] font-semibold tracking-[0.01em] text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
+              className="inline-flex h-9 flex-1 items-center justify-center rounded-full border border-border px-4 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
             >
               Cancel
             </button>

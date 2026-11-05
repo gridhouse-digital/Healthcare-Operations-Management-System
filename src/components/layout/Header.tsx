@@ -23,7 +23,7 @@ interface HeaderProps {
 
 export function Header({ onOpenMobileNav }: HeaderProps) {
     const navigate = useNavigate();
-    const { expanded } = useSidebar();
+    const { pinned: expanded } = useSidebar();
     const [userMeta, setUserMeta] = useState<{ fullName: string; role: string }>({ fullName: '', role: '' });
     const [logoLight, setLogoLight] = useState(defaultLogoDark);
     const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
@@ -74,11 +74,11 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
             >
                 {/* Monogram icon — always visible */}
                 <div
-                    className="w-7 h-7 rounded-md flex-shrink-0 flex items-center justify-center"
-                    style={{ background: 'color-mix(in srgb, var(--sidebar-primary) 18%, transparent)' }}
+                    className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center"
+                    style={{ background: 'color-mix(in oklab, var(--sidebar-primary) 18%, transparent)' }}
                 >
                     <span
-                        className="text-[11px] font-bold select-none"
+                        className="text-xs font-medium select-none"
                         style={{ fontFamily: 'var(--font-mono)', color: 'var(--sidebar-primary)' }}
                     >
                         P
@@ -107,38 +107,13 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                         style={{ color: 'var(--muted-foreground)' }}
                         aria-label="Open navigation"
                     >
-                        <Menu size={16} strokeWidth={2} />
+                        <Menu size={16} strokeWidth={1.75} aria-hidden="true" />
                     </button>
 
                     {/* Search */}
-                    <div className="hidden md:flex items-center relative">
-                        <Search
-                            size={12}
-                            strokeWidth={2}
-                            className="absolute left-2.5 pointer-events-none"
-                            style={{ color: 'var(--muted-foreground)', opacity: 0.4 }}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Search…"
-                            className="h-7 pl-7 pr-10 rounded-md text-[12px] transition-all duration-200 focus:outline-none focus:w-[220px]"
-                            style={{
-                                width: '172px',
-                                background: 'var(--secondary)',
-                                border: '1px solid var(--border)',
-                                color: 'var(--foreground)',
-                                fontFamily: 'var(--font-sans)',
-                            }}
-                            onFocus={e => {
-                                e.currentTarget.style.borderColor = 'var(--border-strong)';
-                                e.currentTarget.style.width = '220px';
-                            }}
-                            onBlur={e => {
-                                e.currentTarget.style.borderColor = 'var(--border)';
-                                e.currentTarget.style.width = '172px';
-                            }}
-                        />
-                        <kbd className="absolute right-2 hidden lg:block text-[10px]" style={{ color: 'var(--muted-foreground)', opacity: 0.35 }}>⌘K</kbd>
+                    <div className="relative hidden w-56 md:block">
+                        <Search size={14} strokeWidth={1.75} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input type="text" aria-label="Search" placeholder="Search…" className="saas-input saas-input-quiet pl-9" />
                     </div>
                 </div>
 
@@ -147,16 +122,11 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
                     {/* Notifications */}
                     <button
-                        className="relative flex items-center justify-center w-8 h-8 rounded-md transition-colors"
+                        aria-label="Notifications"
+                        className="relative flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-secondary"
                         style={{ color: 'var(--muted-foreground)' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--secondary)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                     >
-                        <Bell size={14} strokeWidth={1.75} />
-                        <span
-                            className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
-                            style={{ background: 'var(--severity-critical)', outline: '2px solid var(--background)' }}
-                        />
+                        <Bell size={16} strokeWidth={1.75} aria-hidden="true" />
                     </button>
 
                     {/* Divider */}
@@ -166,18 +136,16 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
-                                className="flex items-center gap-2 pl-1.5 pr-2 py-1 rounded-md transition-colors cursor-pointer"
-                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--secondary)'}
-                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                                className="flex cursor-pointer items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors hover:bg-secondary"
                             >
                                 <div
-                                    className="w-6 h-6 rounded-md flex-shrink-0 overflow-hidden"
-                                    style={{ background: 'color-mix(in srgb, var(--sidebar-primary) 24%, transparent)' }}
+                                    className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full"
+                                    style={{ background: 'color-mix(in oklab, var(--sidebar-primary) 24%, transparent)' }}
                                 >
-                                    <Avatar className="h-full w-full rounded-md">
+                                    <Avatar className="h-full w-full rounded-full bg-transparent">
                                         <AvatarFallback
-                                            className="text-[9px] font-bold bg-transparent rounded-md"
-                                            style={{ fontFamily: 'var(--font-mono)', color: 'var(--sidebar-primary)' }}
+                                            className="rounded-full bg-transparent text-xs font-medium"
+                                            style={{ color: 'var(--sidebar-primary)' }}
                                         >
                                             {userMeta.fullName
                                                 .split(' ')
@@ -189,34 +157,34 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                                     </Avatar>
                                 </div>
                                 <div className="hidden lg:block text-left min-w-0">
-                                    <p className="text-[12px] font-medium leading-none truncate max-w-[110px]" style={{ color: 'var(--foreground)' }}>
+                                    <p className="text-xs font-medium leading-none truncate max-w-[110px]" style={{ color: 'var(--foreground)' }}>
                                         {userMeta.fullName}
                                     </p>
                                     <p
-                                        className="mt-0.5 text-[10px] capitalize leading-none tracking-[0.03em]"
+                                        className="mt-0.5 text-xs capitalize leading-none"
                                         style={{ color: 'var(--muted-foreground)' }}
                                     >
                                         {(userMeta.role || 'Staff').replace('_', ' ')}
                                     </p>
                                 </div>
-                                <ChevronDown size={10} strokeWidth={2.5} className="ml-0.5 flex-shrink-0" style={{ color: 'var(--muted-foreground)', opacity: 0.5 }} />
+                                <ChevronDown size={14} strokeWidth={1.75} aria-hidden="true" className="flex-shrink-0 text-muted-foreground" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44 mt-1">
-                            <DropdownMenuLabel className="text-[10px] font-medium uppercase tracking-[0.06em]">
+                            <DropdownMenuLabel className="text-xs font-medium">
                                 Account
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer text-[13px]">
-                                <User className="mr-2 h-3.5 w-3.5" />
+                            <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer text-sm">
+                                <User className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
                                 Profile
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                                 onClick={handleLogout}
-                                className="cursor-pointer text-[13px] text-destructive focus:text-destructive"
+                                className="cursor-pointer text-sm text-destructive focus:text-destructive"
                             >
-                                <LogOut className="mr-2 h-3.5 w-3.5" />
+                                <LogOut className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
                                 Sign out
                             </DropdownMenuItem>
                         </DropdownMenuContent>

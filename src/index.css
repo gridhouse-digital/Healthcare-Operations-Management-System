@@ -1,189 +1,108 @@
+/* Hallmark · shape: app screen · genre: modern-minimal · theme: Dusk (by request) · redesign: full
+ * nav: kept (top bar and grouped sidebar) · signature: the compliance ledger · states: loading, empty, error, full · dusk: none/periwinkle-apricot/well
+ * axes: dark/grotesk-sans/cool · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H3 E4 S4 R3 V4 · weakest: H, an app has no hero, so the ledger and the ruled tally carry the first screen */
+/* Hallmark · waive 49b · the login link wraps only at 320px · the request-access label is the owner wording and two lines stay legible on the narrowest phones */
+/* Dusk, as owned here: one muted red (--color-error) is kept for expired compliance and destructive actions; the theme itself bans a third signal */
+/* Hallmark · dropped onMouseEnter, onMouseLeave · the hover those handlers drew on StatsCard, ComplianceAlerts and the AI insight rows is gone or lives in CSS, nothing else read them */
+/* Hallmark · dropped onChange={(event) => updateDraft · the Training Rules switches moved into ToggleRow, each still calls updateDraft for its own field */
+/* Hallmark · dropped onBlur, onFocus, onClick={() => setTheme, onClick={() => setSelectedEmployee, onClick={(e) => { e.stopPropagation(); setSelec · the header search no longer animates its width, the theme buttons now share one setTheme(value) handler, and the employee rows also reset the drawer tab, each checked in the browser */
+/* Hallmark · dropped onValueChange={setFilterStatus} · the Employees status filter moved from a select to tabs that call setFilterStatus directly, checked in the browser */
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "./tokens.css";
+@import "./base.css" layer(base);
 
 @config "../tailwind.config.js";
 
-/* ─────────────────────────────────────────────────────────
-   PROLIFIC HR — "Dark Infrastructure" Design System
-   Inspired by: Supabase · Linear · Vercel Dashboard
-   Tone: data-dense · enterprise authority · AI-native · dark-first
-   Fonts: Inter (display + UI) + IBM Plex Mono (data/meta)
-   Accent: Electric cyan on deep zinc canvas
-───────────────────────────────────────────────────────── */
-
 @layer base {
     :root {
-        /* ── DARK MODE IS DEFAULT (Supabase-style) ── */
-        --background:          oklch(0.145 0 0);
-        --foreground:          oklch(0.985 0 0);
-        --card:                oklch(0.205 0 0);
-        --card-foreground:     oklch(0.985 0 0);
-        --popover:             oklch(0.205 0 0);
-        --popover-foreground:  oklch(0.985 0 0);
+        /* shadcn roles, read from Dusk's tokens */
+        --background:          var(--color-paper);
+        --foreground:          var(--color-ink);
+        --card:                var(--color-paper-2);
+        --card-foreground:     var(--color-ink);
+        --popover:             var(--color-paper-3);
+        --popover-foreground:  var(--color-ink);
 
-        /* ── Brand: electric cyan ── */
-        --primary:             oklch(0.62 0.11 152);
-        --primary-foreground:  oklch(0.18 0.01 152);
-        --primary-subtle:      oklch(0.26 0.028 152);
-        --primary-muted:       oklch(0.34 0.048 152);
-        --primary-glow:        oklch(0.62 0.11 152 / 0.16);
+        --primary:             var(--color-signal);
+        --primary-foreground:  var(--color-accent-ink);
+        --primary-subtle:      color-mix(in oklab, var(--color-signal) 12%, transparent);
+        --primary-muted:       color-mix(in oklab, var(--color-signal) 22%, transparent);
+        --primary-glow:        color-mix(in oklab, var(--color-signal) 14%, transparent);
 
-        /* ── Functional palette ── */
-        --secondary:           oklch(0.24 0.004 230);
-        --secondary-foreground: oklch(0.92 0 0);
-        --muted:               oklch(0.22 0.003 230);
-        --muted-foreground:    oklch(0.72 0.003 230);
-        --accent:              oklch(0.29 0.006 230);
-        --accent-foreground:   oklch(0.985 0 0);
+        --secondary:           var(--color-paper-3);
+        --secondary-foreground: var(--color-ink-2);
+        --muted:               var(--color-paper-2);
+        --muted-foreground:    var(--color-ink-3);
+        --accent:              var(--color-paper-3);
+        --accent-foreground:   var(--color-ink);
 
-        /* ── Severity system ── */
-        --severity-critical:   oklch(0.704 0.191 22.216);
-        --severity-high:       oklch(0.69 0.165 55);
-        --severity-medium:     oklch(0.78 0.16 92);
-        --severity-low:        oklch(0.696 0.17 162.48);
-        --severity-ok:         oklch(0.696 0.17 162.48);
+        /* Two signals, two jobs, and one red the owner kept for what cannot wait */
+        --severity-critical:   var(--color-error);
+        --severity-high:       var(--color-accent-2);
+        --severity-medium:     var(--color-accent-2);
+        --severity-low:        var(--color-signal);
+        --severity-ok:         var(--color-signal);
 
-        /* ── AI surface ── */
-        --ai-surface:          oklch(0.24 0.015 152);
-        --ai-border:           oklch(0.34 0.032 152);
-        --ai-text:             oklch(0.84 0.07 152);
-        --ai-pulse:            oklch(0.62 0.11 152);
-        --ai-glow:             oklch(0.62 0.11 152 / 0.12);
+        --ai-surface:          var(--color-paper-2);
+        --ai-border:           var(--color-rule);
+        --ai-text:             var(--color-signal);
+        --ai-pulse:            var(--color-signal);
+        --ai-glow:             color-mix(in oklab, var(--color-signal) 10%, transparent);
 
-        /* ── Destructive ── */
-        --destructive:         oklch(0.704 0.191 22.216);
-        --destructive-foreground: oklch(0.985 0 0);
+        --destructive:         var(--color-error);
+        --destructive-foreground: var(--color-accent-ink);
 
-        /* ── Structure ── */
-        --border:              oklch(1 0 0 / 8%);
-        --border-strong:       oklch(1 0 0 / 14%);
-        --input:               oklch(1 0 0 / 12%);
-        --ring:                oklch(0.62 0.06 152);
-        --radius:              0.875rem;
+        --border:              var(--color-rule);
+        --border-strong:       color-mix(in oklab, var(--color-ink-3) 50%, var(--color-rule));
+        --input:               color-mix(in oklab, var(--color-ink-3) 78%, var(--background));
+        --ring:                var(--color-focus);
+        --radius:              10px;
 
-        /* ── Charts ── */
-        --chart-1:  oklch(0.845 0.143 164.978);
-        --chart-2:  oklch(0.696 0.17 162.48);
-        --chart-3:  oklch(0.596 0.145 163.225);
-        --chart-4:  oklch(0.78 0.16 92);
-        --chart-5:  oklch(0.508 0.118 165.612);
+        --chart-1:  var(--color-signal);
+        --chart-2:  var(--color-accent-hi);
+        --chart-3:  var(--color-signal);
+        --chart-4:  var(--color-accent-2);
+        --chart-5:  var(--color-ink-3);
 
-        /* ── Sidebar — deepest surface (match page background in dark mode) ── */
-        --sidebar:              var(--background);
-        --sidebar-foreground:   oklch(0.82 0.003 230);
-        --sidebar-primary:      var(--primary);
-        --sidebar-primary-foreground: var(--primary-foreground);
-        --sidebar-accent:       oklch(0.24 0.005 230);
-        --sidebar-accent-foreground: oklch(0.96 0 0);
-        --sidebar-border:       oklch(1 0 0 / 8%);
-        --sidebar-ring:         var(--ring);
+        --sidebar:              var(--color-shade);
+        --sidebar-foreground:   var(--color-ink-2);
+        --sidebar-primary:      var(--color-signal);
+        --sidebar-primary-foreground: var(--color-accent-ink);
+        --sidebar-accent:       var(--color-paper-2);
+        --sidebar-accent-foreground: var(--color-ink);
+        --sidebar-border:       var(--color-rule);
+        --sidebar-ring:         var(--color-focus);
 
-        /* ── Sidebar widths ── */
         --sidebar-width:         248px;
         --sidebar-width-collapsed: 56px;
 
-        /* ── Typography ── */
-        --font-sans:     'Inter', system-ui, sans-serif;
-        --font-display:  'Inter', system-ui, sans-serif;
-        --font-mono:     'IBM Plex Mono', 'Fira Code', monospace;
+        --font-sans:     var(--font-body);
+        --font-code:     ui-monospace, "Cascadia Code", Consolas, monospace;
 
-        /* ── Shadows — deep, directional ── */
-        --shadow-2xs: 0 1px 2px hsl(0 0% 0% / 0.22);
-        --shadow-xs:  0 1px 3px hsl(0 0% 0% / 0.30), 0 1px 2px hsl(0 0% 0% / 0.18);
-        --shadow-sm:  0 2px 4px hsl(0 0% 0% / 0.34), 0 1px 2px hsl(0 0% 0% / 0.20);
-        --shadow:     0 4px 8px hsl(0 0% 0% / 0.38), 0 2px 4px hsl(0 0% 0% / 0.22);
-        --shadow-md:  0 6px 16px hsl(0 0% 0% / 0.44), 0 2px 6px hsl(0 0% 0% / 0.26);
-        --shadow-lg:  0 12px 24px hsl(0 0% 0% / 0.48), 0 4px 8px hsl(0 0% 0% / 0.28);
-        --shadow-xl:  0 20px 40px hsl(0 0% 0% / 0.54), 0 8px 16px hsl(0 0% 0% / 0.32);
-        --shadow-2xl: 0 32px 64px hsl(0 0% 0% / 0.64);
+        --tint:          oklch(100% 0 0);
+        --lit-edge:      inset 0 1px 0 oklch(100% 0 0 / 0.06);
 
-        /* ── Spacing ── */
+        --shadow-2xs: 0 1px 2px oklch(8% 0.02 268 / 0.22);
+        --shadow-xs:  0 1px 3px oklch(8% 0.02 268 / 0.30);
+        --shadow-sm:  0 2px 4px oklch(8% 0.02 268 / 0.34);
+        --shadow:     0 4px 8px oklch(8% 0.02 268 / 0.38);
+        --shadow-md:  0 6px 16px oklch(8% 0.02 268 / 0.44);
+        --shadow-lg:  0 12px 24px oklch(8% 0.02 268 / 0.48);
+        --shadow-xl:  0 20px 40px oklch(8% 0.02 268 / 0.54);
+        --shadow-2xl: 0 40px 80px -32px oklch(8% 0.02 268 / 0.7);
+
         --spacing: 0.25rem;
 
-        /* ── Type scale ── */
-        --text-xs:   0.75rem;
-        --text-sm:   0.875rem;
         --text-base: 0.9375rem;
-        --text-lg:   1.125rem;
-        --text-xl:   1.25rem;
-        --text-2xl:  1.5rem;
-        --text-3xl:  1.875rem;
         --text-4xl:  2.25rem;
-
         --tracking-normal: -0.012em;
         --tracking-tight:  -0.028em;
         --tracking-caps:    0.08em;
     }
-
-    .light {
-        /* ── Light mode — refined off-white (Supabase-style) ── */
-        --background:          oklch(1 0 0);
-        --foreground:          oklch(0.145 0 0);
-        --card:                oklch(1 0 0);
-        --card-foreground:     oklch(0.145 0 0);
-        --popover:             oklch(1 0 0);
-        --popover-foreground:  oklch(0.145 0 0);
-
-        --primary:             oklch(0.58 0.1 152);
-        --primary-foreground:  oklch(0.99 0 0);
-        --primary-subtle:      oklch(0.95 0.02 152);
-        --primary-muted:       oklch(0.9 0.035 152);
-        --primary-glow:        oklch(0.58 0.1 152 / 0.10);
-
-        --secondary:           oklch(0.96 0.003 230);
-        --secondary-foreground: oklch(0.28 0.005 230);
-        --muted:               oklch(0.975 0.002 230);
-        --muted-foreground:    oklch(0.52 0.006 230);
-        --accent:              oklch(0.955 0.004 230);
-        --accent-foreground:   oklch(0.205 0 0);
-
-        --severity-critical:   oklch(0.58 0.22 27);
-        --severity-high:       oklch(0.64 0.18 55);
-        --severity-medium:     oklch(0.76 0.16 92);
-        --severity-low:        oklch(0.596 0.145 163.225);
-        --severity-ok:         oklch(0.596 0.145 163.225);
-
-        --ai-surface:          oklch(0.97 0.012 152);
-        --ai-border:           oklch(0.9 0.03 152);
-        --ai-text:             oklch(0.4 0.06 152);
-        --ai-pulse:            var(--primary);
-        --ai-glow:             oklch(0.58 0.1 152 / 0.08);
-
-        --destructive:         oklch(0.58 0.22 27);
-        --destructive-foreground: oklch(0.985 0 0);
-
-        --border:              oklch(0.922 0 0);
-        --border-strong:       oklch(0.85 0 0);
-        --input:               oklch(0.922 0 0);
-        --ring:                oklch(0.58 0.06 152);
-
-        --chart-1:  oklch(0.845 0.143 164.978);
-        --chart-2:  oklch(0.696 0.17 162.48);
-        --chart-3:  oklch(0.596 0.145 163.225);
-        --chart-4:  oklch(0.508 0.118 165.612);
-        --chart-5:  oklch(0.432 0.095 166.913);
-
-        --sidebar:              oklch(0.985 0.002 230);
-        --sidebar-foreground:   oklch(0.34 0.006 230);
-        --sidebar-primary:      var(--primary);
-        --sidebar-primary-foreground: var(--primary-foreground);
-        --sidebar-accent:       oklch(0.95 0.004 230);
-        --sidebar-accent-foreground: oklch(0.22 0.004 230);
-        --sidebar-border:       oklch(0.92 0.003 230);
-        --sidebar-ring:         var(--ring);
-
-        --shadow-2xs: 0 1px 2px hsl(0 0% 0% / 0.04);
-        --shadow-xs:  0 1px 3px hsl(0 0% 0% / 0.06), 0 1px 2px hsl(0 0% 0% / 0.04);
-        --shadow-sm:  0 2px 4px hsl(0 0% 0% / 0.07), 0 1px 2px hsl(0 0% 0% / 0.04);
-        --shadow:     0 4px 8px hsl(0 0% 0% / 0.08), 0 2px 4px hsl(0 0% 0% / 0.04);
-        --shadow-md:  0 6px 16px hsl(0 0% 0% / 0.10), 0 2px 6px hsl(0 0% 0% / 0.05);
-        --shadow-lg:  0 12px 24px hsl(0 0% 0% / 0.12), 0 4px 8px hsl(0 0% 0% / 0.06);
-        --shadow-xl:  0 20px 40px hsl(0 0% 0% / 0.14), 0 8px 16px hsl(0 0% 0% / 0.08);
-        --shadow-2xl: 0 32px 64px hsl(0 0% 0% / 0.20);
-    }
 }
 
-/* ── Tailwind theme bridge ── */
+/* Tailwind bridge: shadcn's names stay as the app's utility vocabulary */
 @theme inline {
     --color-background:  var(--background);
     --color-foreground:  var(--foreground);
@@ -218,96 +137,45 @@
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
 
-    --font-sans:    var(--font-sans);
-    --font-display: var(--font-display);
-    --font-mono:    var(--font-mono);
+    --font-sans:    var(--font-body);
+    --font-mono:    var(--font-body);
 
-    --radius-sm: calc(var(--radius) - 1px);
+    --radius-sm: calc(var(--radius) - 2px);
     --radius-md: var(--radius);
-    --radius-lg: calc(var(--radius) + 2px);
-    --radius-xl: calc(var(--radius) + 6px);
-
-    --shadow-2xs: var(--shadow-2xs);
-    --shadow-xs:  var(--shadow-xs);
-    --shadow-sm:  var(--shadow-sm);
-    --shadow:     var(--shadow);
-    --shadow-md:  var(--shadow-md);
-    --shadow-lg:  var(--shadow-lg);
-    --shadow-xl:  var(--shadow-xl);
-    --shadow-2xl: var(--shadow-2xl);
+    --radius-lg: var(--radius-card);
+    --radius-xl: var(--radius-card);
 }
 
-/* ── Base resets ── */
 @layer base {
     * { @apply border-border; }
 
-    html {
-        scroll-behavior: smooth;
-        /* Prevent content shift when sidebar transitions */
-        overflow-x: hidden;
-    }
+    html { scroll-behavior: smooth; }
 
     body {
-        font-family: var(--font-sans);
         @apply bg-background text-foreground;
-        -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        letter-spacing: var(--tracking-normal);
-        font-size: var(--text-base);
         font-weight: 400;
     }
 
     .font-display { font-family: var(--font-display); }
-    .font-mono    { font-family: var(--font-mono); }
-
-    /* H1 */
-    h1 {
-        font-family: var(--font-display);
-        font-size: 1.95rem;
-        font-weight: 750;
-        letter-spacing: -0.034em;
-        line-height: 1.02;
-    }
-
-    /* H2 */
-    h2 {
-        font-family: var(--font-sans);
-        font-size: 1.0625rem;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-        color: var(--foreground);
-        line-height: 1.2;
-    }
-
-    /* H3 */
-    h3 {
-        font-family: var(--font-sans);
-        font-size: 1rem;
-        font-weight: 600;
-        letter-spacing: -0.018em;
-        line-height: 1.3;
-    }
+    /* Every old mono label reads in the body face; figures stay aligned */
+    .font-mono    { font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+    .font-code    { font-family: var(--font-code); }
 
     p {
         font-size: var(--text-sm);
-        font-weight: 400;
-        line-height: 1.65;
+        line-height: 1.55;
         color: var(--muted-foreground);
     }
 
-    /* Scrollbar — refined, minimal */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    button:active:not(:disabled), a:active { transform: translateY(1px); }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb {
-        background: var(--border-strong);
-        border-radius: 99px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--muted-foreground);
-    }
+    ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--radius-pill); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 }
 
-/* ── Animations ── */
 @layer utilities {
     @keyframes reveal-up {
         from { opacity: 0; transform: translateY(8px); }
@@ -329,42 +197,23 @@
         0%   { background-position: -200% center; }
         100% { background-position: 200% center; }
     }
-    @keyframes progress-fill {
-        from { width: 0%; }
-        to   { width: var(--progress-width, 0%); }
-    }
-    @keyframes sidebar-collapse {
-        from { width: var(--sidebar-width); }
-        to   { width: var(--sidebar-width-collapsed); }
-    }
-    @keyframes sidebar-expand {
-        from { width: var(--sidebar-width-collapsed); }
-        to   { width: var(--sidebar-width); }
-    }
     @keyframes dot-ping {
         0%   { transform: scale(1); opacity: 1; }
         75%, 100% { transform: scale(2.2); opacity: 0; }
     }
 
-    .animate-reveal-up    { animation: reveal-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    .animate-reveal-right { animation: reveal-right 0.24s cubic-bezier(0.22, 1, 0.36, 1) both; }
-    .animate-fade-in      { animation: fade-in 0.20s ease both; }
+    .animate-reveal-up    { animation: reveal-up var(--dur-short) var(--ease-out) backwards; }
+    .animate-reveal-right { animation: reveal-right var(--dur-short) var(--ease-out) backwards; }
+    .animate-fade-in      { animation: fade-in var(--dur-short) ease backwards; }
     .animate-ai-pulse     { animation: ai-pulse 2.4s ease-in-out infinite; }
-    .animate-dot-ping     { animation: dot-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
+    .animate-dot-ping     { animation: dot-ping 1.6s var(--ease-out) infinite; }
 
-    /* AI shimmer loading state */
     .ai-shimmer {
-        background: linear-gradient(
-            90deg,
-            var(--ai-surface) 0%,
-            var(--ai-border) 50%,
-            var(--ai-surface) 100%
-        );
+        background: linear-gradient(90deg, var(--color-paper-2) 0%, var(--color-paper-3) 50%, var(--color-paper-2) 100%);
         background-size: 200% auto;
         animation: ai-shimmer 1.8s linear infinite;
     }
 
-    /* Stagger delays */
     .delay-0   { animation-delay: 0ms; }
     .delay-50  { animation-delay: 50ms; }
     .delay-100 { animation-delay: 100ms; }
@@ -377,224 +226,191 @@
     .delay-450 { animation-delay: 450ms; }
     .delay-500 { animation-delay: 500ms; }
 
-    /* ── Severity left-border system ── */
+    /* A status mark on a row: a hairline of the signal, never a filled band */
     .severity-critical { border-left: 2px solid var(--severity-critical); }
     .severity-high     { border-left: 2px solid var(--severity-high); }
     .severity-medium   { border-left: 2px solid var(--severity-medium); }
     .severity-low      { border-left: 2px solid var(--severity-low); }
     .severity-ok       { border-left: 2px solid var(--severity-ok); }
 
-    /* ── AI tag — mono precision label ── */
     .ai-tag {
         display: inline-flex;
         align-items: center;
-        gap: 3px;
-        font-family: var(--font-mono);
-        font-size: 0.5625rem;         /* 9px */
+        gap: var(--space-2xs);
+        font-family: var(--font-body);
+        font-size: var(--text-xs);
         font-weight: 500;
-        letter-spacing: 0.10em;
-        text-transform: uppercase;
         color: var(--ai-text);
-        background: var(--ai-surface);
-        border: 1px solid var(--ai-border);
-        padding: 2px 5px;
-        border-radius: 2px;
+        background: color-mix(in oklab, var(--color-signal) 12%, transparent);
+        padding: var(--space-3xs) var(--space-xs);
+        border-radius: var(--radius-pill);
         line-height: 1.4;
     }
 
-    /* ── Zone section label ── */
     .zone-label {
-        font-family: var(--font-sans);
-        font-size: 0.73rem;
-        font-weight: 600;
-        letter-spacing: 0.01em;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
         color: var(--muted-foreground);
-        opacity: 0.82;
         user-select: none;
     }
 
-    /* ── Data value (display numbers) ── */
+    /* A heading that sorts its column */
+    .sort-header {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2xs);
+        min-height: 24px;
+        border-radius: var(--radius-sm);
+        color: var(--muted-foreground);
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .sort-header .zone-label {
+        color: inherit;
+        cursor: pointer;
+    }
+    .sort-header:hover,
+    .sort-header-active {
+        color: var(--foreground);
+    }
+
     .data-value {
         font-family: var(--font-display);
-        font-weight: 700;
-        letter-spacing: -0.02em;
+        font-weight: var(--display-weight);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: var(--tracking-display);
         line-height: 1;
     }
 
-    /* ── AI content surface ── */
     .ai-surface {
         background: var(--ai-surface);
-        border: 1px solid var(--ai-border);
-        border-radius: var(--radius);
+        border-radius: var(--radius-card);
+        box-shadow: var(--lit-edge);
         position: relative;
         overflow: hidden;
     }
-    .ai-surface::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 2px;
-        background: linear-gradient(90deg, var(--ai-pulse), transparent);
-        opacity: 0.6;
-    }
 
-    /* ── Sidebar transition classes ── */
-    .sidebar-transition {
-        transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .content-transition {
-        transition: margin-left 220ms cubic-bezier(0.4, 0, 0.2, 1);
-    }
+    .sidebar-transition { transition: none; }
+    .content-transition { transition: none; }
 
-    /* ── Focus ring ── */
     .focus-ring:focus-visible {
-        outline: 2px solid var(--primary);
+        outline: 2px solid var(--color-focus);
         outline-offset: 2px;
     }
 
-    /* ── Interactive table row ── */
     .table-row-interactive {
-        transition: background-color 60ms ease;
+        transition: background-color var(--dur-micro) ease;
         cursor: pointer;
     }
     .table-row-interactive:hover {
-        background-color: var(--secondary);
+        background-color: color-mix(in oklab, var(--tint) 4%, transparent);
     }
 
-    /* ── Metric block ── */
+    /* A figure and its label, one cell of a ruled tally */
     .metric-block {
         position: relative;
-        padding: 1rem 1.25rem;
-        background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: calc(var(--radius) + 2px);
-        overflow: hidden;
-    }
-    .metric-block::after {
-        content: '';
-        position: absolute;
-        bottom: 0; left: 0; right: 0;
-        height: 1px;
-        background: linear-gradient(90deg, var(--primary) 0%, transparent 100%);
-        opacity: 0;
-        transition: opacity 150ms ease;
-    }
-    .metric-block:hover::after {
-        opacity: 0.4;
+        padding: var(--space-md) var(--space-lg);
+        color: var(--foreground);
     }
 
-    /* ── Tooltip (sidebar collapsed state) ── */
     .sidebar-tooltip {
         position: absolute;
         left: calc(var(--sidebar-width-collapsed) + 8px);
         top: 50%;
         transform: translateY(-50%);
-        background: var(--card);
-        border: 1px solid var(--border);
-        color: var(--foreground);
-        font-family: var(--font-sans);
-        font-size: 0.75rem;
+        background: var(--popover);
+        color: var(--popover-foreground);
+        font-family: var(--font-body);
+        font-size: var(--text-xs);
         font-weight: 500;
         white-space: nowrap;
-        padding: 5px 10px;
-        border-radius: var(--radius);
+        padding: var(--space-2xs) var(--space-sm);
+        border-radius: var(--radius-inner);
         pointer-events: none;
         opacity: 0;
-        transition: opacity 120ms ease;
-        z-index: 100;
+        transition: opacity var(--dur-micro) ease;
+        z-index: var(--z-tooltip);
         box-shadow: var(--shadow-md);
     }
-    .sidebar-nav-item:hover .sidebar-tooltip {
-        opacity: 1;
-    }
+    .sidebar-nav-item:hover .sidebar-tooltip { opacity: 1; }
 
-    /* ── Page header block ── */
     .page-header-title {
         font-family: var(--font-display);
-        font-size: 2.1rem;
-        font-weight: 750;
-        letter-spacing: -0.04em;
-        line-height: 1;
+        font-size: var(--text-3xl);
+        font-weight: var(--display-weight);
+        letter-spacing: var(--tracking-display);
+        line-height: 1.1;
         color: var(--foreground);
     }
     .page-header-meta {
-        font-family: var(--font-sans);
-        font-size: 0.8rem;
-        letter-spacing: 0.005em;
+        font-family: var(--font-body);
+        font-size: var(--text-sm);
         color: var(--muted-foreground);
-        opacity: 0.8;
-        margin-top: 0.35rem;
+        margin-top: var(--space-2xs);
     }
 
-    /* ── Status chip system ── */
+    /* Status words: periwinkle is done, apricot is open, red cannot wait */
     .status-chip {
         display: inline-flex;
         align-items: center;
-        height: 22px;
-        padding: 0 9px;
-        border-radius: 999px;
-        font-family: var(--font-sans);
-        font-size: 0.6875rem;
-        font-weight: 600;
-        letter-spacing: 0.01em;
-        border: 1px solid transparent;
+        min-height: 24px;
+        padding: 0 var(--space-sm);
+        border-radius: var(--radius-pill);
+        font-family: var(--font-body);
+        font-size: var(--text-xs);
+        font-weight: 500;
         white-space: nowrap;
         user-select: none;
     }
-    .status-chip-green {
-        background: hsl(152 58% 38% / 0.08);
-        color: hsl(152 50% 30%);
-        border-color: hsl(152 58% 38% / 0.20);
-    }
-    .dark .status-chip-green {
-        color: hsl(152 54% 52%);
-    }
-    .status-chip-red {
-        background: hsl(4 82% 52% / 0.08);
-        color: hsl(4 70% 44%);
-        border-color: hsl(4 82% 52% / 0.20);
-    }
-    .dark .status-chip-red {
-        color: hsl(4 76% 60%);
+    .status-chip-green,
+    .status-chip-cyan {
+        background: color-mix(in oklab, var(--color-signal) 14%, transparent);
+        color: var(--color-signal);
     }
     .status-chip-amber {
-        background: hsl(38 96% 48% / 0.08);
-        color: hsl(38 74% 36%);
-        border-color: hsl(38 96% 48% / 0.20);
+        background: color-mix(in oklab, var(--color-accent-2) 14%, transparent);
+        color: var(--color-accent-2);
     }
-    .dark .status-chip-amber {
-        color: hsl(38 90% 56%);
-    }
-    .status-chip-cyan {
-        background: color-mix(in srgb, var(--primary) 12%, transparent);
-        color: color-mix(in srgb, var(--primary) 72%, black 28%);
-        border-color: color-mix(in srgb, var(--primary) 22%, transparent);
-    }
-    .dark .status-chip-cyan {
-        color: color-mix(in srgb, var(--primary) 88%, white 12%);
+    .status-chip-red {
+        background: color-mix(in oklab, var(--color-error) 14%, transparent);
+        color: var(--color-error);
     }
     .status-chip-muted {
-        background: var(--muted);
+        background: color-mix(in oklab, var(--tint) 6%, transparent);
         color: var(--muted-foreground);
-        border-color: var(--border);
     }
 
-    /* ── Card panel (content section) ── */
-    .panel {
+    .panel,
+    .saas-card {
         background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        overflow: hidden;
+        border-radius: var(--radius-card);
+        box-shadow: var(--lit-edge);
     }
+    .panel { overflow: hidden; }
     .panel-header {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.875rem 1.25rem;
+        gap: var(--space-xs);
+        padding: var(--space-md) var(--space-lg);
         border-bottom: 1px solid var(--border);
     }
 
-    /* ── AI generating state ── */
+    /* A bone well: the one light surface, for what the product hands to a person */
+    .well {
+        background: var(--color-well);
+        color: var(--color-well-ink);
+        border-radius: var(--radius-card);
+        padding: var(--space-lg);
+    }
+    .well-card {
+        background: var(--color-well-card);
+        color: var(--color-well-ink);
+        border-radius: var(--radius-inner);
+    }
+    .well p { color: var(--color-well-muted); }
+    .well-card p { color: var(--color-well-ink); }
+
     .ai-generating {
         position: relative;
         overflow: hidden;
@@ -603,65 +419,56 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: linear-gradient(
-            90deg,
-            transparent 0%,
-            color-mix(in srgb, var(--primary) 18%, transparent) 50%,
-            transparent 100%
-        );
+        background: linear-gradient(90deg, transparent 0%, color-mix(in oklab, var(--color-signal) 14%, transparent) 50%, transparent 100%);
         background-size: 200% 100%;
         animation: ai-shimmer 1.6s ease-in-out infinite;
     }
 
-    /* ── Empty state ── */
     .empty-state {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 4rem 1rem;
+        padding: var(--space-2xl) var(--space-md);
         text-align: center;
-        gap: 0.5rem;
+        gap: var(--space-xs);
     }
     .empty-state-icon {
         color: var(--muted-foreground);
-        opacity: 0.2;
-        margin-bottom: 0.5rem;
+        margin-bottom: var(--space-xs);
     }
     .empty-state-title {
         font-size: var(--text-sm);
         font-weight: 500;
-        color: var(--muted-foreground);
+        color: var(--color-ink-2);
     }
     .empty-state-hint {
-        font-family: var(--font-mono);
-        font-size: 0.6875rem;
+        font-size: var(--text-xs);
         color: var(--muted-foreground);
-        opacity: 0.5;
     }
 
-    /* ── Table system ── */
     .data-table {
         width: 100%;
         border-collapse: collapse;
     }
     .data-table th {
-        padding: 0.625rem 1rem;
+        padding: var(--space-sm) var(--space-md);
         text-align: left;
+        font-size: var(--text-xs);
+        font-weight: 500;
+        color: var(--muted-foreground);
+        white-space: nowrap;
     }
-    .data-table td {
-        padding: 0.75rem 1rem;
-    }
+    .data-table td { padding: var(--space-sm) var(--space-md); }
     .data-table tbody tr {
-        border-top: 1px solid hsl(var(--border) / 0.6);
-        transition: background-color 60ms ease;
+        border-top: 1px solid var(--border);
+        transition: background-color var(--dur-micro) ease;
         cursor: pointer;
     }
     .data-table tbody tr:hover {
-        background-color: hsl(var(--primary) / 0.02);
+        background-color: color-mix(in oklab, var(--tint) 4%, transparent);
     }
 
-    /* ── Input with prefix icon ── */
     .input-with-icon {
         position: relative;
         display: flex;
@@ -669,50 +476,38 @@
     }
     .input-with-icon .input-icon {
         position: absolute;
-        left: 0.625rem;
+        left: var(--space-sm);
         color: var(--muted-foreground);
-        opacity: 0.4;
         pointer-events: none;
     }
-    .input-with-icon input {
-        padding-left: 2rem;
-    }
+    .input-with-icon input { padding-left: var(--space-xl); }
 
-    /* ── Kbd shortcut ── */
     kbd {
-        font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-family: var(--font-body);
+        font-size: var(--text-xs);
         background: var(--secondary);
-        border: 1px solid var(--border);
-        border-radius: 3px;
-        padding: 1px 5px;
+        border-radius: var(--space-2xs);
+        padding: var(--space-3xs) var(--space-2xs);
         color: var(--muted-foreground);
-        letter-spacing: 0.04em;
     }
 
-    /* ── Notification dot ── */
     .notif-dot {
         position: absolute;
-        top: 5px;
-        right: 5px;
-        width: 6px;
-        height: 6px;
+        top: 4px;
+        right: 4px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
-        background: var(--severity-critical);
-        border: 1.5px solid var(--background);
+        background: var(--severity-medium);
+        border: 2px solid var(--background);
     }
 
-    /* ── Divider with label ── */
     .divider-label {
         display: flex;
         align-items: center;
-        gap: 0.75rem;
-        font-family: var(--font-mono);
+        gap: var(--space-sm);
         font-size: var(--text-xs);
-        text-transform: uppercase;
-        letter-spacing: var(--tracking-caps);
         color: var(--muted-foreground);
-        opacity: 0.4;
     }
     .divider-label::before,
     .divider-label::after {
@@ -722,9 +517,10 @@
         background: var(--border);
     }
 
-    /* ── Supabase-style tab bar ── */
+    /* Tabs are a ruled list with a dot, never boxed segments */
     .tab-bar {
         display: flex;
+        gap: var(--space-lg);
         border-bottom: 1px solid var(--border);
         overflow-x: auto;
         scrollbar-width: none;
@@ -734,13 +530,13 @@
         position: relative;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.875rem 1.25rem;
+        gap: var(--space-xs);
+        min-height: 44px;
+        padding: var(--space-sm) 0;
         font-size: var(--text-sm);
         font-weight: 500;
-        letter-spacing: -0.012em;
         white-space: nowrap;
-        transition: color 100ms ease;
+        transition: color var(--dur-micro) ease;
         color: var(--muted-foreground);
         cursor: pointer;
         background: none;
@@ -748,26 +544,23 @@
     }
     .tab-item:hover { color: var(--foreground); }
     .tab-item.active { color: var(--foreground); }
-    .tab-item.active::after {
+    .tab-item.active::before {
         content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: color-mix(in srgb, var(--primary) 88%, white 12%);
-        border-radius: 2px 2px 0 0;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--color-signal);
     }
     .tab-count {
-        font-family: var(--font-mono);
-        font-size: 0.625rem;
-        font-weight: 600;
-        padding: 1px 5px;
-        border-radius: 3px;
+        font-size: var(--text-xs);
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        padding: 0 var(--space-2xs);
+        border-radius: var(--space-2xs);
     }
     .tab-count-active {
-        background: hsl(var(--primary) / 0.1);
-        color: var(--primary);
+        background: color-mix(in oklab, var(--color-signal) 14%, transparent);
+        color: var(--color-signal);
     }
     .tab-count-inactive {
         background: var(--muted);
@@ -776,23 +569,18 @@
 
     .form-label {
         display: block;
-        font-family: var(--font-sans);
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: var(--muted-foreground);
-        margin-bottom: 0.45rem;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        color: var(--color-ink-2);
+        margin-bottom: var(--space-xs);
     }
 
     .meta-label {
-        font-family: var(--font-sans);
-        font-size: 0.72rem;
-        font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 500;
         color: var(--muted-foreground);
-        opacity: 0.82;
     }
 
     .auth-shell {
@@ -801,72 +589,203 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background:
-            radial-gradient(circle at top, color-mix(in srgb, var(--primary) 10%, transparent), transparent 42%),
-            linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, black 8%), var(--background));
+        background: var(--background);
     }
 
-    .auth-grid {
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background-image:
-            linear-gradient(color-mix(in srgb, var(--foreground) 4%, transparent) 1px, transparent 1px),
-            linear-gradient(90deg, color-mix(in srgb, var(--foreground) 4%, transparent) 1px, transparent 1px);
-        background-size: 48px 48px;
-        mask-image: radial-gradient(circle at center, black 30%, transparent 82%);
-    }
+    /* The old grid wash is gone; the node stays so no page's markup moves */
+    .auth-grid { display: none; }
 
     .auth-card {
-        background: color-mix(in srgb, var(--card) 92%, transparent);
-        border: 1px solid var(--border);
-        border-radius: calc(var(--radius) + 4px);
-        box-shadow: var(--shadow-xl);
-        backdrop-filter: blur(18px);
+        background: var(--card);
+        border-radius: var(--radius-card);
+        box-shadow: var(--lit-edge), var(--shadow-md);
         overflow: hidden;
     }
 
     .auth-title {
         font-family: var(--font-display);
-        font-size: 1.7rem;
-        font-weight: 750;
-        letter-spacing: -0.035em;
-        line-height: 1.05;
+        font-size: var(--text-2xl);
+        font-weight: var(--display-weight);
+        letter-spacing: var(--tracking-display);
+        line-height: 1.1;
         color: var(--foreground);
     }
 
     .auth-meta {
-        font-family: var(--font-sans);
-        font-size: 0.8rem;
-        letter-spacing: 0.01em;
+        font-family: var(--font-body);
+        font-size: var(--text-sm);
         color: var(--muted-foreground);
     }
 
     .saas-input {
         display: block;
         width: 100%;
-        height: 2.5rem;
-        padding: 0 0.875rem;
-        background: color-mix(in srgb, var(--background) 24%, var(--card) 76%);
-        border: 1px solid var(--border);
-        border-radius: calc(var(--radius) - 1px);
+        min-height: 40px;
+        padding: 0 var(--space-sm);
+        background: var(--color-paper);
+        border: 1px solid var(--input);
+        border-radius: var(--radius-inner);
         color: var(--foreground);
-        font-size: 0.875rem;
-        font-family: var(--font-sans);
-        letter-spacing: -0.01em;
-        outline: none;
-        transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+        font-size: var(--text-sm);
+        font-family: var(--font-body);
+        transition: background-color var(--dur-micro) ease;
     }
-
-    .saas-input:focus {
-        border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
-        box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+    textarea.saas-input { padding-block: var(--space-xs); }
+    .saas-input::placeholder { color: var(--muted-foreground); }
+    .saas-input:focus-visible {
+        outline: 2px solid var(--color-focus);
+        outline-offset: -1px;
     }
+    .saas-input:disabled { opacity: 0.55; cursor: not-allowed; }
+}
 
-    .saas-card {
-        background: var(--card);
+/* The ruled tally: Dusk's figures live in rows and rules, never a grid of tiles */
+@layer utilities {
+    .tally {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-block: 1px solid var(--border);
+    }
+    .tally-cell {
+        padding: var(--space-md) var(--space-md) var(--space-md) 0;
+        min-width: 0;
+    }
+    .tally-cell + .tally-cell {
+        padding-left: var(--space-md);
+        border-left: 1px solid var(--border);
+    }
+    @media (max-width: 40rem) {
+        .tally { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .tally-cell:nth-child(odd) { padding-left: 0; border-left: 0; }
+        .tally-cell:nth-child(n + 3) { border-top: 1px solid var(--border); }
+    }
+}
+
+@layer utilities {
+    @media (min-width: 60rem) { .tally-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+    @media (min-width: 40.01rem) and (max-width: 59.99rem) { .tally-6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+}
+
+@layer utilities {
+    @media (min-width: 40.01rem) {
+        .tally-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .tally-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+}
+
+/* Switches are periwinkle when on. Choice chips are a checkbox in a pill. */
+@layer utilities {
+    .switch {
+        appearance: none;
+        position: relative;
+        flex-shrink: 0;
+        width: 36px;
+        height: 20px;
+        margin: 0;
+        border-radius: var(--radius-pill);
+        background: color-mix(in oklab, var(--color-ink-3) 45%, transparent);
+        cursor: pointer;
+        transition: background-color var(--dur-micro) ease;
+    }
+    .switch::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--color-well-card);
+        transition: transform var(--dur-micro) var(--ease-out);
+    }
+    .switch:checked { background: var(--color-signal); }
+    .switch:checked::after { background: var(--color-accent-ink); transform: translateX(16px); }
+    .switch:hover { background: color-mix(in oklab, var(--color-ink-3) 65%, transparent); }
+    .switch:checked:hover { background: var(--color-accent-hi); }
+    .switch:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .choice-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 36px;
+        padding: 0 var(--space-md);
         border: 1px solid var(--border);
-        border-radius: calc(var(--radius) + 2px);
-        box-shadow: var(--shadow-sm);
+        border-radius: var(--radius-pill);
+        font-size: var(--text-sm);
+        color: var(--muted-foreground);
+        cursor: pointer;
+        transition: background-color var(--dur-micro) ease, color var(--dur-micro) ease;
+    }
+    .choice-chip:hover { color: var(--foreground); background: var(--secondary); }
+    .choice-chip:has(:checked) {
+        background: color-mix(in oklab, var(--color-signal) 14%, transparent);
+        border-color: color-mix(in oklab, var(--color-signal) 40%, transparent);
+        color: var(--color-signal);
+    }
+    .choice-chip:has(:focus-visible) {
+        outline: 2px solid var(--color-focus);
+        outline-offset: 2px;
+    }
+}
+
+/* A select wearing the field style keeps the field's height and aligns its label */
+@layer utilities {
+    button.saas-input {
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-xs);
+        text-align: left;
+    }
+}
+
+/* Native controls follow the theme */
+@layer base {
+    input[type="checkbox"]:not(.switch) { accent-color: var(--color-signal); width: 16px; height: 16px; }
+}
+
+/* Room for a leading search icon or a trailing eye, on any field */
+@layer utilities {
+    .saas-input.pl-9 { padding-left: 36px; }
+    .saas-input.pr-10 { padding-right: var(--space-xl); }
+}
+
+/* A field in the chrome: compact, and it keeps the 3:1 field edge */
+@layer utilities {
+    .saas-input-quiet {
+        min-height: 36px;
+    }
+}
+
+/* In light mode cards share the page colour, so the preview steps down a shade to stay visible */
+@layer utilities {
+    
+    .light .drawer-surface .well { background: var(--color-paper-3); }
+}
+
+/* Toasts come from a library with its own white and green; these give them the theme's surfaces in both modes */
+:root [data-sonner-toaster][data-sonner-theme] {
+    --normal-bg: var(--popover);
+    --normal-text: var(--popover-foreground);
+    --normal-border: var(--border);
+    --success-bg: var(--popover);
+    --success-text: var(--color-signal);
+    --success-border: var(--border);
+    --error-bg: var(--popover);
+    --error-text: var(--color-error);
+    --error-border: var(--border);
+    --warning-bg: var(--popover);
+    --warning-text: var(--color-accent-2);
+    --warning-border: var(--border);
+    --info-bg: var(--popover);
+    --info-text: var(--color-signal);
+    --info-border: var(--border);
+}
+
+/* Three figures stay on one row on a phone, so none is left alone */
+@layer utilities {
+    @media (max-width: 40rem) {
+        .tally-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .tally-3 .tally-cell:nth-child(3) { padding-left: var(--space-md); border-left: 1px solid var(--border); border-top: 0; }
     }
 }

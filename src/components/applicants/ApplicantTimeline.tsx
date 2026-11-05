@@ -25,7 +25,7 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
                 title: 'Application Submitted',
                 description: `${applicant.answers?.fullName?.first || 'Applicant'} submitted their application`,
                 status: 'completed',
-                icon: <FileText className="w-4 h-4" />
+                icon: <FileText className="w-4 h-4" aria-hidden="true" />
             });
         }
 
@@ -46,7 +46,7 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
                     title: 'All Documents Completed',
                     description: 'All required compliance documents submitted',
                     status: 'completed',
-                    icon: <CheckCircle className="w-4 h-4" />
+                    icon: <CheckCircle className="w-4 h-4" aria-hidden="true" />
                 });
             }
         }
@@ -58,7 +58,7 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
                 title: 'Interview Scheduled',
                 description: 'Candidate moved to interview stage',
                 status: 'completed',
-                icon: <UserCheck className="w-4 h-4" />
+                icon: <UserCheck className="w-4 h-4" aria-hidden="true" />
             });
         }
 
@@ -69,7 +69,7 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
                 title: 'Review Pending',
                 description: 'Application under review by HR team',
                 status: 'pending',
-                icon: <Clock className="w-4 h-4" />
+                icon: <Clock className="w-4 h-4" aria-hidden="true" />
             });
 
             events.push({
@@ -77,7 +77,7 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
                 title: 'Interview',
                 description: 'Schedule interview if qualified',
                 status: 'upcoming',
-                icon: <Calendar className="w-4 h-4" />
+                icon: <Calendar className="w-4 h-4" aria-hidden="true" />
             });
         }
 
@@ -87,9 +87,9 @@ export function ApplicantTimeline({ applicant }: ApplicantTimelineProps) {
     const timeline = buildTimeline();
 
     return (
-        <div className="rounded-[20px] border border-border/70 bg-card p-6">
-            <h3 className="mb-6 flex items-center gap-2 text-lg font-semibold text-foreground">
-                <Clock className="w-5 h-5 text-primary" />
+        <div className="rounded-xl border border-border/70 bg-card p-6">
+            <h3 className="mb-6 flex items-center gap-2 text-lg font-medium text-foreground">
+                <Clock className="w-5 h-5 text-primary" aria-hidden="true" />
                 Application Timeline
             </h3>
 
@@ -121,7 +121,7 @@ function TimelineItem({ event }: TimelineItemProps) {
             case 'completed':
                 return {
                     dot: 'bg-[var(--severity-low)] ring-[color-mix(in_srgb,var(--severity-low)_18%,transparent)]',
-                    icon: 'text-white',
+                    icon: 'text-primary-foreground',
                     title: 'text-foreground',
                     date: 'text-[var(--severity-low)]',
                     description: 'text-muted-foreground'
@@ -129,8 +129,8 @@ function TimelineItem({ event }: TimelineItemProps) {
             case 'pending':
                 return {
                     dot: 'bg-primary ring-primary/15 animate-pulse',
-                    icon: 'text-white',
-                    title: 'text-foreground font-semibold',
+                    icon: 'text-primary-foreground',
+                    title: 'text-foreground font-medium',
                     date: 'text-primary',
                     description: 'text-muted-foreground'
                 };
@@ -151,9 +151,9 @@ function TimelineItem({ event }: TimelineItemProps) {
         <div className="relative flex gap-4 group">
             {/* Status dot with icon */}
             <div className="relative flex-shrink-0">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ring-4 ${styles.dot} transition-all group-hover:scale-110`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ring-4 ${styles.dot} transition group-hover:scale-110`}>
                     <span className={styles.icon}>
-                        {event.icon || <CheckCircle className="w-4 h-4" />}
+                        {event.icon || <CheckCircle className="w-4 h-4" aria-hidden="true" />}
                     </span>
                 </div>
             </div>

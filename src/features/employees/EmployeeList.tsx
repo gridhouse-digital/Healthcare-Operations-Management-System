@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { PageSkeleton } from '@/components/shared/PageSkeleton';
 import { employeeService } from '@/services/employeeService';
 import type { Employee } from '@/types';
 import { format } from 'date-fns';
-import { Search, Mail, Phone, Calendar, Building, MoreHorizontal, BookOpen, Edit2, Save, X, Plus, ClipboardCheck, Users, ShieldCheck } from 'lucide-react';
-import { StatusBadge } from '@/components/shared/StatusBadge';
+import { Search, MoreHorizontal, Edit2, Save, X, Plus } from 'lucide-react';
+import { StatusBadge, type StatusTone } from '@/components/shared/StatusBadge';
 import { SlideOver } from '@/components/ui/SlideOver';
 import { OnboardingSummaryPanel } from '@/components/ai/OnboardingSummaryPanel';
 import { toast } from '@/hooks/useToast';
@@ -11,9 +12,32 @@ import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { AppSelect } from '@/components/ui/AppSelect';
 import { fetchAssignedGroupCourses } from '@/features/training/hooks/assignedGroupCourses';
+import { useTableSort, type SortColumn } from '@/hooks/useTableSort';
+import { SortableHeader } from '@/components/shared/SortableHeader';
 
-const inputCls = 'w-full px-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow';
-const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
+const inputCls = "saas-input";
+const labelCls = "form-label";
+
+/* Some hire dates are stored as a plain date at UTC midnight, others as a real
+   timestamp. The plain ones must not shift back a day in US time zones. */
+function formatHireDate(value: string) {
+    const date = new Date(value);
+    if (date.toISOString().endsWith('T00:00:00.000Z')) {
+        return format(new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()), 'MMM d, yyyy');
+    }
+    return format(date, 'MMM d, yyyy');
+}
+
+const SORT_COLUMNS = {
+    name: { value: (row) => `${row.first_name} ${row.last_name}` },
+    role: { value: (row) => row.job_title },
+    status: { value: (row) => row.employee_status || 'Active' },
+    source: { value: (row) => row.profile_source },
+    department: { value: (row) => row.department },
+    hired: { value: (row) => row.hired_at, kind: 'date' },
+} satisfies Record<string, SortColumn<Employee>>;
+
+const DEFAULT_SORT = { key: 'hired', direction: 'desc' } as const;
 
 interface TrainingRecord {
     id: string;
@@ -43,19 +67,31 @@ function recurringStatusLabel(status: RecurringComplianceRecord['compliance_stat
     }
 }
 
-function recurringStatusClass(status: RecurringComplianceRecord['compliance_status']) {
+function recurringTone(status: RecurringComplianceRecord['compliance_status']): StatusTone {
     switch (status) {
-        case 'completed':
-            return 'border-[color-mix(in_srgb,var(--severity-low)_25%,transparent)] bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)]';
-        case 'overdue':
-            return 'border-[hsl(4,82%,52%)]/25 bg-[hsl(4,82%,52%)]/10 text-[hsl(4,76%,60%)]';
-        case 'due':
-            return 'border-[color-mix(in_srgb,var(--primary)_25%,transparent)] bg-[color-mix(in_srgb,var(--primary)_10%,transparent)] text-primary';
-        case 'due_soon':
-            return 'border-[color-mix(in_srgb,var(--severity-medium)_25%,transparent)] bg-[color-mix(in_srgb,var(--severity-medium)_10%,transparent)] text-[var(--severity-medium)]';
-        case 'not_yet_due':
-            return 'border-border bg-muted/40 text-muted-foreground';
+        case 'completed': return 'done';
+        case 'overdue': return 'critical';
+        case 'due': return 'active';
+        case 'due_soon': return 'waiting';
+        case 'not_yet_due': return 'neutral';
     }
+}
+
+function trainingStatus(record: TrainingRecord): { label: string; tone: StatusTone } {
+    if (record.status === 'completed') return { label: 'Completed', tone: 'done' };
+    if (record.status === 'not_started') return { label: 'Not Started', tone: 'neutral' };
+    return { label: 'In Progress', tone: 'waiting' };
+}
+
+type DrawerTab = 'overview' | 'training' | 'compliance';
+
+function DetailRow({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div className="grid gap-1 py-3 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-4">
+            <dt className="text-sm text-muted-foreground">{label}</dt>
+            <dd className="min-w-0 break-words text-sm text-foreground">{children}</dd>
+        </div>
+    );
 }
 
 function isMissingSchema(error: unknown) {
@@ -85,10 +121,6 @@ function formatCalendarDate(value: string | null): string {
     return format(new Date(value), 'MMMM d, yyyy');
 }
 
-function normalizeCourseName(courseName: string): string {
-    return courseName.toUpperCase();
-}
-
 export function EmployeeList() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
@@ -99,11 +131,13 @@ export function EmployeeList() {
     const [recurringRecords, setRecurringRecords] = useState<RecurringComplianceRecord[]>([]);
     const [activeGroupIds, setActiveGroupIds] = useState<string[]>([]);
     const [loadingTraining, setLoadingTraining] = useState(false);
+    const [recurringState, setRecurringState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
     const [filterDept, setFilterDept] = useState('all');
 
+    const [drawerTab, setDrawerTab] = useState<DrawerTab>('overview');
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [editFormData, setEditFormData] = useState<Partial<Employee>>({});
@@ -111,15 +145,21 @@ export function EmployeeList() {
     useEffect(() => { loadEmployees(); }, []);
 
     useEffect(() => {
-        if (selectedEmployee) {
-            loadTrainingRecords(selectedEmployee.id);
-            loadRecurringCompliance(selectedEmployee.id);
-            loadActiveComplianceGroups(selectedEmployee.id);
-        } else {
+        if (!selectedEmployee) {
             setTrainingRecords([]);
             setRecurringRecords([]);
             setActiveGroupIds([]);
+            setLoadingTraining(false);
+            return;
         }
+
+        /* A slow response for the previous employee must not land on this one */
+        let active = true;
+        const isCurrent = () => active;
+        loadTrainingRecords(selectedEmployee.id, isCurrent);
+        loadRecurringCompliance(selectedEmployee.id, isCurrent);
+        loadActiveComplianceGroups(selectedEmployee.id, isCurrent);
+        return () => { active = false; };
     }, [selectedEmployee]);
 
     const loadEmployees = async () => {
@@ -134,7 +174,7 @@ export function EmployeeList() {
         }
     };
 
-    const loadTrainingRecords = async (personId: string) => {
+    const loadTrainingRecords = async (personId: string, isCurrent: () => boolean) => {
         setLoadingTraining(true);
         try {
             let activeQuery = await supabase
@@ -159,7 +199,7 @@ export function EmployeeList() {
                     progress_pct: row.completion_pct ?? 0,
                 }));
 
-                setTrainingRecords(normalized);
+                if (isCurrent()) setTrainingRecords(normalized);
 
                 return;
             }
@@ -193,15 +233,16 @@ export function EmployeeList() {
             const combinedRecords = [...normalized, ...assignedRecords]
                 .sort((a, b) => a.course_name.localeCompare(b.course_name));
 
-            setTrainingRecords(combinedRecords);
+            if (isCurrent()) setTrainingRecords(combinedRecords);
         } catch (err) {
             console.error('Failed to load training records', err);
         } finally {
-            setLoadingTraining(false);
+            if (isCurrent()) setLoadingTraining(false);
         }
     };
 
-    const loadRecurringCompliance = async (personId: string) => {
+    const loadRecurringCompliance = async (personId: string, isCurrent: () => boolean) => {
+        setRecurringState('loading');
         try {
             const { data, error: recurringErr } = await supabase
                 .from('v_recurring_compliance_status')
@@ -212,7 +253,10 @@ export function EmployeeList() {
             if (recurringErr) {
                 const message = recurringErr.message || '';
                 if (/relation .* does not exist/i.test(message) || /schema cache/i.test(message)) {
-                    setRecurringRecords([]);
+                    if (isCurrent()) {
+                        setRecurringRecords([]);
+                        setRecurringState('unavailable');
+                    }
                     return;
                 }
                 throw recurringErr;
@@ -225,14 +269,20 @@ export function EmployeeList() {
                 }
             }
 
-            setRecurringRecords(Array.from(latestByRule.values()));
+            if (isCurrent()) {
+                setRecurringRecords(Array.from(latestByRule.values()));
+                setRecurringState('ready');
+            }
         } catch (err) {
             console.error('Failed to load recurring compliance', err);
-            setRecurringRecords([]);
+            if (isCurrent()) {
+                setRecurringRecords([]);
+                setRecurringState('unavailable');
+            }
         }
     };
 
-    const loadActiveComplianceGroups = async (personId: string) => {
+    const loadActiveComplianceGroups = async (personId: string, isCurrent: () => boolean) => {
         try {
             const { data, error: groupsErr } = await supabase
                 .from('employee_group_enrollments')
@@ -243,12 +293,12 @@ export function EmployeeList() {
 
             if (groupsErr) throw groupsErr;
 
-            setActiveGroupIds(
-                Array.from(new Set((data || []).map((row) => row.group_id as string)))
-            );
+            if (isCurrent()) {
+                setActiveGroupIds(Array.from(new Set((data || []).map((row) => row.group_id as string))));
+            }
         } catch (err) {
             console.error('Failed to load active compliance groups', err);
-            setActiveGroupIds([]);
+            if (isCurrent()) setActiveGroupIds([]);
         }
     };
 
@@ -298,43 +348,69 @@ export function EmployeeList() {
             employee.email.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesStatus && matchesDept && matchesSearch;
     });
+    const { sortedRows: sortedEmployees, sortProps } = useTableSort(filteredEmployees, SORT_COLUMNS, DEFAULT_SORT);
 
     if (loading) return (
-        <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-muted-foreground">Loading employees…</span>
-        </div>
+        <PageSkeleton rows={8} label="Loading employees" />
     );
     if (error) return (
         <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-destructive">{error}</span>
+            <span className="text-sm text-destructive">{error}</span>
         </div>
     );
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-6">
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pl-1">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div>
                     <h1 className="page-header-title">Employees</h1>
-                    <p className="page-header-meta">{employees.length} team members</p>
+                    <p className="page-header-meta tabular-nums">{employees.length} team members</p>
                 </div>
-                <Button size="sm" className="whitespace-nowrap">
-                    <Plus size={14} strokeWidth={2.5} />
+                <Button className="w-full whitespace-nowrap sm:w-auto">
+                    <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
                     Add Employee
                 </Button>
             </div>
 
-            {/* Filters & Search */}
-            <div className="bg-card border border-border rounded-lg p-3">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                    <div className="md:col-span-2 relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} strokeWidth={2} />
+            <div>
+                {/* Status as a ruled list, the same as Applicants */}
+                <div className="tab-bar" aria-label="Filter by status">
+                    {[
+                        { value: 'all', label: 'All Statuses', count: employees.length },
+                        ...['Active', 'Onboarding', 'Terminated'].map((status) => ({
+                            value: status,
+                            label: status,
+                            count: employees.filter((employee) => (employee.employee_status || 'Active') === status).length,
+                        })),
+                    ].map((tab) => {
+                        const active = filterStatus === tab.value;
+                        return (
+                            <button
+                                key={tab.value}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => setFilterStatus(tab.value)}
+                                className={`tab-item${active ? ' active' : ''}`}
+                            >
+                                {tab.label}
+                                <span className={`tab-count ${active ? 'tab-count-active' : 'tab-count-inactive'}`}>{tab.count}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* Search and department */}
+                <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+                    <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                        <Search size={14} strokeWidth={1.75} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                             type="text"
+                            aria-label="Search employees by name or email"
                             placeholder="Search by name or email…"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-8 pr-3 h-8 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60"
+                            className="saas-input pl-9"
                         />
                     </div>
                     <AppSelect
@@ -346,85 +422,81 @@ export function EmployeeList() {
                             { value: 'Care', label: 'Care' },
                             { value: 'Admin', label: 'Admin' },
                         ]}
-                    />
-                    <AppSelect
-                        value={filterStatus}
-                        onValueChange={setFilterStatus}
-                        options={[
-                            { value: 'all', label: 'All Statuses' },
-                            { value: 'Active', label: 'Active' },
-                            { value: 'Onboarding', label: 'Onboarding' },
-                            { value: 'Terminated', label: 'Terminated' },
-                        ]}
+                        className="min-h-10 sm:w-56"
                     />
                 </div>
-            </div>
 
-            {/* Employees Table */}
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
+                {/* Employees Table */}
+                <div className="overflow-x-auto border-t border-border">
                     <table className="w-full">
                         <thead className="border-b border-border">
                             <tr>
-                                <th className="px-5 py-3 text-left"><span className="zone-label">Employee</span></th>
-                                <th className="px-5 py-3 text-left"><span className="zone-label">Role</span></th>
-                                <th className="px-5 py-3 text-left"><span className="zone-label">Status</span></th>
-                                <th className="px-5 py-3 text-left"><span className="zone-label">Source</span></th>
-                                <th className="px-5 py-3 text-left"><span className="zone-label">Dept</span></th>
+                                <SortableHeader label="Employee" {...sortProps('name')} className="py-3 pr-4 text-left" />
+                                <SortableHeader label="Role" {...sortProps('role')} className="hidden py-3 pr-4 text-left sm:table-cell" />
+                                <SortableHeader label="Status" {...sortProps('status')} className="hidden py-3 pr-4 text-left sm:table-cell" />
+                                <SortableHeader label="Source" {...sortProps('source')} className="hidden py-3 pr-4 text-left lg:table-cell" />
+                                <SortableHeader label="Dept" {...sortProps('department')} className="hidden py-3 pr-4 text-left lg:table-cell" />
+                                <SortableHeader label="Hire Date" {...sortProps('hired')} className="hidden py-3 pr-4 text-right md:table-cell" />
                                 <th className="px-5 py-3 text-left"><span className="zone-label sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border/60">
-                            {filteredEmployees.map((employee) => (
+                            {sortedEmployees.map((employee) => (
                                 <tr
                                     key={employee.id}
-                                    className="transition-colors duration-75 cursor-pointer"
-                                    onClick={() => setSelectedEmployee(employee)}
-                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--secondary)'}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
+                                    className="table-row-interactive"
+                                    onClick={() => { setDrawerTab('overview'); setSelectedEmployee(employee); }}
                                 >
-                                    <td className="px-5 py-3.5">
+                                    <td className="max-w-0 py-3 pr-4 sm:max-w-none">
                                         <div className="flex items-center gap-3">
                                             <div
-                                                className="h-8 w-8 rounded-full text-[11px] font-semibold flex items-center justify-center flex-shrink-0"
-                                                style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
+                                                aria-hidden="true"
+                                                className="flex h-9 w-9 flex-shrink-0 select-none items-center justify-center rounded-full bg-secondary text-xs font-medium text-secondary-foreground"
                                             >
                                                 {employee.first_name[0]}{employee.last_name[0]}
                                             </div>
                                             <div className="flex flex-col min-w-0">
-                                                <span className="text-[13px] text-foreground font-medium truncate">
+                                                <span className="text-sm text-foreground font-medium truncate">
                                                     {employee.first_name} {employee.last_name}
                                                 </span>
-                                                <span className="text-[11px] text-muted-foreground truncate">{employee.email}</span>
+                                                <span className="text-xs text-muted-foreground truncate">{employee.email}</span>
+                                                <span className="truncate text-xs text-muted-foreground sm:hidden">{employee.job_title || '—'}</span>
+                                                <span className="mt-1 sm:hidden"><StatusBadge status={employee.employee_status || 'Active'} size="sm" /></span>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-5 py-3.5">
-                                        <span className="text-[13px] text-foreground">{employee.job_title || '—'}</span>
+                                    <td className="hidden py-3 pr-4 sm:table-cell">
+                                        <span className="text-sm text-secondary-foreground">{employee.job_title || '—'}</span>
                                     </td>
-                                    <td className="px-5 py-3.5">
+                                    <td className="hidden py-3 pr-4 sm:table-cell">
                                         <StatusBadge status={employee.employee_status || 'Active'} size="sm" />
                                     </td>
-                                    <td className="px-5 py-3.5">
-                                        <span className="text-[11px] text-muted-foreground">{employee.profile_source || '—'}</span>
+                                    <td className="hidden py-3 pr-4 lg:table-cell">
+                                        <span className="text-sm text-muted-foreground">{employee.profile_source || '—'}</span>
                                     </td>
-                                    <td className="px-5 py-3.5">
-                                        <span className="text-[13px] text-muted-foreground">{employee.department || '—'}</span>
+                                    <td className="hidden py-3 pr-4 lg:table-cell">
+                                        <span className="text-sm text-muted-foreground">{employee.department || '—'}</span>
                                     </td>
-                                    <td className="px-5 py-3.5">
+                                    <td className="hidden whitespace-nowrap py-3 pr-4 text-right md:table-cell">
+                                        <span className="text-sm tabular-nums text-muted-foreground">
+                                            {employee.hired_at ? formatHireDate(employee.hired_at) : '—'}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 pr-4">
                                         <button
-                                            className="text-muted-foreground/50 hover:text-primary transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); setSelectedEmployee(employee); }}
-                                        >
-                                            <MoreHorizontal size={16} />
+                                            type="button"
+                                            className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                                            onClick={(e) => { e.stopPropagation(); setDrawerTab('overview'); setSelectedEmployee(employee); }}
+                                            aria-label={`Open profile for ${employee.first_name} ${employee.last_name}`}>
+                                            <MoreHorizontal size={16} aria-hidden="true" />
                                         </button>
                                     </td>
                                 </tr>
                             ))}
                             {filteredEmployees.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-5 py-16 text-center">
-                                        <p className="text-[13px] text-muted-foreground">No employees match your filters.</p>
+                                    <td colSpan={7} className="px-5 py-16 text-center">
+                                        <p className="text-sm text-muted-foreground">No employees match your filters.</p>
                                     </td>
                                 </tr>
                             )}
@@ -438,316 +510,323 @@ export function EmployeeList() {
                 isOpen={!!selectedEmployee}
                 onClose={() => { setSelectedEmployee(null); setIsEditing(false); setEditFormData({}); }}
                 title="Employee Profile"
-                width="xl"
+                width="lg"
             >
-                {selectedEmployee && (
-                    <div className="space-y-6">
-                        {/* Header */}
-                        <div className="flex items-start justify-between pb-5 border-b border-border">
-                            <div className="flex items-center gap-4">
-                                <div
-                                    className="h-16 w-16 rounded-full text-xl font-semibold flex items-center justify-center flex-shrink-0"
-                                    style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
-                                >
-                                    {selectedEmployee.first_name[0]}{selectedEmployee.last_name[0]}
-                                </div>
-                                <div>
-                                    <h3 className="text-[15px] font-semibold text-foreground leading-tight">
-                                        {selectedEmployee.first_name} {selectedEmployee.last_name}
-                                    </h3>
-                                    <p className="text-[13px] text-muted-foreground mt-0.5">{selectedEmployee.job_title || '—'}</p>
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <StatusBadge status={selectedEmployee.employee_status || 'Active'} size="sm" />
-                                        {selectedEmployee.profile_source && (
-                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border bg-muted/30 text-muted-foreground border-border">
-                                                {selectedEmployee.profile_source}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
+                {selectedEmployee && (() => {
+                    const completedCourses = trainingRecords.filter((record) => record.status === 'completed').length;
+                    const openRecurring = recurringRecords.filter((record) => record.compliance_status !== 'completed').length;
+                    const overdueRecurring = recurringRecords.filter((record) => record.compliance_status === 'overdue').length;
+
+                    return (
+                    <div className="flex min-h-[calc(100vh-7.5rem)] flex-col gap-6">
+                        {/* Who this is */}
+                        <div className="flex items-center gap-4">
+                            <span
+                                aria-hidden="true"
+                                className="flex h-12 w-12 flex-shrink-0 select-none items-center justify-center rounded-full bg-secondary text-sm font-medium text-secondary-foreground"
+                            >
+                                {selectedEmployee.first_name[0]}{selectedEmployee.last_name[0]}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-section text-foreground">
+                                    {selectedEmployee.first_name} {selectedEmployee.last_name}
+                                </h3>
+                                <p className="mt-1 truncate text-sm text-muted-foreground">
+                                    {[selectedEmployee.job_title, selectedEmployee.department].filter(Boolean).join(', ') || '—'}
+                                </p>
                             </div>
+                            <StatusBadge status={selectedEmployee.employee_status || 'Active'} size="sm" />
                         </div>
 
-                        {/* AI Onboarding Summary */}
-                        {selectedEmployee.employee_status === 'Onboarding' && (
-                            <OnboardingSummaryPanel employee={selectedEmployee} status={selectedEmployee.employee_status} />
-                        )}
+                        {isEditing ? (
+                            /* One focused edit view: every editable field together */
+                            <div className="space-y-6">
+                                <section className="space-y-4">
+                                    <h3 className="text-title text-foreground">Contact Information</h3>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <label className="block">
+                                            <span className={labelCls}>First Name</span>
+                                            <input type="text" value={editFormData.first_name || ''} onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })} className={inputCls} />
+                                        </label>
+                                        <label className="block">
+                                            <span className={labelCls}>Last Name</span>
+                                            <input type="text" value={editFormData.last_name || ''} onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })} className={inputCls} />
+                                        </label>
+                                        <label className="block">
+                                            <span className={labelCls}>Email</span>
+                                            <input type="email" value={editFormData.email || ''} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} className={inputCls} />
+                                        </label>
+                                        <label className="block">
+                                            <span className={labelCls}>Phone</span>
+                                            <input type="tel" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} className={inputCls} />
+                                        </label>
+                                    </div>
+                                </section>
 
-                        {/* Training Progress (from training_records table) */}
-                        <div>
-                            <div className="flex items-center gap-2 mb-3">
-                                <BookOpen size={13} className="text-primary" strokeWidth={2} />
-                                <span className="zone-label">Training Progress</span>
+                                <section className="space-y-4">
+                                    <h3 className="text-title text-foreground">Employment Details</h3>
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <label className="block">
+                                            <span className={labelCls}>Job Title</span>
+                                            <input type="text" value={editFormData.job_title || ''} onChange={(e) => setEditFormData({ ...editFormData, job_title: e.target.value })} className={inputCls} />
+                                        </label>
+                                        <label className="block">
+                                            <span className={labelCls}>Department</span>
+                                            <input type="text" value={editFormData.department || ''} onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })} className={inputCls} />
+                                        </label>
+                                        <label className="block">
+                                            <span className={labelCls}>Hire Date</span>
+                                            <input type="date" value={editFormData.hired_at || ''} onChange={(e) => setEditFormData({ ...editFormData, hired_at: e.target.value })} className={inputCls} />
+                                        </label>
+                                        <label className="block">
+                                            <span className={labelCls}>Status</span>
+                                            <AppSelect
+                                                value={editFormData.employee_status || 'Active'}
+                                                onValueChange={(value) => setEditFormData({
+                                                    ...editFormData,
+                                                    employee_status: value,
+                                                })}
+                                                options={[
+                                                    { value: 'Active', label: 'Active' },
+                                                    { value: 'Onboarding', label: 'Onboarding' },
+                                                    { value: 'Terminated', label: 'Terminated' },
+                                                ]}
+                                                className="min-h-10"
+                                            />
+                                        </label>
+                                    </div>
+                                    {activeGroupIds.length > 1 && (
+                                        <label className="block">
+                                            <span className={labelCls}>Primary Compliance Group</span>
+                                            <AppSelect
+                                                value={editFormData.primary_compliance_group_id || ''}
+                                                onValueChange={(value) => setEditFormData({
+                                                    ...editFormData,
+                                                    primary_compliance_group_id: value || null,
+                                                })}
+                                                options={[
+                                                    { value: '', label: 'All active groups' },
+                                                    ...activeGroupIds.map((groupId) => ({
+                                                        value: groupId,
+                                                        label: `Group ${groupId}`,
+                                                    })),
+                                                ]}
+                                                className="min-h-10"
+                                            />
+                                            <span className="mt-1 block text-xs text-muted-foreground">
+                                                Active LearnDash groups are read-only. This setting only changes which group drives HR compliance.
+                                            </span>
+                                        </label>
+                                    )}
+                                </section>
                             </div>
-                            {loadingTraining ? (
-                                <div className="text-[12px] text-muted-foreground">Loading training data…</div>
-                            ) : trainingRecords.length > 0 ? (
-                                <div className="space-y-3">
-                                    {trainingRecords.map((record) => (
-                                        <div key={record.id} className="p-3.5 bg-muted/30 rounded-md border border-border">
-                                            <div className="flex justify-between items-center mb-2.5">
-                                                <span className="text-[13px] text-foreground font-medium">
-                                                    {normalizeCourseName(record.course_name)}
-                                                </span>
-                                                {record.status === 'completed' ? (
-                                                    <span className="inline-flex shrink-0 whitespace-nowrap text-[10px] font-semibold leading-none px-2.5 py-1 rounded-full border bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)] border-[color-mix(in_srgb,var(--severity-low)_20%,transparent)]">
-                                                        COMPLETED
-                                                    </span>
+                        ) : (
+                            <>
+                                {/* How they stand */}
+                                <div className="tally tally-3">
+                                    <div className="tally-cell">
+                                        <p className="zone-label">Training</p>
+                                        <p className="data-value mt-2 text-2xl">
+                                            {loadingTraining ? '…' : `${completedCourses} of ${trainingRecords.length}`}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">Courses complete</p>
+                                    </div>
+                                    <div className="tally-cell">
+                                        <p className="zone-label">Recurring</p>
+                                        <p className="data-value mt-2 text-2xl" style={{ color: recurringState === 'ready' && overdueRecurring > 0 ? 'var(--severity-critical)' : undefined }}>
+                                            {recurringState === 'ready' ? openRecurring : recurringState === 'loading' ? '…' : '—'}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            {recurringState === 'unavailable'
+                                                ? 'Unavailable'
+                                                : recurringState === 'loading'
+                                                    ? 'Loading'
+                                                    : overdueRecurring > 0 ? `Open, ${overdueRecurring} overdue` : 'Open items'}
+                                        </p>
+                                    </div>
+                                    <div className="tally-cell">
+                                        <p className="zone-label">Hire Date</p>
+                                        <p className="data-value mt-2 text-md">
+                                            {selectedEmployee.hired_at ? formatHireDate(selectedEmployee.hired_at) : '—'}
+                                        </p>
+                                        <p className="mt-2 text-xs text-muted-foreground">{selectedEmployee.profile_source || 'Source unknown'}</p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="tab-bar" aria-label="Profile sections">
+                                        {([
+                                            { value: 'overview', label: 'Overview', count: null },
+                                            { value: 'training', label: 'Training', count: trainingRecords.length },
+                                            { value: 'compliance', label: 'Recurring Compliance', count: recurringState === 'ready' ? recurringRecords.length : '—' },
+                                        ] as const).map((tab) => {
+                                            const active = drawerTab === tab.value;
+                                            return (
+                                                <button
+                                                    key={tab.value}
+                                                    type="button"
+                                                    aria-pressed={active}
+                                                    onClick={() => setDrawerTab(tab.value)}
+                                                    className={`tab-item${active ? ' active' : ''}`}
+                                                >
+                                                    {tab.label}
+                                                    {tab.count !== null && (
+                                                        <span className={`tab-count ${active ? 'tab-count-active' : 'tab-count-inactive'}`}>{tab.count}</span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Stays mounted across tabs so its analysis isn't lost */}
+                                    {selectedEmployee.employee_status === 'Onboarding' && (
+                                        <div className="pt-4" hidden={drawerTab !== 'overview'}>
+                                            <OnboardingSummaryPanel employee={selectedEmployee} status={selectedEmployee.employee_status} />
+                                        </div>
+                                    )}
+
+                                    {drawerTab === 'overview' && (
+                                        <div className="space-y-6 pt-4">
+                                            <section>
+                                                <h3 className="text-title text-foreground">Contact Information</h3>
+                                                <dl className="mt-1 divide-y divide-border">
+                                                    <DetailRow label="Email">{selectedEmployee.email}</DetailRow>
+                                                    <DetailRow label="Phone">{selectedEmployee.phone || '—'}</DetailRow>
+                                                </dl>
+                                            </section>
+
+                                            <section>
+                                                <h3 className="text-title text-foreground">Employment Details</h3>
+                                                <dl className="mt-1 divide-y divide-border">
+                                                    <DetailRow label="Department">{selectedEmployee.department || '—'}</DetailRow>
+                                                    {selectedEmployee.employee_id && (
+                                                        <DetailRow label="Employee ID">{selectedEmployee.employee_id}</DetailRow>
+                                                    )}
+                                                    <DetailRow label="Active LearnDash Groups">
+                                                        {activeGroupIds.length > 0 ? activeGroupIds.join(', ') : '—'}
+                                                    </DetailRow>
+                                                    <DetailRow label="Primary Compliance Group">
+                                                        {selectedEmployee.primary_compliance_group_id || 'All active groups'}
+                                                        {activeGroupIds.length > 1 && !selectedEmployee.primary_compliance_group_id && (
+                                                            <span className="mt-1 block text-xs text-accent-2">
+                                                                Multiple active groups. Choose a primary compliance group to narrow onboarding and recurring obligations.
+                                                            </span>
+                                                        )}
+                                                        {activeGroupIds.length > 1 && (
+                                                            <span className="mt-1 block text-xs text-muted-foreground">
+                                                                Use Edit Profile to change this setting.
+                                                            </span>
+                                                        )}
+                                                    </DetailRow>
+                                                </dl>
+                                            </section>
+                                        </div>
+                                    )}
+
+                                    {drawerTab === 'training' && (
+                                        loadingTraining ? (
+                                            <div className="space-y-4 pt-4" aria-busy="true" aria-label="Loading training data">
+                                                {[1, 2, 3].map((row) => <div key={row} className="h-4 rounded ai-shimmer" />)}
+                                            </div>
+                                        ) : trainingRecords.length > 0 ? (
+                                            <ul className="divide-y divide-border">
+                                                {trainingRecords.map((record) => {
+                                                    const status = trainingStatus(record);
+                                                    return (
+                                                        <li key={record.id} className="py-3">
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <span className="min-w-0 text-sm text-foreground">{record.course_name}</span>
+                                                                <StatusBadge status={status.label} tone={status.tone} />
+                                                            </div>
+                                                            <div className="mt-2 flex items-center gap-3">
+                                                                <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
+                                                                    <div className="h-full rounded-full bg-signal" style={{ width: `${record.progress_pct}%` }} />
+                                                                </div>
+                                                                <span className="w-9 text-right text-xs tabular-nums text-muted-foreground">{record.progress_pct}%</span>
+                                                            </div>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        ) : (
+                                            <div className="empty-state">
+                                                <p className="empty-state-title">No training data available.</p>
+                                                <p className="empty-state-hint">Run “Sync LearnDash Training” from Settings → Connectors.</p>
+                                            </div>
+                                        )
+                                    )}
+
+                                    {drawerTab === 'compliance' && (
+                                        recurringRecords.length > 0 ? (
+                                            <ul className="divide-y divide-border">
+                                                {recurringRecords.map((record) => (
+                                                    <li key={record.instance_id} className="flex items-start justify-between gap-3 py-3">
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm text-foreground">{record.rule_name}</p>
+                                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                                Due {formatCalendarDate(record.due_at)}
+                                                            </p>
+                                                            {record.completed_at && (
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    Completed {format(new Date(record.completed_at), 'MMMM d, yyyy')}
+                                                                    {record.completion_source ? ` via ${record.completion_source}` : ''}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <StatusBadge status={recurringStatusLabel(record.compliance_status)} tone={recurringTone(record.compliance_status)} />
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        ) : (
+                                            <div className="empty-state">
+                                                {recurringState === 'unavailable' ? (
+                                                    <p className="empty-state-title">Recurring compliance could not be loaded.</p>
+                                                ) : recurringState === 'loading' ? (
+                                                    <p className="empty-state-title">Loading recurring compliance…</p>
                                                 ) : (
-                                                    <span className="inline-flex shrink-0 whitespace-nowrap text-[10px] font-semibold leading-none px-2.5 py-1 rounded-full border bg-[color-mix(in_srgb,var(--severity-medium)_10%,transparent)] text-[var(--severity-medium)] border-[color-mix(in_srgb,var(--severity-medium)_20%,transparent)]">
-                                                        IN PROGRESS
-                                                    </span>
+                                                    <>
+                                                        <p className="empty-state-title">No recurring compliance records available.</p>
+                                                        <p className="empty-state-hint">Recurring compliance will appear when this employee has an active compliance group and a recurring rule is tied to one of that group’s courses.</p>
+                                                    </>
                                                 )}
                                             </div>
-                                            <div className="w-full bg-border rounded-full h-1.5 mb-2">
-                                                <div
-                                                    className="bg-primary h-1.5 rounded-full transition-all duration-500"
-                                                    style={{ width: `${record.progress_pct}%` }}
-                                                />
-                                            </div>
-                                            <div className="flex justify-end text-[11px] text-muted-foreground">
-                                                <span>{record.progress_pct}%</span>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
-                                    <p className="text-[12px] text-muted-foreground">No training data available.</p>
-                                    <p className="mt-1 text-[11px] text-muted-foreground/70">Run "Sync LearnDash Training" from Settings → Connectors.</p>
-                                </div>
-                            )}
-                        </div>
+                            </>
+                        )}
 
-                        {/* Recurring Compliance */}
-                        <div>
-                            <div className="flex items-center gap-2 mb-3">
-                                <ClipboardCheck size={13} className="text-primary" strokeWidth={2} />
-                                <span className="zone-label">Recurring Compliance</span>
-                            </div>
-                            {recurringRecords.length > 0 ? (
-                                <div className="space-y-3">
-                                    {recurringRecords.map((record) => (
-                                        <div key={record.instance_id} className="rounded-md border border-border p-3.5">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <p className="text-[13px] font-medium text-foreground">{record.rule_name}</p>
-                                                    <p className="mt-1 text-[11px] text-muted-foreground">
-                                                        Due {formatCalendarDate(record.due_at)}
-                                                    </p>
-                                                    {record.completed_at && (
-                                                        <p className="mt-1 text-[11px] text-muted-foreground">
-                                                            Completed {format(new Date(record.completed_at), 'MMMM d, yyyy')}
-                                                            {record.completion_source ? ` via ${record.completion_source}` : ''}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                                <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${recurringStatusClass(record.compliance_status)}`}>
-                                                    {recurringStatusLabel(record.compliance_status)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="p-4 bg-muted/20 rounded-md border border-border text-center">
-                                    <p className="text-[12px] text-muted-foreground">No recurring compliance records available.</p>
-                                    <p className="mt-1 text-[11px] text-muted-foreground/70">Recurring compliance will appear when this employee has an active compliance group and a recurring rule is tied to one of that group&apos;s courses.</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Contact Information */}
-                        <div>
-                            <p className="zone-label mb-3">Contact Information</p>
-                            {isEditing ? (
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div>
-                                            <label className={labelCls}>First Name</label>
-                                            <input type="text" value={editFormData.first_name || ''} onChange={(e) => setEditFormData({ ...editFormData, first_name: e.target.value })} className={inputCls} />
-                                        </div>
-                                        <div>
-                                            <label className={labelCls}>Last Name</label>
-                                            <input type="text" value={editFormData.last_name || ''} onChange={(e) => setEditFormData({ ...editFormData, last_name: e.target.value })} className={inputCls} />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Email</label>
-                                        <input type="email" value={editFormData.email || ''} onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })} className={inputCls} />
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Phone</label>
-                                        <input type="tel" value={editFormData.phone || ''} onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })} className={inputCls} />
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Job Title</label>
-                                        <input type="text" value={editFormData.job_title || ''} onChange={(e) => setEditFormData({ ...editFormData, job_title: e.target.value })} className={inputCls} />
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Department</label>
-                                        <input type="text" value={editFormData.department || ''} onChange={(e) => setEditFormData({ ...editFormData, department: e.target.value })} className={inputCls} />
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Hire Date</label>
-                                        <input type="date" value={editFormData.hired_at || ''} onChange={(e) => setEditFormData({ ...editFormData, hired_at: e.target.value })} className={inputCls} />
-                                    </div>
-                                    <div>
-                                        <label className={labelCls}>Status</label>
-                                        <AppSelect
-                                            value={editFormData.employee_status || 'Active'}
-                                            onValueChange={(value) => setEditFormData({
-                                                ...editFormData,
-                                                employee_status: value,
-                                            })}
-                                            options={[
-                                                { value: 'Active', label: 'Active' },
-                                                { value: 'Onboarding', label: 'Onboarding' },
-                                                { value: 'Terminated', label: 'Terminated' },
-                                            ]}
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="divide-y divide-border/60 rounded-md border border-border overflow-hidden">
-                                    <div className="flex items-center gap-3 px-4 py-3">
-                                        <Mail size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                        <div className="min-w-0">
-                                            <p className="zone-label mb-0.5">Email</p>
-                                            <p className="text-[13px] text-foreground truncate">{selectedEmployee.email}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 px-4 py-3">
-                                        <Phone size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                        <div>
-                                            <p className="zone-label mb-0.5">Phone</p>
-                                            <p className="text-[13px] text-foreground">{selectedEmployee.phone || '—'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Employment Details */}
-                        <div>
-                            <p className="zone-label mb-3">Employment Details</p>
-                            <div className="divide-y divide-border/60 rounded-md border border-border overflow-hidden">
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <Calendar size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                    <div>
-                                        <p className="zone-label mb-0.5">Hire Date</p>
-                                        <p className="text-[13px] text-foreground font-mono">
-                                            {selectedEmployee.hired_at ? format(new Date(selectedEmployee.hired_at), 'MMMM d, yyyy') : '—'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <Building size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                    <div>
-                                        <p className="zone-label mb-0.5">Department</p>
-                                        <p className="text-[13px] text-foreground">{selectedEmployee.department || '—'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <Users size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                    <div>
-                                        <p className="zone-label mb-0.5">Active LearnDash Groups</p>
-                                        <p className="text-[13px] text-foreground">
-                                            {activeGroupIds.length > 0 ? activeGroupIds.join(', ') : 'â€”'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 px-4 py-3">
-                                    <ShieldCheck size={13} className="text-muted-foreground flex-shrink-0" strokeWidth={1.75} />
-                                    <div>
-                                        <p className="zone-label mb-0.5">Primary Compliance Group</p>
-                                        <p className="text-[13px] text-foreground">
-                                            {selectedEmployee.primary_compliance_group_id || 'All active groups'}
-                                        </p>
-                                        {activeGroupIds.length > 1 && !selectedEmployee.primary_compliance_group_id && (
-                                            <p className="mt-1 text-[11px] text-[var(--severity-medium)]">
-                                                Multiple active groups. Choose a primary compliance group to narrow onboarding and recurring obligations.
-                                            </p>
-                                        )}
-                                        {activeGroupIds.length > 1 && !isEditing && (
-                                            <p className="mt-1 text-[11px] text-muted-foreground">
-                                                Use Edit Profile to change this setting.
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                                    {isEditing && activeGroupIds.length > 1 && (
-                                        <div className="px-4 py-3">
-                                            <label className={labelCls}>Primary Compliance Group</label>
-                                        <AppSelect
-                                            value={editFormData.primary_compliance_group_id || ''}
-                                            onValueChange={(value) => setEditFormData({
-                                                ...editFormData,
-                                                primary_compliance_group_id: value || null,
-                                            })}
-                                            options={[
-                                                { value: '', label: 'All active groups' },
-                                                ...activeGroupIds.map((groupId) => ({
-                                                    value: groupId,
-                                                    label: `Group ${groupId}`,
-                                                })),
-                                            ]}
-                                        />
-                                        <p className="mt-1 text-[11px] text-muted-foreground">
-                                            Active LearnDash groups are read-only. This setting only changes which group drives HR compliance.
-                                        </p>
-                                    </div>
-                                )}
-                                {selectedEmployee.employee_id && (
-                                    <div className="flex items-center gap-3 px-4 py-3">
-                                        <span className="text-[11px] font-mono text-muted-foreground flex-shrink-0">#</span>
-                                        <div>
-                                            <p className="zone-label mb-0.5">Employee ID</p>
-                                            <p className="text-[13px] text-foreground font-mono">{selectedEmployee.employee_id}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2.5 pt-4 border-t border-border">
+                        {/* Actions stay in reach */}
+                        <div className="sticky bottom-0 -mx-6 -mb-6 mt-auto flex flex-wrap justify-between gap-2 border-t border-border bg-card px-6 py-4">
                             {isEditing ? (
                                 <>
-                                    <button
-                                        onClick={handleSaveEdit}
-                                        disabled={isSaving}
-                                        className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <Save size={13} />
-                                        {isSaving ? 'Saving…' : 'Save Changes'}
-                                    </button>
-                                    <button
-                                        onClick={handleCancelEdit}
-                                        disabled={isSaving}
-                                        className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <X size={13} />
-                                        Cancel
-                                    </button>
+                                    <span />
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
+                                            <X size={14} aria-hidden="true" />
+                                            Cancel
+                                        </Button>
+                                        <Button onClick={handleSaveEdit} disabled={isSaving}>
+                                            <Save size={14} aria-hidden="true" />
+                                            {isSaving ? 'Saving…' : 'Save Changes'}
+                                        </Button>
+                                    </div>
                                 </>
                             ) : (
                                 <>
-                                    <button
-                                        onClick={handleEditClick}
-                                        className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors"
-                                    >
-                                        <Edit2 size={13} />
-                                        Edit Profile
-                                    </button>
-                                    <button className="flex-1 inline-flex items-center justify-center h-8 px-4 rounded-md border border-[hsl(4,82%,52%)]/30 text-[hsl(4,70%,44%)] dark:text-[hsl(4,76%,60%)] text-[13px] font-semibold hover:bg-[hsl(4,82%,52%)]/6 transition-colors">
+                                    <Button variant="outline" className="border-error/40 text-error hover:bg-error/12 hover:text-error">
                                         Terminate
-                                    </button>
+                                    </Button>
+                                    <Button onClick={handleEditClick}>
+                                        <Edit2 size={14} aria-hidden="true" />
+                                        Edit Profile
+                                    </Button>
                                 </>
                             )}
                         </div>
                     </div>
-                )}
+                    );
+                })()}
             </SlideOver>
         </div>
     );

@@ -1,3 +1,4 @@
+import type { SortColumn } from '@/hooks/useTableSort';
 import type { ComplianceStatus, TrainingEmployee } from '../types';
 import type { OnboardingGateRow } from '../hooks/useOnboardingGate';
 
@@ -21,42 +22,42 @@ export const complianceStatusConfig: Record<
 > = {
   compliant: {
     label: 'Compliant',
-    dot: 'hsl(152 58% 42%)',
-    text: 'hsl(152 54% 56%)',
-    bg: 'hsl(152 58% 38% / 0.10)',
-    border: 'hsl(152 58% 38% / 0.20)',
+    dot: 'var(--color-signal)',
+    text: 'var(--color-signal)',
+    bg: 'color-mix(in oklab, var(--color-signal) 14%, transparent)',
+    border: 'color-mix(in oklab, var(--color-signal) 28%, transparent)',
     priority: 1,
   },
   overdue: {
     label: 'Overdue',
-    dot: 'hsl(4 82% 56%)',
-    text: 'hsl(4 76% 66%)',
-    bg: 'hsl(4 82% 52% / 0.08)',
-    border: 'hsl(4 82% 52% / 0.20)',
+    dot: 'var(--color-error)',
+    text: 'var(--color-error)',
+    bg: 'color-mix(in oklab, var(--color-error) 11%, transparent)',
+    border: 'color-mix(in oklab, var(--color-error) 28%, transparent)',
     priority: 5,
   },
   in_progress: {
     label: 'In Progress',
-    dot: 'hsl(38 96% 52%)',
-    text: 'hsl(38 90% 60%)',
-    bg: 'hsl(38 96% 48% / 0.08)',
-    border: 'hsl(38 96% 48% / 0.20)',
+    dot: 'var(--color-accent-2)',
+    text: 'var(--color-accent-2)',
+    bg: 'color-mix(in oklab, var(--color-accent-2) 11%, transparent)',
+    border: 'color-mix(in oklab, var(--color-accent-2) 28%, transparent)',
     priority: 3,
   },
   not_started: {
     label: 'Not Started',
-    dot: 'hsl(220 10% 48%)',
-    text: 'hsl(220 10% 62%)',
-    bg: 'hsl(220 10% 50% / 0.08)',
-    border: 'hsl(220 10% 50% / 0.14)',
+    dot: 'var(--muted-foreground)',
+    text: 'var(--muted-foreground)',
+    bg: 'color-mix(in oklab, var(--tint) 6%, transparent)',
+    border: 'color-mix(in oklab, var(--tint) 6%, transparent)',
     priority: 2,
   },
   no_courses: {
     label: 'No Courses',
-    dot: 'hsl(262 18% 52%)',
-    text: 'hsl(262 16% 68%)',
-    bg: 'hsl(262 18% 50% / 0.10)',
-    border: 'hsl(262 18% 50% / 0.18)',
+    dot: 'var(--muted-foreground)',
+    text: 'var(--muted-foreground)',
+    bg: 'color-mix(in oklab, var(--tint) 6%, transparent)',
+    border: 'color-mix(in oklab, var(--tint) 6%, transparent)',
     priority: 4,
   },
 };
@@ -82,6 +83,21 @@ export function summarizeGate(rows: OnboardingGateRow[] | undefined, unavailable
     completed,
     total,
     label: 'Requirements incomplete',
+  };
+}
+
+export type TrainingSortKey = 'name' | 'assignment' | 'completion' | 'gate' | 'status' | 'activity';
+
+export function trainingSortColumns(
+  gateSummaries: Map<string, GateSummary>,
+): Record<TrainingSortKey, SortColumn<TrainingEmployee>> {
+  return {
+    name: { value: (row) => `${row.first_name} ${row.last_name}` },
+    assignment: { value: (row) => row.coursesAssigned || null, kind: 'number' },
+    completion: { value: (row) => (row.coursesAssigned > 0 ? row.completionPct : null), kind: 'number' },
+    gate: { value: (row) => gateSummaries.get(row.person_id)?.label },
+    status: { value: (row) => row.complianceStatus },
+    activity: { value: (row) => row.lastActivity, kind: 'date' },
   };
 }
 

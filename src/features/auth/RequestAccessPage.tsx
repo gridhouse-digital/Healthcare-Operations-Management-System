@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AuthLogo } from '@/components/shared/AuthLogo';
 import { Link } from 'react-router-dom';
 import { Controller, useForm } from 'react-hook-form';
 import { ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -170,7 +171,7 @@ export function RequestAccessPage() {
                     {submittedRequest ? (
                         <div className="px-8 py-10 text-center">
                             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[color:var(--severity-low)]/30 bg-[color:var(--severity-low)]/10">
-                                <CheckCircle2 className="h-7 w-7 text-[color:var(--severity-low)]" />
+                                <CheckCircle2 className="h-7 w-7 text-[color:var(--severity-low)]" aria-hidden="true" />
                             </div>
                             <h1 className="auth-title mt-6">Request Received</h1>
                             <p className="auth-meta mt-3">
@@ -182,13 +183,13 @@ export function RequestAccessPage() {
                             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
                                 <Link
                                     to="/login"
-                                    className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-5 text-[13px] font-semibold tracking-[0.01em] text-primary-foreground transition-all hover:bg-primary/90"
+                                    className="inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:bg-accent-hi"
                                 >
                                     Return to Login
                                 </Link>
                                 <button
                                     type="button"
-                                    className="inline-flex h-10 items-center justify-center rounded-lg border border-border px-5 text-[13px] font-semibold tracking-[0.01em] text-foreground transition-colors hover:bg-secondary"
+                                    className="inline-flex h-10 items-center justify-center rounded-lg border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-secondary"
                                     onClick={() => {
                                         setSubmittedRequest(null);
                                         setSubmitError(null);
@@ -201,11 +202,7 @@ export function RequestAccessPage() {
                     ) : (
                         <>
                             <div className="border-b border-border px-8 pb-6 pt-8 text-center">
-                                <img
-                                    src="https://bucket-ivvnia.s3.amazonaws.com/wp-content/uploads/2025/06/02222211/Prolific-Homecare-Logo.png"
-                                    alt="HOMS"
-                                    className="mx-auto mb-5 h-14 w-auto object-contain"
-                                />
+                                <AuthLogo />
                                 <h1 className="auth-title">Request Access</h1>
                                 <p className="auth-meta mt-2">
                                     New organizations can submit onboarding details here.
@@ -233,7 +230,7 @@ export function RequestAccessPage() {
                                             className="saas-input"
                                         />
                                         {errors.organizationName?.message && (
-                                            <p className="mt-1.5 text-[12px] text-destructive">{errors.organizationName.message}</p>
+                                            <p className="mt-1.5 text-xs text-destructive">{errors.organizationName.message}</p>
                                         )}
                                     </div>
 
@@ -246,7 +243,7 @@ export function RequestAccessPage() {
                                             className="saas-input"
                                         />
                                         {errors.primaryContactName?.message && (
-                                            <p className="mt-1.5 text-[12px] text-destructive">{errors.primaryContactName.message}</p>
+                                            <p className="mt-1.5 text-xs text-destructive">{errors.primaryContactName.message}</p>
                                         )}
                                     </div>
 
@@ -260,7 +257,7 @@ export function RequestAccessPage() {
                                             className="saas-input"
                                         />
                                         {errors.workEmail?.message && (
-                                            <p className="mt-1.5 text-[12px] text-destructive">{errors.workEmail.message}</p>
+                                            <p className="mt-1.5 text-xs text-destructive">{errors.workEmail.message}</p>
                                         )}
                                     </div>
 
@@ -274,7 +271,7 @@ export function RequestAccessPage() {
                                             className="saas-input"
                                         />
                                         {errors.phone?.message && (
-                                            <p className="mt-1.5 text-[12px] text-destructive">{errors.phone.message}</p>
+                                            <p className="mt-1.5 text-xs text-destructive">{errors.phone.message}</p>
                                         )}
                                     </div>
 
@@ -292,12 +289,12 @@ export function RequestAccessPage() {
                                                         value: option,
                                                         label: option,
                                                     }))}
-                                                    className="saas-input justify-between"
+                                                    className="justify-between"
                                                 />
                                             )}
                                         />
                                         {errors.teamSize?.message && (
-                                            <p className="mt-1.5 text-[12px] text-destructive">{errors.teamSize.message}</p>
+                                            <p className="mt-1.5 text-xs text-destructive">{errors.teamSize.message}</p>
                                         )}
                                     </div>
 
@@ -309,7 +306,7 @@ export function RequestAccessPage() {
                                             className="saas-input min-h-[104px] resize-y py-3"
                                         />
                                         {errors.integrationNeeds?.message && (
-                                            <p className="mt-1.5 text-[12px] text-destructive">{errors.integrationNeeds.message}</p>
+                                            <p className="mt-1.5 text-xs text-destructive">{errors.integrationNeeds.message}</p>
                                         )}
                                     </div>
 
@@ -321,31 +318,31 @@ export function RequestAccessPage() {
                                             className="saas-input min-h-[120px] resize-y py-3"
                                         />
                                         {errors.notes?.message && (
-                                            <p className="mt-1.5 text-[12px] text-destructive">{errors.notes.message}</p>
+                                            <p className="mt-1.5 text-xs text-destructive">{errors.notes.message}</p>
                                         )}
                                     </div>
                                 </div>
 
                                 {submitError && (
                                     <div className="rounded-lg border border-destructive/20 bg-destructive/8 px-3 py-2.5">
-                                        <p className="text-[12px] text-destructive">{submitError}</p>
+                                        <p className="text-xs text-destructive">{submitError}</p>
                                     </div>
                                 )}
 
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary text-[13px] font-semibold tracking-[0.01em] text-primary-foreground transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-55"
+                                    className="inline-flex h-10 w-full items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground transition hover:bg-accent-hi disabled:cursor-not-allowed disabled:opacity-55"
                                 >
-                                    {isSubmitting ? 'Submitting Request...' : 'Submit Access Request'}
+                                    {isSubmitting ? 'Submitting Request…' : 'Submit Access Request'}
                                 </button>
 
                                 <div className="pt-1 text-center">
                                     <Link
                                         to="/login"
-                                        className="inline-flex items-center gap-1.5 text-[12px] font-medium tracking-[0.01em] text-primary transition-colors hover:text-primary/80"
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary transition-colors hover:text-primary/80"
                                     >
-                                        <ArrowLeft size={12} />
+                                        <ArrowLeft size={14} aria-hidden="true" />
                                         Back to Login
                                     </Link>
                                 </div>
@@ -354,7 +351,7 @@ export function RequestAccessPage() {
                     )}
                 </div>
 
-                <p className="mt-5 text-center text-[11px] tracking-[0.06em] text-muted-foreground/55">
+                <p className="mt-5 text-center text-xs text-muted-foreground">
                     Request access does not create a workspace automatically. The operations team
                     reviews each submission before onboarding.
                 </p>

@@ -28,12 +28,12 @@ export function ProgressBar({
         <div className="w-full">
             <div className="flex items-center justify-between mb-1">
                 {showLabel && (
-                    <span className="text-sm font-light text-muted-foreground">{progress}%</span>
+                    <span className="text-sm tabular-nums text-muted-foreground">{progress}%</span>
                 )}
             </div>
-            <div className={`w-full rounded-full bg-border/60 ${heightClasses[size]} overflow-hidden`}>
+            <div className={`w-full rounded-full bg-secondary ${heightClasses[size]} overflow-hidden`}>
                 <div
-                    className={`${heightClasses[size]} rounded-full ${colorClasses[color]} transition-all duration-300`}
+                    className={`${heightClasses[size]} rounded-full ${colorClasses[color]}`}
                     style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                 />
             </div>

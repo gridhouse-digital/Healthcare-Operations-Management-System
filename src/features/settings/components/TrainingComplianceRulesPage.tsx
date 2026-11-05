@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { BookCheck, Plus, Save } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ChevronDown, Plus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SlideOver } from "@/components/ui/SlideOver";
 import { AppSelect } from "@/components/ui/AppSelect";
+import { SortableHeader } from "@/components/shared/SortableHeader";
+import { useTableSort, type SortColumn } from "@/hooks/useTableSort";
 import { toast } from "@/hooks/useToast";
 import {
   useSaveTrainingComplianceRule,
@@ -13,9 +16,7 @@ import type {
   TrainingComplianceRuleDraft,
 } from "../types/training-compliance-rules";
 
-const inputCls =
-  "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50 [&_option]:bg-card [&_option]:text-foreground";
-const labelCls = "block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5";
+const selectCls = "min-h-10";
 
 const templateOptions = [
   { value: "annual_employee_review", label: "Annual Employee Review" },
@@ -77,10 +78,71 @@ function toDraft(rule: TrainingComplianceRule): TrainingComplianceRuleDraft {
   };
 }
 
-function statusPill(active: boolean): string {
-  return active
-    ? "border-[color-mix(in_srgb,var(--severity-low)_25%,transparent)] bg-[color-mix(in_srgb,var(--severity-low)_10%,transparent)] text-[var(--severity-low)]"
-    : "border-border bg-muted/40 text-muted-foreground";
+const anchorLabels: Record<TrainingComplianceRuleDraft["anchor_type"], string> = {
+  group_enrollment: "group enrollment",
+  hire_date: "hire date",
+  manual: "the manual anchor date",
+};
+
+function firstDueText(months: number, anchor: TrainingComplianceRuleDraft["anchor_type"]) {
+  return `First due ${months} months after ${anchorLabels[anchor]}`;
+}
+
+function reminderText(day: number) {
+  return day === 0 ? "Due date" : `${day} days`;
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <label className="block min-w-0">
+      <span className="form-label">{label}</span>
+      {children}
+      {hint && <span className="mt-1 block text-xs text-muted-foreground">{hint}</span>}
+    </label>
+  );
+}
+
+function ToggleRow({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex min-h-11 cursor-pointer items-center justify-between gap-4 py-2">
+      <span className="min-w-0">
+        <span className="block text-sm text-foreground">{label}</span>
+        {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
+      </span>
+      <input
+        type="checkbox"
+        role="switch"
+        className="switch"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
+    </label>
+  );
+}
+
+function CatalogDisclosure({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  return (
+    <details className="group">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 py-3 [&::-webkit-details-marker]:hidden">
+        <span className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">{title}</span>
+          <span className="tab-count tab-count-inactive">{count}</span>
+        </span>
+        <ChevronDown size={16} strokeWidth={1.75} aria-hidden="true" className="text-muted-foreground transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="max-h-72 overflow-y-auto pb-3">{children}</div>
+    </details>
+  );
 }
 
 export function TrainingComplianceRulesPage() {
@@ -88,6 +150,7 @@ export function TrainingComplianceRulesPage() {
   const saveRule = useSaveTrainingComplianceRule();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [draft, setDraft] = useState<TrainingComplianceRuleDraft>(createDefaultDraft());
 
   function openNewRule() {
@@ -159,42 +222,61 @@ export function TrainingComplianceRulesPage() {
     }
   }
 
+  const rules = data?.rules ?? [];
+  const visibleRules = rules.filter((rule) =>
+    statusFilter === "all" ? true : statusFilter === "active" ? rule.active : !rule.active,
+  );
+  const coursesWithRule = new Set(rules.map((rule) => rule.course_id));
+  const groups = data?.groups;
+  const sortColumns = useMemo(() => ({
+    rule: { value: (rule) => rule.rule_name },
+    appliesTo: { value: (rule) => groups?.find((group) => group.group_id === rule.group_id)?.label ?? rule.group_id },
+    schedule: { value: (rule) => rule.recurrence_interval_months, kind: "number" },
+    reminders: { value: (rule) => rule.reminder_days.length, kind: "number" },
+    status: { value: (rule) => (rule.active ? "Active" : "Inactive") },
+  } satisfies Record<string, SortColumn<TrainingComplianceRule>>), [groups]);
+  const { sortedRows: sortedRules, sortProps } = useTableSort(visibleRules, sortColumns);
+  const groupLabel = (groupId: string) =>
+    data?.groups.find((group) => group.group_id === groupId)?.label ?? groupId;
+
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="pl-1">
-          <div className="flex items-center gap-2">
-            <BookCheck size={18} className="text-primary" />
-            <h1 className="page-header-title">Training Compliance Rules</h1>
-          </div>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="page-header-title">Training Compliance Rules</h1>
           <p className="page-header-meta">
             Choose which LearnDash courses are recurring compliance items instead of onboarding.
           </p>
         </div>
-        <Button onClick={openNewRule} size="sm">
-          <Plus size={13} />
+        <Button onClick={openNewRule} className="w-full sm:w-auto">
+          <Plus size={14} aria-hidden="true" />
           Add Rule
         </Button>
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
+        <div className="divide-y divide-border border-y border-border" aria-busy="true" aria-label="Loading rules">
+          {[1, 2, 3].map((row) => (
+            <div key={row} className="flex items-center gap-4 py-4">
+              <div className="h-3 w-1/3 rounded ai-shimmer" />
+              <div className="ml-auto h-3 w-1/4 rounded ai-shimmer" />
+            </div>
+          ))}
         </div>
       )}
 
       {!isLoading && error && (
-        <div className="saas-card p-5 text-[13px] text-destructive">
+        <div className="saas-card p-6 text-sm text-destructive">
           Failed to load training compliance rules.
         </div>
       )}
 
       {!isLoading && !error && data && !data.schemaReady && (
-        <div className="saas-card p-5 space-y-2">
-          <p className="text-[14px] font-semibold text-foreground">
+        <div className="saas-card p-6 space-y-2">
+          <p className="text-sm font-medium text-foreground">
             Recurring compliance schema not available yet
           </p>
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Apply the Epic 5.9 recurring compliance migration before using this screen.
           </p>
         </div>
@@ -202,54 +284,103 @@ export function TrainingComplianceRulesPage() {
 
       {!isLoading && !error && data?.schemaReady && (
         <>
-          <div className="saas-card overflow-hidden">
+          <div>
+            <div className="tab-bar" aria-label="Filter rules by status">
+              {[
+                { value: "all" as const, label: "All rules", count: rules.length },
+                { value: "active" as const, label: "Active", count: rules.filter((rule) => rule.active).length },
+                { value: "inactive" as const, label: "Inactive", count: rules.filter((rule) => !rule.active).length },
+              ].map((tab) => {
+                const active = statusFilter === tab.value;
+                return (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setStatusFilter(tab.value)}
+                    className={`tab-item${active ? " active" : ""}`}
+                  >
+                    {tab.label}
+                    <span className={`tab-count ${active ? "tab-count-active" : "tab-count-inactive"}`}>{tab.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b border-border">
                   <tr>
-                    <th className="px-5 py-3 text-left"><span className="zone-label">Rule Name</span></th>
-                    <th className="px-5 py-3 text-left"><span className="zone-label">LearnDash Course</span></th>
-                    <th className="px-5 py-3 text-left"><span className="zone-label">Applies To</span></th>
-                    <th className="px-5 py-3 text-left"><span className="zone-label">Due Every</span></th>
-                    <th className="px-5 py-3 text-left"><span className="zone-label">Reminders</span></th>
-                    <th className="px-5 py-3 text-left"><span className="zone-label">Status</span></th>
-                    <th className="px-5 py-3 text-right"><span className="zone-label">Action</span></th>
+                    <SortableHeader label="Rule" {...sortProps("rule")} className="py-3 pr-4 text-left" />
+                    <SortableHeader label="Applies To" {...sortProps("appliesTo")} className="hidden py-3 pr-4 text-left xl:table-cell" />
+                    <SortableHeader label="Schedule" {...sortProps("schedule")} className="hidden py-3 pr-4 text-left md:table-cell" />
+                    <SortableHeader label="Reminders" {...sortProps("reminders")} className="hidden py-3 pr-4 text-left lg:table-cell" />
+                    <SortableHeader label="Status" {...sortProps("status")} className="hidden py-3 pr-4 text-left sm:table-cell" />
+                    <th className="w-16 py-3 text-right zone-label"><span className="visually-hidden">Action</span></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/60">
-                  {data.rules.map((rule) => (
-                    <tr key={rule.id}>
-                      <td className="px-5 py-3.5 text-[13px] font-medium text-foreground">{rule.rule_name}</td>
-                      <td className="px-5 py-3.5 text-[13px] text-foreground">{rule.course_name ?? rule.course_id}</td>
-                      <td className="px-5 py-3.5 text-[12px] text-muted-foreground">
-                        {rule.applies_to_type === "group_members" ? "Everyone in group" : rule.applies_to_type}
+                <tbody className="divide-y divide-border">
+                  {sortedRules.map((rule) => (
+                    <tr key={rule.id} className="table-row-interactive" onClick={() => openEditRule(rule)}>
+                      <td className="max-w-0 py-4 pr-4 md:max-w-none">
+                        <p className="text-sm font-medium text-foreground">{rule.rule_name}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{rule.course_name ?? rule.course_id}</p>
+                        <p className="mt-1 text-xs text-muted-foreground md:hidden">
+                          Every {rule.recurrence_interval_months} months
+                        </p>
+                        <span className="mt-2 inline-flex sm:hidden"><StatusBadge status={rule.active ? "Active" : "Inactive"} tone={rule.active ? "done" : "neutral"} /></span>
                       </td>
-                      <td className="px-5 py-3.5 text-[12px] text-muted-foreground">
-                        {rule.recurrence_interval_months} months
+                      <td className="hidden py-4 pr-4 xl:table-cell">
+                        <p className="text-sm text-secondary-foreground">
+                          {rule.applies_to_type === "group_members" ? "Everyone in group" : rule.applies_to_type}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">{groupLabel(rule.group_id)}</p>
                       </td>
-                      <td className="px-5 py-3.5 text-[12px] text-muted-foreground">
-                        {rule.reminder_days.length > 0
-                          ? rule.reminder_days.map((day) => (day === 0 ? "Due date" : `${day}d`)).join(", ")
-                          : "None"}
+                      <td className="hidden py-4 pr-4 md:table-cell">
+                        <p className="whitespace-nowrap text-sm tabular-nums text-secondary-foreground">
+                          Every {rule.recurrence_interval_months} months
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {firstDueText(rule.initial_due_offset_months, rule.anchor_type)}
+                        </p>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusPill(rule.active)}`}>
-                          {rule.active ? "Active" : "Inactive"}
-                        </span>
+                      <td className="hidden py-4 pr-4 lg:table-cell">
+                        {rule.reminder_days.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {rule.reminder_days.map((day) => (
+                              <span key={day} className="status-chip status-chip-muted tabular-nums">{reminderText(day)}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">None</span>
+                        )}
                       </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openEditRule(rule)}>
+                      <td className="hidden py-4 pr-4 sm:table-cell">
+                        <StatusBadge status={rule.active ? "Active" : "Inactive"} tone={rule.active ? "done" : "neutral"} />
+                      </td>
+                      <td className="py-4 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`Edit ${rule.rule_name}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditRule(rule);
+                          }}
+                        >
                           Edit
                         </Button>
                       </td>
                     </tr>
                   ))}
-                  {data.rules.length === 0 && (
+                  {visibleRules.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-5 py-16 text-center">
-                        <p className="text-[13px] text-muted-foreground">
-                          No recurring compliance rules configured yet.
-                        </p>
+                      <td colSpan={6}>
+                        <div className="empty-state">
+                          <p className="empty-state-title">
+                            {rules.length === 0 ? "No recurring compliance rules configured yet." : `No ${statusFilter} rules.`}
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -258,34 +389,40 @@ export function TrainingComplianceRulesPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="saas-card p-5">
-              <p className="text-[13px] font-semibold text-foreground">Available LearnDash Groups</p>
-              <div className="mt-3 space-y-2">
-                {data.groups.length > 0 ? data.groups.map((group) => (
-                  <div key={group.group_id} className="rounded-md border border-border px-3 py-2 text-[12px] text-muted-foreground">
-                    {group.label}
-                  </div>
-                )) : (
-                  <p className="text-[12px] text-muted-foreground">
+          <div>
+            <p className="zone-label mb-1">Synced from LearnDash</p>
+            <div className="divide-y divide-border border-y border-border">
+              <CatalogDisclosure title="Available LearnDash Groups" count={data.groups.length}>
+                {data.groups.length > 0 ? (
+                  <ul className="divide-y divide-border">
+                    {data.groups.map((group) => (
+                      <li key={group.group_id} className="py-2 text-sm text-secondary-foreground">{group.label}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
                     No group mappings found yet. Add LearnDash group mappings first.
                   </p>
                 )}
-              </div>
-            </div>
-            <div className="saas-card p-5">
-              <p className="text-[13px] font-semibold text-foreground">Available LearnDash Courses</p>
-              <div className="mt-3 max-h-56 space-y-2 overflow-y-auto">
-                {data.courses.length > 0 ? data.courses.map((course) => (
-                  <div key={course.course_id} className="rounded-md border border-border px-3 py-2 text-[12px] text-muted-foreground">
-                    {course.course_name ?? course.course_id}
-                  </div>
-                )) : (
-                  <p className="text-[12px] text-muted-foreground">
+              </CatalogDisclosure>
+              <CatalogDisclosure title="Available LearnDash Courses" count={data.courses.length}>
+                {data.courses.length > 0 ? (
+                  <ul className="divide-y divide-border">
+                    {data.courses.map((course) => (
+                      <li key={course.course_id} className="flex items-center justify-between gap-3 py-2 text-sm text-secondary-foreground">
+                        <span className="min-w-0">{course.course_name ?? course.course_id}</span>
+                        {coursesWithRule.has(course.course_id) && (
+                          <StatusBadge status="Has a rule" tone="done" />
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
                     No synced LearnDash courses found yet. Run a training sync after WordPress is connected.
                   </p>
                 )}
-              </div>
+              </CatalogDisclosure>
             </div>
           </div>
         </>
@@ -297,120 +434,132 @@ export function TrainingComplianceRulesPage() {
         title={draft.id ? "Edit Compliance Rule" : "Add Compliance Rule"}
         width="lg"
       >
-        <div className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className={labelCls}>Rule Name</label>
+        <div className="space-y-8">
+          <section className="space-y-4">
+            <h3 className="text-title text-foreground">What it tracks</h3>
+            <Field label="Rule Name">
               <input
                 value={draft.rule_name}
                 onChange={(event) => updateDraft("rule_name", event.target.value)}
-                className={inputCls}
+                className="saas-input"
                 placeholder="Annual Employee Review"
               />
+            </Field>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Rule Template">
+                <AppSelect
+                  value={draft.rule_template ?? ""}
+                  onValueChange={(value) => updateDraft("rule_template", value || null)}
+                  options={[
+                    { value: "", label: "Custom" },
+                    ...templateOptions.map((option) => ({ value: option.value, label: option.label })),
+                  ]}
+                  className={selectCls}
+                />
+              </Field>
+              <Field label="Rule Type">
+                <AppSelect
+                  value={draft.rule_type}
+                  onValueChange={(value) => updateDraft("rule_type", value as TrainingComplianceRuleDraft["rule_type"])}
+                  options={[
+                    { value: "annual_recurring", label: "Annual Recurring" },
+                    { value: "interval_recurring", label: "Interval Recurring" },
+                    { value: "assignment_specific", label: "Assignment-Specific" },
+                  ]}
+                  className={selectCls}
+                />
+              </Field>
+              <Field label="LearnDash Group">
+                <AppSelect
+                  value={draft.group_id}
+                  onValueChange={(value) => updateDraft("group_id", value)}
+                  options={[
+                    { value: "", label: "Select group" },
+                    ...((data?.groups ?? []).map((group) => ({ value: group.group_id, label: group.label }))),
+                  ]}
+                  className={selectCls}
+                />
+              </Field>
+              <Field
+                label="LearnDash Course"
+                hint="Courses come from synced LearnDash catalog data, with fallback to existing training history if the catalog is still empty."
+              >
+                <AppSelect
+                  value={draft.course_id}
+                  onValueChange={(value) => updateDraft("course_id", value)}
+                  options={[
+                    { value: "", label: "Select course" },
+                    ...((data?.courses ?? []).map((course) => ({
+                      value: course.course_id,
+                      label: course.course_name ?? course.course_id,
+                    }))),
+                  ]}
+                  className={selectCls}
+                />
+              </Field>
             </div>
-            <div>
-              <label className={labelCls}>Rule Template</label>
-              <AppSelect
-                value={draft.rule_template ?? ""}
-                onValueChange={(value) => updateDraft("rule_template", value || null)}
-                options={[
-                  { value: "", label: "Custom" },
-                  ...templateOptions.map((option) => ({ value: option.value, label: option.label })),
-                ]}
-                className={inputCls}
-              />
+          </section>
+
+          <section className="space-y-4">
+            <h3 className="text-title text-foreground">When it's due</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2"><Field label="Anchor Date">
+                <AppSelect
+                  value={draft.anchor_type}
+                  onValueChange={(value) => updateDraft("anchor_type", value as TrainingComplianceRuleDraft["anchor_type"])}
+                  options={[
+                    { value: "group_enrollment", label: "Group enrollment date" },
+                    { value: "hire_date", label: "Hire date" },
+                    { value: "manual", label: "Manual anchor" },
+                  ]}
+                  className={selectCls}
+                />
+              </Field></div>
+              <Field label="First Due">
+                <AppSelect
+                  value={String(draft.initial_due_offset_months)}
+                  onValueChange={(value) => updateDraft("initial_due_offset_months", Number(value))}
+                  options={[
+                    { value: "12", label: "12 months after anchor date" },
+                    { value: "24", label: "24 months after anchor date" },
+                    { value: "6", label: "6 months after anchor date" },
+                  ]}
+                  className={selectCls}
+                />
+              </Field>
+              <Field label="Repeats Every">
+                <AppSelect
+                  value={String(draft.recurrence_interval_months)}
+                  onValueChange={(value) => updateDraft("recurrence_interval_months", Number(value))}
+                  options={[
+                    { value: "12", label: "12 months" },
+                    { value: "24", label: "24 months" },
+                    { value: "36", label: "36 months" },
+                  ]}
+                  className={selectCls}
+                />
+              </Field>
             </div>
-            <div>
-              <label className={labelCls}>Rule Type</label>
-              <AppSelect
-                value={draft.rule_type}
-                onValueChange={(value) => updateDraft("rule_type", value as TrainingComplianceRuleDraft["rule_type"])}
-                options={[
-                  { value: "annual_recurring", label: "Annual Recurring" },
-                  { value: "interval_recurring", label: "Interval Recurring" },
-                  { value: "assignment_specific", label: "Assignment-Specific" },
-                ]}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Anchor Date</label>
-              <AppSelect
-                value={draft.anchor_type}
-                onValueChange={(value) => updateDraft("anchor_type", value as TrainingComplianceRuleDraft["anchor_type"])}
-                options={[
-                  { value: "group_enrollment", label: "Group enrollment date" },
-                  { value: "hire_date", label: "Hire date" },
-                  { value: "manual", label: "Manual anchor" },
-                ]}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>LearnDash Group</label>
-              <AppSelect
-                value={draft.group_id}
-                onValueChange={(value) => updateDraft("group_id", value)}
-                options={[
-                  { value: "", label: "Select group" },
-                  ...((data?.groups ?? []).map((group) => ({ value: group.group_id, label: group.label }))),
-                ]}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>LearnDash Course</label>
-              <AppSelect
-                value={draft.course_id}
-                onValueChange={(value) => updateDraft("course_id", value)}
-                options={[
-                  { value: "", label: "Select course" },
-                  ...((data?.courses ?? []).map((course) => ({
-                    value: course.course_id,
-                    label: course.course_name ?? course.course_id,
-                  }))),
-                ]}
-                className={inputCls}
-              />
-              <p className="mt-1 text-[12px] text-muted-foreground">
-                Courses come from synced LearnDash catalog data, with fallback to existing training history if the catalog is still empty.
+            <div className="well">
+              <p className="text-sm font-medium" style={{ color: "var(--color-well-ink)" }}>
+                {firstDueText(draft.initial_due_offset_months, draft.anchor_type)}, then every {draft.recurrence_interval_months} months.
+              </p>
+              <p className="mt-1 text-xs">
+                {draft.reminder_days.length > 0
+                  ? `Reminders: ${draft.reminder_days.map((day) => (day === 0 ? "on the due date" : `${day} days before`)).join(", ")}.`
+                  : "No reminders are set."}
               </p>
             </div>
-            <div>
-              <label className={labelCls}>First Due</label>
-              <AppSelect
-                value={String(draft.initial_due_offset_months)}
-                onValueChange={(value) => updateDraft("initial_due_offset_months", Number(value))}
-                options={[
-                  { value: "12", label: "12 months after anchor date" },
-                  { value: "24", label: "24 months after anchor date" },
-                  { value: "6", label: "6 months after anchor date" },
-                ]}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Repeats Every</label>
-              <AppSelect
-                value={String(draft.recurrence_interval_months)}
-                onValueChange={(value) => updateDraft("recurrence_interval_months", Number(value))}
-                options={[
-                  { value: "12", label: "12 months" },
-                  { value: "24", label: "24 months" },
-                  { value: "36", label: "36 months" },
-                ]}
-                className={inputCls}
-              />
-            </div>
-          </div>
+          </section>
 
-          <div className="rounded-lg border border-border p-4 space-y-3">
-            <p className="text-[13px] font-semibold text-foreground">Reminder Schedule</p>
-            <div className="space-y-2">
+          <section className="space-y-3">
+            <h3 className="text-title text-foreground">Reminder Schedule</h3>
+            <div className="flex flex-wrap gap-2">
               {reminderChoices.map((choice) => (
-                <label key={choice.day} className="flex items-center gap-2 text-[13px] text-foreground">
+                <label key={choice.day} className="choice-chip">
                   <input
                     type="checkbox"
+                    className="visually-hidden"
                     checked={draft.reminder_days.includes(choice.day)}
                     onChange={() => toggleReminder(choice.day)}
                   />
@@ -418,75 +567,36 @@ export function TrainingComplianceRulesPage() {
                 </label>
               ))}
             </div>
+          </section>
+
+          <div className="grid gap-x-8 gap-y-6 md:grid-cols-2">
+            <section>
+              <h3 className="text-title mb-1 text-foreground">Notify</h3>
+              <div className="divide-y divide-border">
+                <ToggleRow label="Employee" checked={draft.notify_employee} onChange={(value) => updateDraft("notify_employee", value)} />
+                <ToggleRow label="HR/Admin" checked={draft.notify_admin} onChange={(value) => updateDraft("notify_admin", value)} />
+              </div>
+            </section>
+            <section>
+              <h3 className="text-title mb-1 text-foreground">Completion Source</h3>
+              <div className="divide-y divide-border">
+                <ToggleRow label="Accept LearnDash completion" checked={draft.accept_learndash_completion} onChange={(value) => updateDraft("accept_learndash_completion", value)} />
+                <ToggleRow label="Allow manual HR completion" checked={draft.allow_manual_completion} onChange={(value) => updateDraft("allow_manual_completion", value)} />
+                <ToggleRow label="Allow early completion" checked={draft.allow_early_completion} onChange={(value) => updateDraft("allow_early_completion", value)} />
+              </div>
+            </section>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-lg border border-border p-4 space-y-2">
-              <p className="text-[13px] font-semibold text-foreground">Notify</p>
-              <label className="flex items-center gap-2 text-[13px] text-foreground">
-                <input
-                  type="checkbox"
-                  checked={draft.notify_employee}
-                  onChange={(event) => updateDraft("notify_employee", event.target.checked)}
-                />
-                <span>Employee</span>
-              </label>
-              <label className="flex items-center gap-2 text-[13px] text-foreground">
-                <input
-                  type="checkbox"
-                  checked={draft.notify_admin}
-                  onChange={(event) => updateDraft("notify_admin", event.target.checked)}
-                />
-                <span>HR/Admin</span>
-              </label>
-            </div>
-            <div className="rounded-lg border border-border p-4 space-y-2">
-              <p className="text-[13px] font-semibold text-foreground">Completion Source</p>
-              <label className="flex items-center gap-2 text-[13px] text-foreground">
-                <input
-                  type="checkbox"
-                  checked={draft.accept_learndash_completion}
-                  onChange={(event) => updateDraft("accept_learndash_completion", event.target.checked)}
-                />
-                <span>Accept LearnDash completion</span>
-              </label>
-              <label className="flex items-center gap-2 text-[13px] text-foreground">
-                <input
-                  type="checkbox"
-                  checked={draft.allow_manual_completion}
-                  onChange={(event) => updateDraft("allow_manual_completion", event.target.checked)}
-                />
-                <span>Allow manual HR completion</span>
-              </label>
-              <label className="flex items-center gap-2 text-[13px] text-foreground">
-                <input
-                  type="checkbox"
-                  checked={draft.allow_early_completion}
-                  onChange={(event) => updateDraft("allow_early_completion", event.target.checked)}
-                />
-                <span>Allow early completion</span>
-              </label>
-            </div>
-          </div>
+          <section className="border-t border-border pt-2">
+            <ToggleRow
+              label="Active"
+              hint="Inactive rules stay in history but stop generating future cycles."
+              checked={draft.active}
+              onChange={(value) => updateDraft("active", value)}
+            />
+          </section>
 
-          <div className="flex items-center justify-between rounded-lg border border-border p-4">
-            <div>
-              <p className="text-[13px] font-semibold text-foreground">Rule Status</p>
-              <p className="text-[12px] text-muted-foreground">
-                Inactive rules stay in history but stop generating future cycles.
-              </p>
-            </div>
-            <label className="flex items-center gap-2 text-[13px] text-foreground">
-              <input
-                type="checkbox"
-                checked={draft.active}
-                onChange={(event) => updateDraft("active", event.target.checked)}
-              />
-              <span>Active</span>
-            </label>
-          </div>
-
-          <div className="flex justify-between gap-2 pt-2">
+          <div className="sticky bottom-0 -mx-6 -mb-6 flex flex-wrap justify-between gap-2 border-t border-border bg-card px-6 py-4">
             <div>
               {draft.id && (
                 <Button variant="outline" onClick={() => void handleDeactivate()} disabled={saveRule.isPending}>
@@ -499,8 +609,8 @@ export function TrainingComplianceRulesPage() {
                 Cancel
               </Button>
               <Button onClick={() => void handleSave()} disabled={saveRule.isPending}>
-                <Save size={13} />
-                {saveRule.isPending ? "Saving..." : "Save Rule"}
+                <Save size={14} aria-hidden="true" />
+                {saveRule.isPending ? "Saving…" : "Save Rule"}
               </Button>
             </div>
           </div>

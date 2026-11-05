@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { PageSkeleton } from '@/components/shared/PageSkeleton';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { supabase } from '@/lib/supabase';
-import { BarChart, Activity, Database, AlertTriangle, CheckCircle, Sparkles, Zap } from 'lucide-react';
+import { Activity, Database, AlertTriangle, Sparkles } from 'lucide-react';
 
 interface AILog {
     id: string;
@@ -76,72 +78,55 @@ export function AIDashboardPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-20">
-                <div className="flex items-center gap-3">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    <span className="text-[13px] tracking-[0.02em] text-muted-foreground">Loading AI telemetry...</span>
-                </div>
-            </div>
+            <PageSkeleton label="Loading AI telemetry" />
         );
     }
 
     return (
         <div className="space-y-5">
-            <div className="flex items-end justify-between pl-1">
+            <div className="flex items-end justify-between">
                 <div>
                     <h1 className="page-header-title">AI Dashboard</h1>
                     <p className="page-header-meta">System telemetry, inference performance, and cache activity</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="ai-tag">AI</span>
-                    <div className="flex items-center gap-1.5">
-                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[color:var(--severity-low)]" />
-                        <span className="text-[11px] font-medium tracking-[0.04em] text-[color:var(--severity-low)]">
-                            Operational
-                        </span>
-                    </div>
                 </div>
             </div>
 
             {error && (
                 <div className="rounded-lg border border-destructive/20 bg-destructive/8 p-4">
                     <div className="mb-1 flex items-center gap-2">
-                        <AlertTriangle size={13} className="text-destructive" />
-                        <p className="text-[13px] font-semibold text-destructive">Error Loading Data</p>
+                        <AlertTriangle size={14} className="text-destructive" aria-hidden="true" />
+                        <p className="text-sm font-medium text-destructive">Error Loading Data</p>
                     </div>
-                    <p className="text-[12px] text-destructive/90">{error}</p>
-                    <p className="mt-1.5 text-[11px] text-muted-foreground">The `ai_logs` or `ai_cache` tables may not exist, or there may be permission issues.</p>
+                    <p className="text-xs text-destructive/90">{error}</p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">The `ai_logs` or `ai_cache` tables may not exist, or there may be permission issues.</p>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="tally tally-3">
                 {[
-                    { label: 'Total Requests', value: totalRequests.toLocaleString(), icon: BarChart, color: 'text-primary' },
-                    { label: 'Success Rate', value: `${successRate}%`, icon: CheckCircle, color: 'text-[color:var(--severity-low)]' },
-                    { label: 'Token Usage', value: totalTokens.toLocaleString(), icon: Zap, color: 'text-[color:var(--severity-medium)]' },
-                ].map(({ label, value, icon: Icon, color }) => (
-                    <div key={label} className="saas-card p-4">
-                        <div className="mb-3 flex items-center justify-between">
-                            <span className="zone-label">{label}</span>
-                            <Icon size={14} className={color} strokeWidth={2} />
-                        </div>
-                        <p className="data-value text-[2rem] text-foreground">{value}</p>
+                    { label: 'Total Requests', value: totalRequests.toLocaleString() },
+                    { label: 'Success Rate', value: `${successRate}%` },
+                    { label: 'Token Usage', value: totalTokens.toLocaleString() },
+                ].map(({ label, value }) => (
+                    <div key={label} className="tally-cell">
+                        <p className="zone-label">{label}</p>
+                        <p className="data-value mt-2 text-3xl text-foreground">{value}</p>
                     </div>
                 ))}
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <div className="overflow-hidden rounded-xl border border-border bg-card lg:col-span-2">
-                    <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
-                        <Activity size={13} className="text-primary" strokeWidth={2} />
-                        <span className="zone-label">Recent Activity Log</span>
+                <div className="panel lg:col-span-2">
+                    <div className="panel-header">
+                        <Activity size={14} className="text-primary" strokeWidth={1.75} aria-hidden="true" />
+                        <h2 className="text-title text-foreground">Recent Activity Log</h2>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="border-b border-border">
                                 <tr>
                                     {['Time', 'Feature', 'Model', 'Tokens', 'Status'].map((h) => (
-                                        <th key={h} className="px-4 py-3 text-left">
+                                        <th key={h} className={`whitespace-nowrap px-4 py-3 ${h === 'Tokens' ? 'text-right' : 'text-left'}`}>
                                             <span className="zone-label">{h}</span>
                                         </th>
                                     ))}
@@ -151,37 +136,35 @@ export function AIDashboardPage() {
                                 {logs.length === 0 ? (
                                     <tr>
                                         <td colSpan={5} className="px-5 py-16 text-center">
-                                            <Sparkles size={28} className="mx-auto mb-3 text-muted-foreground/25" strokeWidth={1} />
-                                            <p className="text-[13px] text-muted-foreground">No AI activity logs yet</p>
-                                            <p className="mt-1 text-[12px] text-muted-foreground/60">Logs appear after AI features are used</p>
+                                            <Sparkles size={28} className="mx-auto mb-3 text-muted-foreground" strokeWidth={1} aria-hidden="true" />
+                                            <p className="text-sm text-muted-foreground">No AI activity logs yet</p>
+                                            <p className="mt-1 text-xs text-muted-foreground">Logs appear after AI features are used</p>
                                         </td>
                                     </tr>
                                 ) : (
                                     logs.map((log) => (
                                         <tr key={log.id} className="table-row-interactive">
-                                            <td className="px-4 py-3">
-                                                <span className="text-[12px] text-muted-foreground">
-                                                    {new Date(log.created_at).toLocaleTimeString()}
+                                            <td className="whitespace-nowrap px-4 py-2">
+                                                <span className="text-xs tabular-nums text-muted-foreground">
+                                                    {new Date(log.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-[13px] font-medium tracking-[-0.01em] text-foreground">{log.feature}</span>
+                                            <td className="whitespace-nowrap px-4 py-2">
+                                                <span className="text-sm text-foreground">{log.feature}</span>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-[12px] text-muted-foreground">{log.model?.split('/').pop() || 'N/A'}</span>
+                                            <td className="max-w-[200px] px-4 py-2">
+                                                <span className="block truncate text-xs text-muted-foreground" title={log.model ?? undefined}>{log.model?.split('/').pop() || 'N/A'}</span>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <span className="text-[12px] text-muted-foreground">
+                                            <td className="px-4 py-2 text-right">
+                                                <span className="text-xs tabular-nums text-muted-foreground">
                                                     {(log.tokens_in + log.tokens_out).toLocaleString()}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className={log.success ? 'status-chip status-chip-green' : 'status-chip status-chip-red'}>
-                                                        {log.success ? 'ok' : 'error'}
-                                                    </span>
+                                            <td className="px-4 py-2">
+                                                <div className="flex flex-col items-start gap-1">
+                                                    <StatusBadge status={log.success ? 'OK' : 'Error'} tone={log.success ? 'done' : 'critical'} />
                                                     {log.error && (
-                                                        <span className="max-w-[180px] truncate text-[11px] text-destructive" title={log.error}>
+                                                        <span className="max-w-[180px] truncate text-xs text-destructive" title={log.error}>
                                                             {log.error}
                                                         </span>
                                                     )}
@@ -195,27 +178,27 @@ export function AIDashboardPage() {
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-xl border border-border bg-card">
-                    <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
-                        <Database size={13} className="text-primary" strokeWidth={2} />
-                        <span className="zone-label">Cache Status</span>
+                <div className="panel">
+                    <div className="panel-header">
+                        <Database size={14} className="text-primary" strokeWidth={1.75} aria-hidden="true" />
+                        <h2 className="text-title text-foreground">Cache Status</h2>
                     </div>
                     <div className="p-4">
                         <div className="mb-4 flex items-center justify-between">
                             <span className="meta-label">Active entries</span>
-                            <span className="data-value text-[1.5rem] text-foreground">{cacheEntries.length}</span>
+                            <span className="data-value text-section text-foreground">{cacheEntries.length}</span>
                         </div>
                         {cacheEntries.length === 0 ? (
                             <div className="py-8 text-center">
-                                <Database size={24} className="mx-auto mb-2 text-muted-foreground/25" strokeWidth={1} />
-                                <p className="text-[12px] text-muted-foreground">No cached entries</p>
+                                <Database size={24} className="mx-auto mb-2 text-muted-foreground" strokeWidth={1} aria-hidden="true" />
+                                <p className="text-xs text-muted-foreground">No cached entries</p>
                             </div>
                         ) : (
                             <div className="space-y-2">
                                 {cacheEntries.slice(0, 5).map((entry) => (
                                     <div key={entry.input_hash} className="flex items-center justify-between rounded-md border border-border bg-muted/30 p-2.5">
-                                        <span className="max-w-[140px] truncate text-[12px] text-foreground">{entry.model || 'cached'}</span>
-                                        <span className="ml-2 shrink-0 text-[11px] text-muted-foreground">
+                                        <span className="max-w-[140px] truncate text-xs text-foreground">{entry.model || 'cached'}</span>
+                                        <span className="ml-2 shrink-0 text-xs text-muted-foreground">
                                             {Math.floor((new Date().getTime() - new Date(entry.created_at).getTime()) / 1000 / 60)}m ago
                                         </span>
                                     </div>
@@ -224,7 +207,7 @@ export function AIDashboardPage() {
                         )}
                         {cacheEntries.length > 0 && (
                             <div className="mt-4 border-t border-border pt-4">
-                                <button className="h-8 w-full rounded-md border border-destructive/25 text-[12px] font-semibold text-destructive transition-colors hover:bg-destructive/6">
+                                <button className="h-8 w-full rounded-md border border-destructive/25 text-xs font-medium text-destructive transition-colors hover:bg-destructive/6">
                                     Clear Cache
                                 </button>
                             </div>

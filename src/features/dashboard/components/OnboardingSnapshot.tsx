@@ -1,5 +1,5 @@
 import { GraduationCap, ChevronRight } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 import type { OnboardingEmployee } from '@/services/dashboardService';
 
 interface OnboardingSnapshotProps {
@@ -7,32 +7,17 @@ interface OnboardingSnapshotProps {
     loading?: boolean;
 }
 
-function ProgressTrack({ value }: { value: number }) {
-    const pct = Math.min(100, Math.max(0, value));
-    const color = pct >= 75 ? 'bg-[hsl(152,58%,38%)]'
-                : pct >= 40 ? 'bg-[hsl(196,84%,42%)]'
-                :              'bg-[hsl(38,96%,48%)]';
-    return (
-        <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
-            <div
-                className={cn('h-full rounded-full transition-all duration-700', color)}
-                style={{ width: `${pct}%` }}
-            />
-        </div>
-    );
-}
-
 export function OnboardingSnapshot({ employees, loading }: OnboardingSnapshotProps) {
     return (
-        <section className="animate-reveal-up delay-100 bg-card rounded-lg border border-border overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
+        <section className="panel">
+            <div className="panel-header justify-between">
                 <div className="flex items-center gap-2.5">
-                    <GraduationCap size={14} strokeWidth={2} className="text-muted-foreground/60" />
-                    <h3 className="text-[13px] font-semibold text-foreground">Onboarding Progress</h3>
+                    <GraduationCap size={14} strokeWidth={2} className="text-muted-foreground" />
+                    <h3 className="text-title text-foreground">Onboarding Progress</h3>
                 </div>
-                <button className="text-[11px] font-medium text-primary hover:text-primary/70 transition-colors flex items-center gap-0.5">
-                    All <ChevronRight size={11} strokeWidth={2.5} />
-                </button>
+                <Link to="/employees" className="inline-flex min-h-8 items-center gap-1 text-sm font-medium text-primary transition-colors hover:text-accent-hi">
+                    All <ChevronRight size={14} strokeWidth={1.75} aria-hidden="true" />
+                </Link>
             </div>
 
             {loading ? (
@@ -49,7 +34,7 @@ export function OnboardingSnapshot({ employees, loading }: OnboardingSnapshotPro
                 </div>
             ) : employees.length === 0 ? (
                 <div className="px-5 py-8 text-center">
-                    <p className="text-[13px] text-muted-foreground/50 font-medium">No onboarding in progress</p>
+                    <p className="text-[13px] text-muted-foreground font-medium">No onboarding in progress</p>
                 </div>
             ) : (
                 <div className="px-5 py-4 space-y-4">
@@ -61,18 +46,16 @@ export function OnboardingSnapshot({ employees, loading }: OnboardingSnapshotPro
                         >
                             <div className="flex items-baseline justify-between gap-2">
                                 <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-foreground truncate leading-none">
+                                    <p className="text-[13px] font-medium text-foreground truncate leading-none">
                                         {emp.name}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground/50 font-medium mt-0.5">
+                                    <p className="text-xs text-muted-foreground font-medium mt-0.5">
                                         {emp.role}
                                     </p>
                                 </div>
-                                <span className="text-[12px] font-bold tabular-nums text-foreground/80 flex-shrink-0">
-                                    {emp.progress}%
-                                </span>
+                                {/* Course progress isn't computed here yet, so no percentage is shown */}
+                                <span className="text-xs text-muted-foreground flex-shrink-0">Not tracked yet</span>
                             </div>
-                            <ProgressTrack value={emp.progress} />
                         </div>
                     ))}
                 </div>

@@ -19,8 +19,8 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
             <div className="ai-surface p-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <ClipboardList className="h-5 w-5" style={{ color: 'var(--ai-text)' }} />
-                        <h3 className="text-[15px] font-semibold tracking-[-0.015em] text-foreground">Onboarding Assistant</h3>
+                        <ClipboardList className="h-5 w-5" style={{ color: 'var(--ai-text)' }} aria-hidden="true" />
+                        <h3 className="text-[15px] font-medium text-foreground">Onboarding Assistant</h3>
                     </div>
                     <Button
                         onClick={handleAnalyze}
@@ -30,7 +30,7 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
                     </Button>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                    Identify missing documents and next steps for {employee.name}.
+                    Identify missing documents and next steps for {employee.name ?? `${employee.first_name ?? ''} ${employee.last_name ?? ''}`.trim()}.
                 </p>
             </div>
         );
@@ -40,7 +40,7 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
         return (
             <div className="ai-surface flex flex-col items-center justify-center space-y-3 p-8">
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-border" style={{ borderTopColor: 'var(--primary)' }} />
-                <p className="animate-pulse text-sm text-muted-foreground">Checking requirements...</p>
+                <p className="animate-pulse text-sm text-muted-foreground">Checking requirements…</p>
             </div>
         );
     }
@@ -58,19 +58,19 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
         <div className="space-y-4">
             <div className="saas-card p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <ClipboardList className="h-5 w-5" style={{ color: 'var(--ai-text)' }} />
-                    <h3 className="text-lg font-semibold">Onboarding Status</h3>
+                    <ClipboardList className="h-5 w-5" style={{ color: 'var(--ai-text)' }} aria-hidden="true" />
+                    <h3 className="text-lg font-medium">Onboarding Status</h3>
                 </div>
 
-                <p className="mb-6 font-medium text-foreground/80">
+                <p className="mb-6 font-medium text-secondary-foreground">
                     {data?.status_summary}
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Missing Documents */}
                     <div>
-                        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-destructive">
-                            <AlertCircle className="w-4 h-4" />
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-destructive">
+                            <AlertCircle className="w-4 h-4" aria-hidden="true" />
                             Missing Documents
                         </h4>
                         <ul className="space-y-2">
@@ -89,8 +89,8 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
 
                     {/* Next Steps */}
                     <div>
-                        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
-                            <CheckSquare className="w-4 h-4" />
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
+                            <CheckSquare className="w-4 h-4" aria-hidden="true" />
                             Recommended Actions
                         </h4>
                         <ul className="space-y-2">
@@ -106,7 +106,7 @@ export function OnboardingSummaryPanel({ employee, status }: OnboardingSummaryPa
 
                 {data?.estimated_completion && (
                     <div className="mt-6 flex items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
-                        <Clock className="w-4 h-4" />
+                        <Clock className="w-4 h-4" aria-hidden="true" />
                         Estimated Completion: <span className="font-medium text-foreground">{data.estimated_completion}</span>
                     </div>
                 )}

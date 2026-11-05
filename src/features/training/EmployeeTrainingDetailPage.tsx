@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { PageSkeleton } from '@/components/shared/PageSkeleton';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { format } from 'date-fns';
 import { Check, ChevronLeft, Circle, ClipboardEdit, PenLine } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -9,17 +11,17 @@ import type { TrainingComplianceRecord, TrainingEvent } from './types';
 import { Button } from '@/components/ui/button';
 
 const courseStatusStyles: Record<string, { text: string; bg: string; border: string; label: string }> = {
-  completed: { text: 'hsl(152 54% 56%)', bg: 'hsl(152 58% 38% / 0.10)', border: 'hsl(152 58% 38% / 0.20)', label: 'Completed' },
-  in_progress: { text: 'hsl(38 90% 60%)', bg: 'hsl(38 96% 48% / 0.08)', border: 'hsl(38 96% 48% / 0.20)', label: 'In Progress' },
-  not_started: { text: 'hsl(0 0% 56%)', bg: 'hsl(0 0% 100% / 0.04)', border: 'hsl(0 0% 100% / 0.08)', label: 'Not Started' },
-  overdue: { text: 'hsl(4 82% 52%)', bg: 'hsl(4 82% 52% / 0.10)', border: 'hsl(4 82% 52% / 0.18)', label: 'Overdue' },
+  completed: { text: 'var(--color-signal)', bg: 'color-mix(in oklab, var(--color-signal) 10%, transparent)', border: 'color-mix(in oklab, var(--color-signal) 20%, transparent)', label: 'Completed' },
+  in_progress: { text: 'var(--color-accent-2)', bg: 'color-mix(in oklab, var(--color-accent-2) 8%, transparent)', border: 'color-mix(in oklab, var(--color-accent-2) 20%, transparent)', label: 'In Progress' },
+  not_started: { text: 'var(--muted-foreground)', bg: 'color-mix(in oklab, var(--tint) 4%, transparent)', border: 'color-mix(in oklab, var(--tint) 8%, transparent)', label: 'Not Started' },
+  overdue: { text: 'var(--color-error)', bg: 'color-mix(in oklab, var(--color-error) 10%, transparent)', border: 'color-mix(in oklab, var(--color-error) 18%, transparent)', label: 'Overdue' },
 };
 
 const eventStyles = {
   enrolled: { icon: Circle, color: 'var(--muted-foreground)', label: 'Enrolled' },
   completed: { icon: Check, color: 'var(--primary)', label: 'Completed' },
   adjusted: { icon: PenLine, color: 'var(--primary)', label: 'Adjusted' },
-  expired: { icon: Circle, color: 'hsl(4 82% 52%)', label: 'Expired' },
+  expired: { icon: Circle, color: 'var(--color-error)', label: 'Expired' },
 } as const;
 
 type DisplayEvent = {
@@ -77,29 +79,22 @@ function getComparisonLines(record: TrainingComplianceRecord) {
   const comparisons: string[] = [];
 
   if (record.raw_status !== record.effective_status && record.effective_status) {
-    comparisons.push(`Original: ${record.raw_status ?? '-'} -> Adjusted: ${record.effective_status}`);
+    comparisons.push(`Original: ${(record.raw_status ?? 'none').replace(/_/g, ' ')}, adjusted: ${record.effective_status.replace(/_/g, ' ')}`);
   }
 
   if (record.raw_completion_pct !== record.effective_completion_pct && record.effective_completion_pct != null) {
-    comparisons.push(`Original: ${record.raw_completion_pct ?? 0}% -> Adjusted: ${record.effective_completion_pct}%`);
+    comparisons.push(`Original: ${record.raw_completion_pct ?? 0}%, adjusted: ${record.effective_completion_pct}%`);
   }
 
   if (record.raw_completed_at !== record.effective_completed_at && record.effective_completed_at) {
-    comparisons.push(`Original: ${formatDate(record.raw_completed_at)} -> Adjusted: ${formatDate(record.effective_completed_at)}`);
+    comparisons.push(`Original: ${formatDate(record.raw_completed_at)}, adjusted: ${formatDate(record.effective_completed_at)}`);
   }
 
   if (record.raw_training_hours !== record.effective_training_hours && record.effective_training_hours != null) {
-    comparisons.push(`Original: ${formatHours(record.raw_training_hours)} -> Adjusted: ${formatHours(record.effective_training_hours)}`);
+    comparisons.push(`Original: ${formatHours(record.raw_training_hours)}, adjusted: ${formatHours(record.effective_training_hours)}`);
   }
 
   return comparisons;
-}
-
-function getSummaryChipClass(label: string) {
-  if (label.includes('overdue')) return 'status-chip status-chip-amber';
-  if (label.includes('adjusted')) return 'status-chip status-chip-cyan';
-  if (label.includes('% complete')) return 'status-chip status-chip-green';
-  return 'status-chip status-chip-muted';
 }
 
 function historicalVisibilityLabel(state: string) {
@@ -235,16 +230,14 @@ export function EmployeeTrainingDetailPage({
 
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-100px)] items-center justify-center">
-        <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-primary" />
-      </div>
+      <PageSkeleton label="Loading employee compliance" />
     );
   }
 
   if (error) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-[13px] text-destructive">
+        <span className="text-sm text-destructive">
           Failed to load employee training detail: {error.message}
         </span>
       </div>
@@ -254,7 +247,7 @@ export function EmployeeTrainingDetailPage({
   if (!data) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="text-[13px] text-muted-foreground">Employee not found.</span>
+        <span className="text-sm text-muted-foreground">Employee not found.</span>
       </div>
     );
   }
@@ -273,7 +266,7 @@ export function EmployeeTrainingDetailPage({
             size="sm"
             className="px-0 text-muted-foreground hover:text-foreground"
           >
-            <ChevronLeft size={16} strokeWidth={2} />
+            <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />
             Back to Compliance
           </Button>
         ) : onClose ? (
@@ -283,54 +276,53 @@ export function EmployeeTrainingDetailPage({
             size="sm"
             className="px-0 text-muted-foreground hover:text-foreground"
           >
-            <ChevronLeft size={16} strokeWidth={2} />
+            <ChevronLeft size={16} strokeWidth={1.75} aria-hidden="true" />
             Back to directory
           </Button>
         ) : null}
 
-        <div className="saas-card space-y-5 p-5">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div className="flex items-center gap-4">
-              <div
-                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-base font-semibold"
-                style={{ background: 'color-mix(in srgb, var(--primary) 16%, transparent)', color: 'var(--primary)' }}
-              >
-                {monogram}
-              </div>
-              <div className="min-w-0 pl-1">
-                <h1 className="page-header-title">{fullName}</h1>
-                <p className="page-header-meta">
-                  {employee.job_title ?? 'No job title'} - {employee.employee_status ?? 'Active'}
-                </p>
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <span
+              aria-hidden="true"
+              className="flex h-12 w-12 shrink-0 select-none items-center justify-center rounded-full bg-secondary text-sm font-medium text-secondary-foreground"
+            >
+              {monogram}
+            </span>
+            <div className="min-w-0">
+              <h1 className={embedded ? 'text-section text-foreground' : 'page-header-title'}>{fullName}</h1>
+              <p className="page-header-meta">
+                {employee.job_title ?? 'No job title'}, {employee.employee_status ?? 'Active'}
+              </p>
             </div>
+          </div>
 
-            <div className="flex flex-wrap gap-2">
-              {[
-                `${stats.completed}/${stats.total} courses`,
-                `${stats.completionPct}% complete`,
-                `${stats.overdue} overdue`,
-                `${stats.adjusted} adjusted`,
-                stats.totalHours > 0 ? `${formatHours(stats.totalHours)} recorded` : null,
-              ].map((label) =>
-                label ? (
-                  <span key={label} className={getSummaryChipClass(label)}>
-                    {label}
-                  </span>
-                ) : null,
-              )}
+          <div className="tally">
+            <div className="tally-cell">
+              <p className="zone-label">Courses</p>
+              <p className="data-value mt-2 text-2xl">{stats.completed} of {stats.total}</p>
+            </div>
+            <div className="tally-cell">
+              <p className="zone-label">Complete</p>
+              <p className="data-value mt-2 text-2xl">{stats.completionPct}%</p>
+            </div>
+            <div className="tally-cell">
+              <p className="zone-label">Overdue</p>
+              <p className="data-value mt-2 text-2xl" style={{ color: stats.overdue > 0 ? 'var(--severity-critical)' : undefined }}>{stats.overdue}</p>
+            </div>
+            <div className="tally-cell">
+              <p className="zone-label">Adjusted</p>
+              <p className="data-value mt-2 text-2xl">{stats.adjusted}</p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-border">
-              <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
-                style={{ width: `${stats.completionPct}%` }}
-              />
+            <div className="h-1 w-full overflow-hidden rounded-full bg-secondary">
+              <div className="h-full rounded-full bg-signal" style={{ width: `${stats.completionPct}%` }} />
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{stats.inProgress} in progress</span>
+              {stats.totalHours > 0 ? <span>{formatHours(stats.totalHours)} recorded</span> : null}
               <span>{stats.notStarted} not started</span>
             </div>
           </div>
@@ -341,103 +333,88 @@ export function EmployeeTrainingDetailPage({
         <div className="space-y-4">
           {courses.length === 0 ? (
             <div className="saas-card p-10 text-center">
-              <p className="text-[15px] font-semibold tracking-[-0.01em] text-foreground">No courses assigned</p>
-              <p className="mt-2 text-[13px] text-muted-foreground">
+              <p className="text-title text-foreground">No courses assigned</p>
+              <p className="mt-2 text-sm text-muted-foreground">
                 This employee has no training records in LearnDash yet.
               </p>
             </div>
           ) : (
-            courses.map((record) => {
-              const isOverdue = Boolean(record.expires_at) && new Date(record.expires_at as string) < new Date();
-              const statusKey = isOverdue ? 'overdue' : (record.effective_status ?? 'not_started');
-              const statusStyle = courseStatusStyles[statusKey] ?? courseStatusStyles.not_started;
-              const comparisonLines = getComparisonLines(record);
+            <div className="panel divide-y divide-border">
+              {courses.map((record) => {
+                const isOverdue = Boolean(record.expires_at) && new Date(record.expires_at as string) < new Date();
+                const statusKey = isOverdue ? 'overdue' : (record.effective_status ?? 'not_started');
+                const statusStyle = courseStatusStyles[statusKey] ?? courseStatusStyles.not_started;
+                const comparisonLines = record.has_overrides ? getComparisonLines(record) : [];
+                const pct = record.effective_completion_pct ?? 0;
 
-              return (
-                <div key={record.training_record_id} className="saas-card p-5">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-1.5">
-                        <h2 className="text-[13px] font-semibold tracking-[-0.01em] text-foreground">
+                return (
+                  <div key={record.training_record_id} className="space-y-3 px-6 py-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h2 className="text-sm font-medium text-foreground">
                           {normalizeCourseTitle(record.course_name ?? `Course #${record.course_id}`)}
                         </h2>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span
-                            className="inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.03em]"
-                            style={{
-                              color: statusStyle.text,
-                              background: statusStyle.bg,
-                              border: `1px solid ${statusStyle.border}`,
-                            }}
-                          >
-                            {statusStyle.label}
-                          </span>
-                          {record.has_overrides ? <span className="status-chip status-chip-cyan">Adjusted</span> : null}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <StatusBadge
+                            status={statusStyle.label}
+                            tone={statusKey === 'completed' ? 'done' : statusKey === 'overdue' ? 'critical' : statusKey === 'in_progress' ? 'waiting' : 'neutral'}
+                          />
+                          {record.has_overrides ? <StatusBadge status="Adjusted" tone="active" /> : null}
                         </div>
                       </div>
 
-                      <Button
-                        onClick={() => setAdjustRecord(record)}
-                        variant="outline"
-                        size="sm"
-                        className="self-start"
-                      >
-                        <PenLine size={13} strokeWidth={2} />
+                      <Button onClick={() => setAdjustRecord(record)} variant="outline" size="sm">
+                        <PenLine size={14} strokeWidth={1.75} aria-hidden="true" />
                         Adjust
                       </Button>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-border">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all duration-500"
-                          style={{ width: `${record.effective_completion_pct ?? 0}%` }}
-                        />
+                    <div className="flex items-center gap-3">
+                      <div className="h-1 flex-1 overflow-hidden rounded-full bg-secondary">
+                        <div className="h-full rounded-full bg-signal" style={{ width: `${pct}%` }} />
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {record.effective_completion_pct ?? 0}% complete
-                      </p>
+                      <span className="w-9 text-right text-xs tabular-nums text-muted-foreground">{pct}%</span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 text-sm text-muted-foreground xl:grid-cols-4">
+                    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                       <div>
-                        <p className="meta-label mb-1">Completed</p>
-                        <p>{formatDate(record.effective_completed_at)}</p>
+                        <dt className="text-xs text-muted-foreground">Completed</dt>
+                        <dd className="text-sm text-foreground">{formatDate(record.effective_completed_at)}</dd>
                       </div>
                       <div>
-                        <p className="meta-label mb-1">Time Spent</p>
-                        <p>{formatHours(record.effective_training_hours)}</p>
+                        <dt className="text-xs text-muted-foreground">Time Spent</dt>
+                        <dd className="text-sm text-foreground">{formatHours(record.effective_training_hours)}</dd>
                       </div>
                       <div>
-                        <p className="meta-label mb-1">Expiry</p>
-                        <p style={isOverdue ? { color: 'var(--destructive)' } : undefined}>
+                        <dt className="text-xs text-muted-foreground">Expiry</dt>
+                        <dd className="text-sm text-foreground" style={isOverdue ? { color: 'var(--destructive)' } : undefined}>
                           {formatDate(record.expires_at)}
-                        </p>
+                        </dd>
                       </div>
                       <div>
-                        <p className="meta-label mb-1">Last Sync</p>
-                        <p>{formatDate(record.last_synced_at)}</p>
+                        <dt className="text-xs text-muted-foreground">Last Sync</dt>
+                        <dd className="text-sm text-foreground">{formatDate(record.last_synced_at)}</dd>
                       </div>
-                    </div>
+                    </dl>
 
                     {comparisonLines.length > 0 ? (
-                      <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {comparisonLines.map((line) => (
-                          <p key={line}>{line}</p>
+                          <p key={line} className="text-xs">{line}</p>
                         ))}
                       </div>
                     ) : null}
                   </div>
-                </div>
-              );
-            })
+                );
+              })}
+            </div>
           )}
 
           {historicalCourses.length > 0 ? (
-            <div className="saas-card p-5">
+            <div className="saas-card p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-[13px] font-semibold tracking-[-0.01em] text-foreground">
+                  <h2 className="text-sm font-medium text-foreground">
                     Historical / Superseded Training
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -452,7 +429,7 @@ export function EmployeeTrainingDetailPage({
                   <div key={record.training_record_id} className="rounded-md border border-border bg-secondary/35 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-[13px] font-medium text-foreground">
+                        <p className="text-sm font-medium text-foreground">
                           {normalizeCourseTitle(record.course_name ?? `Course #${record.course_id}`)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -472,10 +449,10 @@ export function EmployeeTrainingDetailPage({
           <OnboardingGateCard personId={employee.id} />
 
           {recurringHistory.length > 0 ? (
-            <section className="saas-card p-5">
+            <section className="saas-card p-6">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-semibold text-foreground">Recurring Compliance History</h3>
+                  <h3 className="text-sm font-medium text-foreground">Recurring Compliance History</h3>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Prior-series and superseded recurring cycles remain audit-visible here while active dashboards show only the current obligation set.
                   </p>
@@ -485,14 +462,14 @@ export function EmployeeTrainingDetailPage({
 
               <div className="space-y-3">
                 {recurringHistory.map((record) => (
-                  <div key={record.instance_id} className="rounded-md border border-border bg-card p-3">
+                  <div key={record.instance_id} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">
                           {record.rule_name}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Group {record.group_id} • Cycle {record.cycle_number} • Due {formatCalendarDate(record.due_at)}
+                          Group {record.group_id}, cycle {record.cycle_number}, due {formatCalendarDate(record.due_at)}
                         </p>
                         {record.completed_at ? (
                           <p className="mt-1 text-xs text-muted-foreground">
@@ -511,18 +488,18 @@ export function EmployeeTrainingDetailPage({
             </section>
           ) : null}
 
-          <section className="saas-card p-5">
+          <section className="saas-card p-6">
             <div className="mb-4 flex items-center gap-2">
-              <ClipboardEdit size={14} strokeWidth={2} style={{ color: 'var(--primary)' }} />
-              <h3 className="text-sm font-semibold text-foreground">Adjustment History</h3>
+              <ClipboardEdit size={14} strokeWidth={1.75} style={{ color: 'var(--primary)' }} aria-hidden="true" />
+              <h3 className="text-sm font-medium text-foreground">Adjustment History</h3>
             </div>
 
             {adjustments.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">No adjustments recorded</p>
+              <p className="text-sm text-muted-foreground">No adjustments recorded</p>
             ) : (
               <div className="space-y-3">
                 {adjustments.map((adjustment) => (
-                  <div key={adjustment.id} className="rounded-md border border-border bg-card p-3">
+                  <div key={adjustment.id} className="border-t border-border pt-3 first:border-t-0 first:pt-0">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-foreground">
@@ -543,14 +520,14 @@ export function EmployeeTrainingDetailPage({
             )}
           </section>
 
-          <section className="saas-card p-5">
+          <section className="saas-card p-6">
             <div className="mb-4 flex items-center gap-2">
-              <Circle size={12} strokeWidth={2} style={{ color: 'var(--muted-foreground)' }} />
-              <h3 className="text-sm font-semibold text-foreground">Training Events</h3>
+              <Circle size={14} strokeWidth={1.75} style={{ color: 'var(--muted-foreground)' }} aria-hidden="true" />
+              <h3 className="text-sm font-medium text-foreground">Training Events</h3>
             </div>
 
             {displayEvents.length === 0 ? (
-              <p className="text-[13px] text-muted-foreground">No events recorded</p>
+              <p className="text-sm text-muted-foreground">No events recorded</p>
             ) : (
               <div className="space-y-4">
                 {displayEvents.map((event, index) => {
@@ -564,7 +541,7 @@ export function EmployeeTrainingDetailPage({
                           className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary"
                           style={{ color: style.color }}
                         >
-                          <Icon size={13} strokeWidth={2} />
+                          <Icon size={14} strokeWidth={1.75} />
                         </div>
                         {index < displayEvents.length - 1 ? (
                           <div className="mt-1 w-px flex-1 bg-border" style={{ minHeight: '22px' }} />
@@ -572,10 +549,10 @@ export function EmployeeTrainingDetailPage({
                       </div>
 
                       <div className="min-w-0 pb-2">
-                        <p className="text-[13px] font-medium tracking-[-0.01em] text-foreground">
+                        <p className="text-sm font-medium text-foreground">
                           {event.courseLabel}
                         </p>
-                        <p className="mt-1 text-[12px] tracking-[0.005em] text-muted-foreground">
+                        <p className="mt-1 text-xs text-muted-foreground">
                           {style.label} - {formatDate(event.occurredAt)}
                         </p>
                       </div>
