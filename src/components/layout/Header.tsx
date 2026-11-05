@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Bell, Search, ChevronDown, User, LogOut, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/lib/supabase';
 import { useSidebar } from './SidebarContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { settingsService } from '@/services/settingsService';
 import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
@@ -23,10 +25,25 @@ interface HeaderProps {
 
 export function Header({ onOpenMobileNav }: HeaderProps) {
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const { pinned: expanded } = useSidebar();
+    const { isPlatformAdmin } = useUserRole();
     const [userMeta, setUserMeta] = useState<{ fullName: string; role: string }>({ fullName: '', role: '' });
     const [logoLight, setLogoLight] = useState(defaultLogoDark);
     const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
+
+    /* Outside the overview, pages still show one agency, so a platform admin must be able to see which */
+    const { data: viewingAgency } = useQuery({
+        queryKey: ['viewing-agency'],
+        enabled: isPlatformAdmin && pathname !== '/',
+        queryFn: async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const tenantId = session?.user.app_metadata?.tenant_id as string | undefined;
+            if (!tenantId) return null;
+            const { data } = await supabase.from('tenants').select('name').eq('id', tenantId).maybeSingle();
+            return data?.name ?? null;
+        },
+    });
 
     useEffect(() => { loadUser(); loadLogos(); }, []);
 
@@ -119,6 +136,11 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
                 {/* Right: notifications + profile */}
                 <div className="flex items-center gap-1">
+                    {isPlatformAdmin && pathname !== '/' && viewingAgency && (
+                        <span className="mr-2 hidden max-w-56 truncate text-xs text-muted-foreground sm:inline">
+                            Viewing: {viewingAgency}
+                        </span>
+                    )}
 
                     {/* Notifications */}
                     <button

@@ -561,3 +561,15 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 **Why:** owner request.
 
 **Rollback:** set `defaultTheme` back to `dark` in `src/App.tsx` and the fallback in the `index.html` script.
+
+---
+
+## 2026-11-05 - Platform overview reads across agencies on the server
+
+**Decision:** the `platform-overview` Edge Function uses the service role to read counts across every tenant. This is a deliberate exception to reading one tenant from the JWT. RLS policies are not changed. It returns totals only, never personal fields or `integration_log.payload`, and each read is audited.
+
+**Why:** platform admins need to oversee all agencies. Loosening RLS on `people` or `offers` would expose individual records to the browser, while totals from one guarded function do not.
+
+**Safeguards:** `tenantGuard` only decodes the JWT, so the role claim alone is not trusted. The function also verifies the token with Supabase Auth and requires an active `platform_admin` row in `tenant_users`. Deploy with JWT verification on.
+
+**Rollback:** remove the function and point the index route back to `DashboardPage`. No schema change is involved.

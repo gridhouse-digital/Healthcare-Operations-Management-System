@@ -12,7 +12,7 @@ import { OfferList } from '@/features/offers/OfferList';
 import { OfferEditor } from '@/features/offers/OfferEditor';
 import { OfferPublicView } from '@/features/offers/OfferPublicView';
 
-import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { HomePage } from '@/features/dashboard/HomePage';
 import { EmployeeList } from '@/features/employees/EmployeeList';
 import { TrainingPage } from '@/features/training/TrainingPage';
 import { EmployeeTrainingDetailPage } from '@/features/training/EmployeeTrainingDetailPage';
@@ -42,7 +42,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route path="/update-password" element={<UpdatePasswordPage />} />
             <Route path="/" element={<MainLayout />}>
-              <Route index element={<DashboardPage />} />
+              <Route index element={<HomePage />} />
               <Route path="applicants" element={<ApplicantList />} />
               <Route path="applicants/:id" element={<ApplicantDetailsPage />} />
               <Route path="offers" element={<OfferList />} />

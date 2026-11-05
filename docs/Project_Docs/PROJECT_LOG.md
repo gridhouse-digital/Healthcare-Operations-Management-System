@@ -13,6 +13,24 @@ Addressed the CodeRabbit review. Frontend only.
 - Hire dates stored at UTC midnight (4 of 42 live rows) display as calendar dates; real timestamps are unchanged.
 - Dashboard onboarding shows "Not tracked yet" instead of a hard-coded 0%.
 - Dark-mode text fix in the offer draft panel and setup helper, `.light` restates semantic aliases for nested light containers, the sidebar stays open for keyboard focus, and `PageSkeleton` announces its label.
+## 2026-11-05 - Platform Admin agency overview (branch feat/platform-overview, not deployed)
+
+Platform admins now land on an all-agencies overview at `/`. Everyone else keeps the existing dashboard.
+
+### Changed
+
+- New Edge Function `platform-overview` with pure logic in `_shared/platform-overview.ts`. It returns totals only and audits each read as `platform_overview_read`.
+- New `PlatformOverviewPage`, `HomePage` and `platformService`. The header shows "Viewing: agency" for platform admins on other pages, which still show one agency.
+- Tests: 19 Deno tests in `_shared/tests/platform-overview.test.ts`.
+
+### Not verified
+
+- The function has not been deployed or run against a real database. Its count queries and live access checks are untested.
+- The page was exercised with made-up data in a throwaway local preview. The header label and the platform admin landing switch need a platform admin login to confirm.
+
+### Before release
+
+Deploy `platform-overview` with JWT verification left on, then test as a platform admin and as a tenant admin. Deploy it before the frontend, or platform admins see the error state.
 
 ---
 ## 2026-11-05 - CI: Supabase config section renamed
