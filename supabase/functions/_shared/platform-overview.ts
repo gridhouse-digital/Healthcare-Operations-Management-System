@@ -6,6 +6,9 @@ export type SyncSource = typeof SYNC_SOURCES[number];
 
 export const SYNC_WINDOW_DAYS = 7;
 
+/** A connector with no success for this long has quietly stopped */
+export const SYNC_STALE_HOURS = 48;
+
 /**
  * Runs that recorded a problem. Connectors can finish a run while individual
  * records fail, so a "failed" status alone would report those agencies healthy.
@@ -58,9 +61,11 @@ export interface AgencySummary {
     completedPct: number | null;
     recurringOverdue: number;
   } | null;
-  connections: Array<{ source: SyncSource; lastSuccessAt: string | null; failedLastWindow: number }>;
+  connections: Array<{ source: SyncSource; lastSuccessAt: string | null; failedLastWindow: number; stale: boolean }>;
   lastSyncAt: string | null;
   failedSyncs: number;
+  /** Plain-language reasons behind an "attention" status, most urgent first */
+  attentionReasons: string[];
 }
 
 export interface OverviewTotals {
@@ -74,10 +79,20 @@ export interface OverviewTotals {
   openAccessRequests: number;
 }
 
-export function summarizeAgency(raw: RawAgencyCounts): AgencySummary {
+function plural(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+export function summarizeAgency(raw: RawAgencyCounts, now: Date = new Date()): AgencySummary {
+  const staleBefore = now.getTime() - SYNC_STALE_HOURS * 60 * 60 * 1000;
   const connections = raw.sources
     .filter((source) => source.active || source.everRan)
-    .map(({ source, lastSuccessAt, failedLastWindow }) => ({ source, lastSuccessAt, failedLastWindow }));
+    .map(({ source, lastSuccessAt, failedLastWindow }) => ({
+      source,
+      lastSuccessAt,
+      failedLastWindow,
+      stale: lastSuccessAt !== null && new Date(lastSuccessAt).getTime() < staleBefore,
+    }));
 
   const failedSyncs = connections.reduce((sum, connection) => sum + connection.failedLastWindow, 0);
   const lastSyncAt = connections
@@ -100,10 +115,17 @@ export function summarizeAgency(raw: RawAgencyCounts): AgencySummary {
     }
     : null;
 
+  const staleSyncs = connections.filter((connection) => connection.stale).length;
+  const attentionReasons = [
+    raw.recurringOverdue > 0 ? plural(raw.recurringOverdue, "overdue renewal") : null,
+    failedSyncs > 0 ? plural(failedSyncs, "sync error") : null,
+    staleSyncs > 0 ? plural(staleSyncs, "stale sync") : null,
+  ].filter((reason): reason is string => reason !== null);
+
   return {
     id: raw.id,
     name: raw.name,
-    status: agencyStatus(raw, connections.length, failedSyncs, lastSyncAt !== null),
+    status: agencyStatus(raw, connections.length, attentionReasons.length > 0, lastSyncAt !== null),
     employees: raw.employees,
     employeesActive: raw.employeesActive,
     employeesOnboarding: raw.employeesOnboarding,
@@ -113,21 +135,28 @@ export function summarizeAgency(raw: RawAgencyCounts): AgencySummary {
     connections,
     lastSyncAt,
     failedSyncs,
+    attentionReasons,
   };
 }
 
 function agencyStatus(
   raw: RawAgencyCounts,
   connections: number,
-  failedSyncs: number,
+  hasProblem: boolean,
   synced: boolean,
 ): AgencyStatus {
   /* Checked first: a known problem must outrank a missing connection */
-  if (failedSyncs > 0 || raw.recurringOverdue > 0) return "attention";
+  if (hasProblem) return "attention";
   /* A connector saved before its first import has delivered nothing yet */
   if (raw.employees === 0 && raw.applicants === 0 && !synced) return "no_data";
   if (connections === 0) return "not_connected";
   return "ok";
+}
+
+/** Agencies that need action first; ties keep the order given. */
+export function sortByAttention(agencies: AgencySummary[]): AgencySummary[] {
+  const rank = (agency: AgencySummary) => (agency.status === "attention" ? 0 : 1);
+  return [...agencies].sort((a, b) => rank(a) - rank(b));
 }
 
 export function summarizeTotals(agencies: AgencySummary[], openAccessRequests: number): OverviewTotals {

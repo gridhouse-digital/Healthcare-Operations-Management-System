@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Bell, Search, ChevronDown, User, LogOut, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/lib/supabase';
+import { sessionClaims } from '@/lib/sessionClaims';
 import { useSidebar } from './SidebarContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { settingsService } from '@/services/settingsService';
@@ -44,7 +45,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
         enabled: showsOneAgency,
         queryFn: async () => {
             const { data: { session } } = await supabase.auth.getSession();
-            const tenantId = session?.user.app_metadata?.tenant_id as string | undefined;
+            const tenantId = sessionClaims(session).tenant_id;
             if (!tenantId) return null;
             const { data, error } = await supabase.from('tenants').select('name').eq('id', tenantId).maybeSingle();
             if (error) throw error;
@@ -58,7 +59,8 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             const fullName = user.user_metadata?.full_name || user.email || 'User';
-            const role = user.app_metadata?.role || 'hr_admin';
+            const { data: { session } } = await supabase.auth.getSession();
+            const role = sessionClaims(session).role || 'hr_admin';
             setUserMeta({ fullName, role });
         }
     };

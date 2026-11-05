@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { tenantGuard } from "../_shared/tenant-guard.ts";
 import { handlePlatformOverview } from "./handler.ts";
 import {
+  sortByAttention,
   summarizeAgency,
   summarizeTotals,
   SYNC_ERROR_FILTER,
@@ -136,10 +137,11 @@ async function loadAgency(
   };
 }
 
-async function loadOverview(admin: SupabaseClient) {
+/* The admin's own agency is the operator's internal account, not a client */
+async function loadOverview(admin: SupabaseClient, ownTenantId: string) {
   const since = new Date(Date.now() - SYNC_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-  const [tenants, settings, openAccessRequests] = await Promise.all([
+  const [allTenants, settings, openAccessRequests] = await Promise.all([
     fetchAll<{ id: string; name: string }>((from, to) =>
       admin.from("tenants").select("id, name").order("name").order("id").range(from, to)
     ),
@@ -149,6 +151,7 @@ async function loadOverview(admin: SupabaseClient) {
     countOf(head(admin, "tenant_access_requests").in("status", ["submitted", "under_review"])),
   ]);
 
+  const tenants = allTenants.filter((tenant) => tenant.id !== ownTenantId);
   const connectorsByTenant = new Map<string, string[]>(
     settings.map((row) => [row.tenant_id, row.active_connectors ?? []]),
   );
@@ -165,7 +168,7 @@ async function loadOverview(admin: SupabaseClient) {
     );
   }
 
-  const agencies = raw.map(summarizeAgency);
+  const agencies = sortByAttention(raw.map((agency) => summarizeAgency(agency)));
   return { totals: summarizeTotals(agencies, openAccessRequests), agencies };
 }
 
@@ -192,7 +195,7 @@ Deno.serve((req: Request) => {
           .eq("role", "platform_admin")
           .eq("status", "active"),
       ),
-    loadOverview: () => loadOverview(admin()),
+    loadOverview: (ctx) => loadOverview(admin(), ctx.tenantId),
     /* Written directly: logAudit swallows failures, and this read must not go unrecorded */
     writeAudit: async (ctx, agencies) => {
       const { error } = await admin().from("audit_log").insert({

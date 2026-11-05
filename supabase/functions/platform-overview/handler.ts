@@ -23,7 +23,7 @@ export interface PlatformOverviewDeps<Caller extends OverviewCaller> {
   guard: (req: Request) => Caller;
   verifyUserId: (caller: Caller, token: string) => Promise<string | null>;
   countActiveAdminRows: (userId: string) => Promise<number>;
-  loadOverview: () => Promise<OverviewData>;
+  loadOverview: (caller: Caller) => Promise<OverviewData>;
   /** Must reject when the audit row cannot be written. */
   writeAudit: (caller: Caller, agencies: number) => Promise<void>;
 }
@@ -61,7 +61,7 @@ export async function handlePlatformOverview<Caller extends OverviewCaller>(
     }
     if (access === "forbidden") return forbidden();
 
-    const { totals, agencies } = await deps.loadOverview();
+    const { totals, agencies } = await deps.loadOverview(caller);
 
     /* A cross-agency read is only released once it has been recorded */
     try {

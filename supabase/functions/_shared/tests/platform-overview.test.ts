@@ -1,6 +1,7 @@
 import { assertEquals } from "jsr:@std/assert";
 import {
   decidePlatformAccess,
+  sortByAttention,
   summarizeAgency,
   summarizeTotals,
   SYNC_ERROR_FILTER,
@@ -8,6 +9,9 @@ import {
   type RawAgencyCounts,
   type SourceCounts,
 } from "../platform-overview.ts";
+
+const NOW = new Date("2026-11-02T10:00:00Z");
+const summarize = (input: RawAgencyCounts) => summarizeAgency(input, NOW);
 
 function source(over: Partial<SourceCounts> = {}): SourceCounts {
   return { source: "jazzhr", active: true, lastSuccessAt: "2026-11-01T10:00:00Z", failedLastWindow: 0, everRan: true, ...over };
@@ -70,11 +74,11 @@ Deno.test("claim without an active platform_admin row is forbidden", () => {
 // ── Status: not connected and no data must never read as healthy ─────────────
 
 Deno.test("connected agency with no problems is ok", () => {
-  assertEquals(summarizeAgency(raw()).status, "ok");
+  assertEquals(summarize(raw()).status, "ok");
 });
 
 Deno.test("empty agency is no_data, not zero and not healthy", () => {
-  const agency = summarizeAgency(raw({
+  const agency = summarize(raw({
     employees: 0, employeesActive: 0, employeesOnboarding: 0, applicants: 0,
     trainingRecords: 0, trainingCompleted: 0, trainingInProgress: 0, recurringTotal: 0,
     sources: SYNC_SOURCES.map(idle),
@@ -85,7 +89,7 @@ Deno.test("empty agency is no_data, not zero and not healthy", () => {
 });
 
 Deno.test("connector saved but never synced is no_data, not healthy", () => {
-  const agency = summarizeAgency(raw({
+  const agency = summarize(raw({
     employees: 0, employeesActive: 0, employeesOnboarding: 0, applicants: 0,
     trainingRecords: 0, trainingCompleted: 0, recurringTotal: 0,
     sources: [source({ lastSuccessAt: null, everRan: false })],
@@ -94,23 +98,23 @@ Deno.test("connector saved but never synced is no_data, not healthy", () => {
 });
 
 Deno.test("agency with staff but no connector is not_connected", () => {
-  assertEquals(summarizeAgency(raw({ sources: [idle("jazzhr")] })).status, "not_connected");
+  assertEquals(summarize(raw({ sources: [idle("jazzhr")] })).status, "not_connected");
 });
 
 Deno.test("a source that ran counts as connected even if not listed active", () => {
-  const agency = summarizeAgency(raw({ sources: [source({ source: "learndash", active: false })] }));
+  const agency = summarize(raw({ sources: [source({ source: "learndash", active: false })] }));
   assertEquals(agency.status, "ok");
   assertEquals(agency.connections.map((item) => item.source), ["learndash"]);
 });
 
 Deno.test("failed sync needs attention", () => {
-  const agency = summarizeAgency(raw({ sources: [source({ failedLastWindow: 3 })] }));
+  const agency = summarize(raw({ sources: [source({ failedLastWindow: 3 })] }));
   assertEquals(agency.status, "attention");
   assertEquals(agency.failedSyncs, 3);
 });
 
 Deno.test("overdue training outranks a missing connection", () => {
-  const agency = summarizeAgency(raw({ recurringOverdue: 2, sources: [idle("jazzhr")] }));
+  const agency = summarize(raw({ recurringOverdue: 2, sources: [idle("jazzhr")] }));
   assertEquals(agency.status, "attention");
   assertEquals(summarizeTotals([agency], 0).needingAttention, 1);
 });
@@ -122,25 +126,25 @@ Deno.test("sync error filter covers partial failures and per-record errors", () 
 });
 
 Deno.test("overdue training needs attention", () => {
-  assertEquals(summarizeAgency(raw({ recurringOverdue: 1 })).status, "attention");
+  assertEquals(summarize(raw({ recurringOverdue: 1 })).status, "attention");
 });
 
 // ── Figures ──────────────────────────────────────────────────────────────────
 
 Deno.test("training is null when nothing is tracked, so 0 overdue is never claimed", () => {
-  assertEquals(summarizeAgency(raw({ trainingRecords: 0, recurringTotal: 0 })).training, null);
+  assertEquals(summarize(raw({ trainingRecords: 0, recurringTotal: 0 })).training, null);
 });
 
 Deno.test("completed percent is null when only recurring rows exist", () => {
-  assertEquals(summarizeAgency(raw({ trainingRecords: 0, trainingCompleted: 0 })).training?.completedPct, null);
+  assertEquals(summarize(raw({ trainingRecords: 0, trainingCompleted: 0 })).training?.completedPct, null);
 });
 
 Deno.test("completed percent rounds", () => {
-  assertEquals(summarizeAgency(raw({ trainingRecords: 3, trainingCompleted: 2 })).training?.completedPct, 67);
+  assertEquals(summarize(raw({ trainingRecords: 3, trainingCompleted: 2 })).training?.completedPct, 67);
 });
 
 Deno.test("last sync is the newest success across sources", () => {
-  const agency = summarizeAgency(raw({
+  const agency = summarize(raw({
     sources: [source({ source: "wordpress", lastSuccessAt: "2026-11-03T10:00:00Z" }), source()],
   }));
   assertEquals(agency.lastSyncAt, "2026-11-03T10:00:00Z");
@@ -148,8 +152,8 @@ Deno.test("last sync is the newest success across sources", () => {
 
 Deno.test("totals add up and untracked agencies add nothing", () => {
   const totals = summarizeTotals([
-    summarizeAgency(raw({ recurringOverdue: 2 })),
-    summarizeAgency(raw({ employees: 1, employeesOnboarding: 0, trainingRecords: 0, recurringTotal: 0, recurringOverdue: 9 })),
+    summarize(raw({ recurringOverdue: 2 })),
+    summarize(raw({ employees: 1, employeesOnboarding: 0, trainingRecords: 0, recurringTotal: 0, recurringOverdue: 9 })),
   ], 4);
   assertEquals(totals, {
     agencies: 2,
@@ -162,21 +166,54 @@ Deno.test("totals add up and untracked agencies add nothing", () => {
   });
 });
 
+Deno.test("a connector with no success for 48 hours is stale and needs attention", () => {
+  const agency = summarize(raw({ sources: [source({ lastSuccessAt: "2026-10-30T09:59:00Z" })] }));
+  assertEquals(agency.connections[0].stale, true);
+  assertEquals(agency.status, "attention");
+  assertEquals(agency.attentionReasons, ["1 stale sync"]);
+});
+
+Deno.test("a connector inside 48 hours is not stale", () => {
+  const agency = summarize(raw({ sources: [source({ lastSuccessAt: "2026-10-31T10:01:00Z" })] }));
+  assertEquals(agency.connections[0].stale, false);
+  assertEquals(agency.status, "ok");
+});
+
+Deno.test("a connector that has never succeeded is not called stale", () => {
+  assertEquals(summarize(raw({ sources: [source({ lastSuccessAt: null })] })).connections[0].stale, false);
+});
+
+Deno.test("reasons explain the status, most urgent first", () => {
+  const agency = summarize(raw({ recurringOverdue: 6, sources: [source({ failedLastWindow: 1 })] }));
+  assertEquals(agency.attentionReasons, ["6 overdue renewals", "1 sync error"]);
+});
+
+Deno.test("a healthy agency has no reasons", () => {
+  assertEquals(summarize(raw()).attentionReasons, []);
+});
+
+Deno.test("agencies needing attention sort first and ties keep their order", () => {
+  const a = summarize(raw({ id: "a" }));
+  const b = summarize(raw({ id: "b", recurringOverdue: 1 }));
+  const c = summarize(raw({ id: "c" }));
+  assertEquals(sortByAttention([a, b, c]).map((agency) => agency.id), ["b", "a", "c"]);
+});
+
 Deno.test("failed syncs add up across agencies", () => {
   const totals = summarizeTotals([
-    summarizeAgency(raw({ sources: [source({ failedLastWindow: 2 })] })),
-    summarizeAgency(raw({ sources: [source({ failedLastWindow: 1 })] })),
+    summarize(raw({ sources: [source({ failedLastWindow: 2 })] })),
+    summarize(raw({ sources: [source({ failedLastWindow: 1 })] })),
   ], 0);
   assertEquals(totals.failedSyncs, 3);
 });
 
 Deno.test("overdue total is unknown when no agency tracks training", () => {
-  const untracked = summarizeAgency(raw({ trainingRecords: 0, recurringTotal: 0 }));
+  const untracked = summarize(raw({ trainingRecords: 0, recurringTotal: 0 }));
   assertEquals(summarizeTotals([untracked], 0).recurringOverdue, null);
 });
 
 Deno.test("overdue total stays zero when tracked agencies have none overdue", () => {
-  assertEquals(summarizeTotals([summarizeAgency(raw())], 0).recurringOverdue, 0);
+  assertEquals(summarizeTotals([summarize(raw())], 0).recurringOverdue, 0);
 });
 
 function allKeys(value: unknown): string[] {
@@ -189,6 +226,6 @@ function allKeys(value: unknown): string[] {
 
 Deno.test("summary carries no personal or payload fields at any depth", () => {
   const sensitive = { ...source(), email: "a@example.test", payload: { first_name: "A" } };
-  const keys = allKeys(summarizeAgency(raw({ sources: [sensitive] })));
+  const keys = allKeys(summarize(raw({ sources: [sensitive] })));
   assertEquals(keys.filter((key) => /email|first_name|last_name|payload/i.test(key)), []);
 });

@@ -12,6 +12,9 @@ interface NavItem {
     adminOnly: boolean;
     isAI: boolean;
     platformAdminOnly?: boolean;
+    /** Works inside one agency, so it stays out of the platform admin's menu */
+    agencyOnly?: boolean;
+    platformName?: string;
 }
 
 interface NavGroup {
@@ -23,26 +26,26 @@ const navGroups: NavGroup[] = [
     {
         label: 'Overview',
         items: [
-            { name: 'Dashboard', href: '/', icon: LayoutDashboard, adminOnly: false, isAI: false },
+            { name: 'Dashboard', platformName: 'Agency Overview', href: '/', icon: LayoutDashboard, adminOnly: false, isAI: false },
         ],
     },
     {
         label: 'Hiring',
         items: [
-            { name: 'Applicants', href: '/applicants', icon: Users,     adminOnly: false, isAI: false },
-            { name: 'Offers',     href: '/offers',     icon: FileText,  adminOnly: false, isAI: false },
+            { name: 'Applicants', href: '/applicants', icon: Users,     adminOnly: false, isAI: false, agencyOnly: true },
+            { name: 'Offers',     href: '/offers',     icon: FileText,  adminOnly: false, isAI: false, agencyOnly: true },
         ],
     },
     {
         label: 'Workforce',
         items: [
-            { name: 'Employees', href: '/employees', icon: Briefcase, adminOnly: false, isAI: false },
+            { name: 'Employees', href: '/employees', icon: Briefcase, adminOnly: false, isAI: false, agencyOnly: true },
         ],
     },
     {
         label: 'Training',
         items: [
-            { name: 'Compliance', href: '/training', icon: BookOpenCheck, adminOnly: false, isAI: false },
+            { name: 'Compliance', href: '/training', icon: BookOpenCheck, adminOnly: false, isAI: false, agencyOnly: true },
         ],
     },
     {
@@ -50,13 +53,25 @@ const navGroups: NavGroup[] = [
         items: [
             { name: 'AI Dashboard',     href: '/admin/ai-dashboard',    icon: Sparkles, adminOnly: true,  isAI: true },
             { name: 'Access Requests',  href: '/admin/access-requests', icon: Mail,      adminOnly: true,  platformAdminOnly: true, isAI: false },
-            { name: 'Connectors',        href: '/settings/connectors',   icon: Plug,      adminOnly: true,  isAI: false },
-            { name: 'Training Rules',    href: '/settings/training-rules', icon: ClipboardCheck, adminOnly: true, isAI: false },
+            { name: 'Connectors',        href: '/settings/connectors',   icon: Plug,      adminOnly: true,  isAI: false, agencyOnly: true },
+            { name: 'Training Rules',    href: '/settings/training-rules', icon: ClipboardCheck, adminOnly: true, isAI: false, agencyOnly: true },
             { name: 'Users',             href: '/settings/users',        icon: UserCog,   adminOnly: true,  isAI: false },
             { name: 'System Settings',   href: '/settings/system',       icon: Wrench,    adminOnly: true,  isAI: false },
         ],
     },
 ];
+
+/* Shared with MobileNav so both menus show the same links */
+export function visibleNavItems(group: NavGroup, role: { isAdmin: boolean; isPlatformAdmin: boolean }): NavItem[] {
+    return group.items
+        .filter((item) => {
+            if (item.adminOnly && !role.isAdmin) return false;
+            if (item.platformAdminOnly && !role.isPlatformAdmin) return false;
+            if (item.agencyOnly && role.isPlatformAdmin) return false;
+            return true;
+        })
+        .map((item) => (role.isPlatformAdmin && item.platformName ? { ...item, name: item.platformName } : item));
+}
 
 export function Sidebar() {
     const location = useLocation();
@@ -86,11 +101,7 @@ export function Sidebar() {
             {/* ── Navigation ── */}
             <nav aria-label="Main" className="flex-1 overflow-y-auto overflow-x-hidden p-2">
                 {navGroups.map((group, gi) => {
-                    const visibleItems = group.items.filter(item => {
-                        if (item.adminOnly && !isAdmin) return false;
-                        if (item.platformAdminOnly && !isPlatformAdmin) return false;
-                        return true;
-                    });
+                    const visibleItems = visibleNavItems(group, { isAdmin, isPlatformAdmin });
                     if (visibleItems.length === 0) return null;
 
                     return (

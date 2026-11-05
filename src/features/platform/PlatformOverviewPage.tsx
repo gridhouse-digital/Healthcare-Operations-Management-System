@@ -72,19 +72,31 @@ function ConnectionRow({ connection, syncWindowDays }: { connection: AgencyConne
             </div>
             {failing
                 ? <StatusBadge status={`${connection.failedLastWindow} with errors in ${syncWindowDays} days`} tone="critical" />
-                : <StatusBadge status={`No errors in ${syncWindowDays} days`} tone="done" />}
+                : connection.stale
+                    ? <StatusBadge status="Sync stale" tone="waiting" />
+                    : <StatusBadge status={`No errors in ${syncWindowDays} days`} tone="done" />}
         </div>
     );
 }
 
-function AgencyDetails({ agency, syncWindowDays }: { agency: AgencySummary; syncWindowDays: number }) {
+function StatusWithReason({ agency }: { agency: AgencySummary }) {
     const status = STATUS[agency.status];
+    return (
+        <>
+            <StatusBadge status={status.label} tone={status.tone} />
+            {agency.attentionReasons.length > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">{agency.attentionReasons.join(', ')}</p>
+            )}
+        </>
+    );
+}
 
+function AgencyDetails({ agency, syncWindowDays }: { agency: AgencySummary; syncWindowDays: number }) {
     return (
         <div className="space-y-6">
             <div className="flex items-start justify-between gap-4">
                 <h3 className="text-section min-w-0 text-foreground">{agency.name}</h3>
-                <StatusBadge status={status.label} tone={status.tone} />
+                <div className="flex-shrink-0 text-right"><StatusWithReason agency={agency} /></div>
             </div>
 
             <section className="space-y-4 border-t border-border pt-6">
@@ -209,7 +221,6 @@ export function PlatformOverviewPage() {
                     </thead>
                     <tbody className="divide-y divide-border">
                         {sortedRows.map((agency) => {
-                            const status = STATUS[agency.status];
                             return (
                                 <tr key={agency.id} className="table-row-interactive group" onClick={() => setSelectedId(agency.id)}>
                                     <td className="max-w-0 py-3 pr-4 sm:max-w-none">
@@ -219,9 +230,9 @@ export function PlatformOverviewPage() {
                                                 ? agency.connections.map((connection) => sourceLabel(connection.source)).join(', ')
                                                 : 'No connected systems'}
                                         </p>
-                                        <div className="mt-1 sm:hidden"><StatusBadge status={status.label} tone={status.tone} /></div>
+                                        <div className="mt-1 sm:hidden"><StatusWithReason agency={agency} /></div>
                                     </td>
-                                    <td className="hidden py-3 pr-4 sm:table-cell"><StatusBadge status={status.label} tone={status.tone} /></td>
+                                    <td className="hidden py-3 pr-4 sm:table-cell"><StatusWithReason agency={agency} /></td>
                                     <td className="hidden py-3 pr-4 text-right text-sm tabular-nums text-secondary-foreground md:table-cell">{agency.employees}</td>
                                     <td className="hidden py-3 pr-4 text-right text-sm tabular-nums text-muted-foreground xl:table-cell">{agency.employeesOnboarding}</td>
                                     <td className="hidden py-3 pr-4 text-right text-sm tabular-nums text-muted-foreground xl:table-cell">{agency.applicants}</td>

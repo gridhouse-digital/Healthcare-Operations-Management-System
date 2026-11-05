@@ -13,7 +13,7 @@ Addressed the CodeRabbit review. Frontend only.
 - Hire dates stored at UTC midnight (4 of 42 live rows) display as calendar dates; real timestamps are unchanged.
 - Dashboard onboarding shows "Not tracked yet" instead of a hard-coded 0%.
 - Dark-mode text fix in the offer draft panel and setup helper, `.light` restates semantic aliases for nested light containers, the sidebar stays open for keyboard focus, and `PageSkeleton` announces its label.
-## 2026-11-05 - Platform Admin agency overview (branch feat/platform-overview, not deployed)
+## 2026-11-05 - Platform Admin agency overview (branch feat/platform-overview, function deployed)
 
 Platform admins now land on an all-agencies overview at `/`. Everyone else keeps the existing dashboard.
 
@@ -25,14 +25,26 @@ Platform admins now land on an all-agencies overview at `/`. Everyone else keeps
 - The access flow lives in `platform-overview/handler.ts`, so it is tested without a server. A failed audit insert withholds the data. Tenant and settings reads page past the 1,000-row cap, and agencies load five at a time.
 - Tests: `_shared/tests/platform-overview.test.ts` and `_shared/tests/platform-overview-handler.test.ts`.
 
+### Also changed
+
+- The app now reads role and tenant from the JWT through `src/lib/sessionClaims.ts`. It read `session.user.app_metadata`, which is empty for accounts whose role comes only from `custom_access_token_hook`, so platform admins were treated as having no role and saw the agency dashboard.
+- Platform admins get their own menu: Agency Overview, AI Dashboard, Access Requests, Users and System Settings. Agency pages stay reachable by URL.
+- The overview leaves out the admin's own agency, sorts agencies needing attention first, and states why. No success in 48 hours marks a connector "Sync stale".
+
+### Verified
+
+`platform-overview` is deployed. On a real platform admin login the totals matched the database and reads reached `audit_log`. No token, the anon key, a forged token and, before the final redeploy, a tenant admin were all refused.
+
 ### Not verified
 
-- The function has not been deployed or run against a real database. Its count queries and live access checks are untested.
-- The page was exercised with made-up data in a throwaway local preview. The header label and the platform admin landing switch need a platform admin login to confirm.
+- Saving on any page, and the stale badge and attention ordering on real data, which currently has one agency and no stale connector.
+- Tenant admin refusal after the final redeploy; the handler did not change and unit tests cover it.
+- Retired connectors stay flagged as stale, since any source that has ever synced is checked.
+- Platform admins can still read every agency's applicants by URL or API until the `applicants` RLS policy is tightened.
 
 ### Before release
 
-Deploy `platform-overview` with JWT verification left on, then test as a platform admin and as a tenant admin. Deploy it before the frontend, or platform admins see the error state.
+Merge after CI passes. The function is already live and older pages ignore its new fields.
 
 ---
 ## 2026-11-05 - CI: Supabase config section renamed

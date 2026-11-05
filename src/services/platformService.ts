@@ -6,6 +6,7 @@ export interface AgencyConnection {
     source: string;
     lastSuccessAt: string | null;
     failedLastWindow: number;
+    stale: boolean;
 }
 
 export interface AgencySummary {
@@ -28,6 +29,7 @@ export interface AgencySummary {
     connections: AgencyConnection[];
     lastSyncAt: string | null;
     failedSyncs: number;
+    attentionReasons: string[];
 }
 
 export interface PlatformOverview {
@@ -50,6 +52,13 @@ export const platformService = {
         const { data, error } = await supabase.functions.invoke<PlatformOverview>('platform-overview');
         if (error) throw error;
         if (!data) throw new Error('Agency overview returned no data');
-        return data;
+        /* The function deploys separately, so a field it doesn't send yet must not break the page */
+        return {
+            ...data,
+            agencies: data.agencies.map((agency) => ({
+                ...agency,
+                attentionReasons: agency.attentionReasons ?? [],
+            })),
+        };
     },
 };

@@ -573,3 +573,23 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 **Safeguards:** `tenantGuard` only decodes the JWT, so the role claim alone is not trusted. The function also verifies the token with Supabase Auth and requires an active `platform_admin` row in `tenant_users`. Deploy with JWT verification on.
 
 **Rollback:** remove the function and point the index route back to `DashboardPage`. No schema change is involved.
+
+---
+
+## 2026-11-05 - Role and tenant are read from the JWT in the frontend
+
+**Decision:** the frontend reads role and tenant from the access token through `sessionClaims`, falling back to `session.user.app_metadata`.
+
+**Why:** `custom_access_token_hook` writes these claims from `tenant_users`, and the stored auth metadata can be empty. The JWT is the documented source of truth. This affects display and routing only; RLS and Edge Functions enforce access.
+
+**Rollback:** revert `src/lib/sessionClaims.ts` and its callers. No schema change is involved.
+
+---
+
+## 2026-11-05 - Platform admins get a platform-only menu
+
+**Decision:** Applicants, Offers, Employees, Compliance, Connectors and Training Rules leave the platform admin menu, and the overview leaves out the admin's own agency.
+
+**Why:** those pages work inside one agency, and the operator's internal account is not a client. Hiding them does not remove access: the `applicants` RLS policy still allows platform admins, and tightening it needs its own migration.
+
+**Rollback:** remove `agencyOnly` from the nav items. No schema change is involved.
