@@ -3,6 +3,7 @@ import { tenantGuard } from "../_shared/tenant-guard.ts";
 import { handleError, errorResponse } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
+import { blockedUserChange } from "../_shared/role-change.ts";
 
 // FR-19: Deactivate user — disable auth + invalidate sessions + audit.
 
@@ -49,10 +50,13 @@ Deno.serve(async (req: Request) => {
       return withCors(errorResponse("NOT_FOUND", "User not found in this tenant", 404), req);
     }
 
-    // Prevent deactivating yourself
-    if ((tu as { user_id: string }).user_id === ctx.userId) {
-      return withCors(errorResponse("FORBIDDEN", "Cannot deactivate your own account", 403), req);
-    }
+    const target = tu as { user_id: string; role: string };
+    const blocked = blockedUserChange({
+      actorUserId: ctx.userId,
+      targetUserId: target.user_id,
+      targetRole: target.role,
+    });
+    if (blocked) return withCors(errorResponse("FORBIDDEN", blocked, 403), req);
 
     // Update tenant_users status
     const { error: updateError } = await adminClient

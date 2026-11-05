@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { StatusBadge, type StatusTone } from "@/components/shared/StatusBadge";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -56,7 +57,7 @@ function UserStatusBadge({ status }: { status: TenantUser["status"] }) {
 // User row
 // ---------------------------------------------------------------------------
 
-function UserRow({ user }: { user: TenantUser }) {
+function UserRow({ user, canManage }: { user: TenantUser; canManage: boolean }) {
   const updateRole = useUpdateUserRole();
   const deactivate = useDeactivateUser();
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
@@ -105,7 +106,7 @@ function UserRow({ user }: { user: TenantUser }) {
         </p>
       </td>
       <td className="px-4 py-3">
-        {user.status !== "deactivated" && (
+        {canManage && user.status !== "deactivated" && (
           <div className="flex items-center gap-2">
             <AppSelect
               value={user.role}
@@ -248,6 +249,11 @@ export function UserManagementPage() {
   const { data: users = [], isLoading } = useTenantUsers();
   const { sortedRows: sortedUsers, sortProps } = useTableSort(users, SORT_COLUMNS);
   const [showInvite, setShowInvite] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setCurrentUserId(session?.user.id ?? null));
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -291,7 +297,14 @@ export function UserManagementPage() {
                   </td>
                 </tr>
               ) : (
-                sortedUsers.map((user) => <UserRow key={user.id} user={user} />)
+                sortedUsers.map((user) => (
+                  <UserRow
+                    key={user.id}
+                    user={user}
+                    /* Matches the server: your own account and platform admins aren't editable here */
+                    canManage={currentUserId !== null && user.user_id !== currentUserId && user.role !== "platform_admin"}
+                  />
+                ))
               )}
             </tbody>
           </table>
