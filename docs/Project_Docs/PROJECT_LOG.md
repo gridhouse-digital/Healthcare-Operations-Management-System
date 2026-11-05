@@ -3,7 +3,12 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
-## 2026-11-05 - Access Requests page rebuilt (branch hallmark-redesign, uncommitted)
+## 2026-11-05 - CI: Supabase config section renamed
+
+Tenant Isolation failed on PR 28 before any test ran: CI installs the latest Supabase CLI, which no longer accepts `[inbucket]` in `supabase/config.toml`. Renamed the section to `[local_smtp]`. Local emulator config only; nothing deployed changes.
+
+---
+## 2026-11-05 - Access Requests page rebuilt (branch hallmark-redesign, committed)
 
 `src/features/admin/pages/AccessRequestsPage.tsx` moved from a fixed-height split view to the Applicants and Employees pattern: status tabs with counts, search, a sortable table (newest first), and details in a drawer. The summary tiles were dropped because the tabs carry the same counts. **Frontend only: the hook and the query are unchanged.**
 
