@@ -71,8 +71,8 @@ function ConnectionRow({ connection, syncWindowDays }: { connection: AgencyConne
                 </p>
             </div>
             {failing
-                ? <StatusBadge status={`${connection.failedLastWindow} failed in ${syncWindowDays} days`} tone="critical" />
-                : <StatusBadge status={`No failures in ${syncWindowDays} days`} tone="done" />}
+                ? <StatusBadge status={`${connection.failedLastWindow} with errors in ${syncWindowDays} days`} tone="critical" />
+                : <StatusBadge status={`No errors in ${syncWindowDays} days`} tone="done" />}
         </div>
     );
 }
@@ -181,7 +181,7 @@ export function PlatformOverviewPage() {
                 <StatsCard title="Agencies" value={totals.agencies} subtitle={totals.needingAttention === 1 ? '1 needs attention' : `${totals.needingAttention} need attention`} />
                 <StatsCard title="Employees" value={totals.employees} subtitle={`${totals.employeesOnboarding} onboarding`} />
                 <StatsCard title="Overdue Renewals" value={totals.recurringOverdue} subtitle="HOMS records" intent={totals.recurringOverdue > 0 ? 'warning' : 'default'} />
-                <StatsCard title="Failed Syncs" value={totals.failedSyncs} subtitle={`Last ${syncWindowDays} days`} intent={totals.failedSyncs > 0 ? 'danger' : 'default'} />
+                <StatsCard title="Sync Errors" value={totals.failedSyncs} subtitle={`Last ${syncWindowDays} days`} intent={totals.failedSyncs > 0 ? 'danger' : 'default'} />
                 <StatsCard title="Open Requests" value={totals.openAccessRequests} subtitle="Waiting for review" />
             </div>
 

@@ -7,6 +7,7 @@ import {
   decidePlatformAccess,
   summarizeAgency,
   summarizeTotals,
+  SYNC_ERROR_FILTER,
   SYNC_SOURCES,
   SYNC_WINDOW_DAYS,
   type RawAgencyCounts,
@@ -50,7 +51,7 @@ async function loadSource(
       .order("completed_at", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),
-    countOf(head(admin, "integration_log").eq("tenant_id", tenantId).eq("source", source).eq("status", "failed").gte("created_at", since)),
+    countOf(head(admin, "integration_log").eq("tenant_id", tenantId).eq("source", source).or(SYNC_ERROR_FILTER).gte("created_at", since)),
     countOf(head(admin, "integration_log").eq("tenant_id", tenantId).eq("source", source)),
   ]);
 

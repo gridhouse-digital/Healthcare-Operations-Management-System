@@ -6,6 +6,13 @@ export type SyncSource = typeof SYNC_SOURCES[number];
 
 export const SYNC_WINDOW_DAYS = 7;
 
+/**
+ * Runs that recorded a problem. Connectors can finish a run while individual
+ * records fail, so a "failed" status alone would report those agencies healthy.
+ */
+export const SYNC_ERROR_FILTER =
+  "status.in.(failed,partial_failure,completed_with_errors),error_count.gt.0";
+
 export type AgencyStatus = "ok" | "attention" | "not_connected" | "no_data";
 
 export interface SourceCounts {
@@ -109,9 +116,10 @@ export function summarizeAgency(raw: RawAgencyCounts): AgencySummary {
 }
 
 function agencyStatus(raw: RawAgencyCounts, connections: number, failedSyncs: number): AgencyStatus {
+  /* Checked first: a known problem must outrank a missing connection */
+  if (failedSyncs > 0 || raw.recurringOverdue > 0) return "attention";
   if (raw.employees === 0 && raw.applicants === 0 && connections === 0) return "no_data";
   if (connections === 0) return "not_connected";
-  if (failedSyncs > 0 || raw.recurringOverdue > 0) return "attention";
   return "ok";
 }
 

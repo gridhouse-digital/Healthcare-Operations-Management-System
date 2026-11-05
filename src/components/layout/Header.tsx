@@ -19,6 +19,10 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/* Only pages proven to show the JWT agency. Applicants can span agencies, and
+   Access Requests and the AI dashboard aren't limited to one. */
+const SINGLE_AGENCY_ROUTES = ['/offers', '/employees', '/training', '/settings'];
+
 interface HeaderProps {
     onOpenMobileNav: () => void;
 }
@@ -32,10 +36,12 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
     const [logoLight, setLogoLight] = useState(defaultLogoDark);
     const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
 
-    /* Outside the overview, pages still show one agency, so a platform admin must be able to see which */
+    /* These pages show one agency, so a platform admin must be able to see which */
+    const showsOneAgency = isPlatformAdmin
+        && SINGLE_AGENCY_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
     const { data: viewingAgency } = useQuery({
         queryKey: ['viewing-agency'],
-        enabled: isPlatformAdmin && pathname !== '/',
+        enabled: showsOneAgency,
         queryFn: async () => {
             const { data: { session } } = await supabase.auth.getSession();
             const tenantId = session?.user.app_metadata?.tenant_id as string | undefined;
@@ -136,7 +142,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
                 {/* Right: notifications + profile */}
                 <div className="flex items-center gap-1">
-                    {isPlatformAdmin && pathname !== '/' && viewingAgency && (
+                    {showsOneAgency && viewingAgency && (
                         <span className="mr-2 hidden max-w-56 truncate text-xs text-muted-foreground sm:inline">
                             Viewing: {viewingAgency}
                         </span>

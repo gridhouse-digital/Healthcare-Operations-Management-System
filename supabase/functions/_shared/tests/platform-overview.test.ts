@@ -3,6 +3,7 @@ import {
   decidePlatformAccess,
   summarizeAgency,
   summarizeTotals,
+  SYNC_ERROR_FILTER,
   SYNC_SOURCES,
   type RawAgencyCounts,
   type SourceCounts,
@@ -97,6 +98,18 @@ Deno.test("failed sync needs attention", () => {
   const agency = summarizeAgency(raw({ sources: [source({ failedLastWindow: 3 })] }));
   assertEquals(agency.status, "attention");
   assertEquals(agency.failedSyncs, 3);
+});
+
+Deno.test("overdue training outranks a missing connection", () => {
+  const agency = summarizeAgency(raw({ recurringOverdue: 2, sources: [idle("jazzhr")] }));
+  assertEquals(agency.status, "attention");
+  assertEquals(summarizeTotals([agency], 0).needingAttention, 1);
+});
+
+Deno.test("sync error filter covers partial failures and per-record errors", () => {
+  for (const term of ["failed", "partial_failure", "completed_with_errors", "error_count.gt.0"]) {
+    assertEquals(SYNC_ERROR_FILTER.includes(term), true, term);
+  }
 });
 
 Deno.test("overdue training needs attention", () => {
