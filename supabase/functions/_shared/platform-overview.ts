@@ -16,7 +16,7 @@ export const SYNC_STALE_HOURS = 48;
 export const SYNC_ERROR_FILTER =
   "status.in.(failed,partial_failure,completed_with_errors),error_count.gt.0";
 
-export type AgencyStatus = "ok" | "attention" | "not_connected" | "no_data";
+export type AgencyStatus = "ok" | "attention" | "not_connected" | "no_data" | "suspended";
 
 export interface SourceCounts {
   source: SyncSource;
@@ -41,6 +41,9 @@ export interface RawAgencyCounts {
   recurringTotal: number;
   recurringOverdue: number;
   sources: SourceCounts[];
+  tenantStatus?: string;
+  statusReason?: string | null;
+  statusChangedAt?: string | null;
 }
 
 export interface AgencySummary {
@@ -66,11 +69,13 @@ export interface AgencySummary {
   failedSyncs: number;
   /** Plain-language reasons behind an "attention" status, most urgent first */
   attentionReasons: string[];
+  suspension: { reason: string | null; since: string | null } | null;
 }
 
 export interface OverviewTotals {
   agencies: number;
   needingAttention: number;
+  suspended: number;
   employees: number;
   employeesOnboarding: number;
   /** null when no agency tracks training, which must not read as zero overdue */
@@ -115,8 +120,10 @@ export function summarizeAgency(raw: RawAgencyCounts, now: Date = new Date()): A
     }
     : null;
 
+  const suspended = raw.tenantStatus === "suspended";
   const staleSyncs = connections.filter((connection) => connection.stale).length;
-  const attentionReasons = [
+  /* Scheduled jobs skip a suspended agency, so its syncs going stale is expected */
+  const attentionReasons = suspended ? [] : [
     raw.recurringOverdue > 0 ? plural(raw.recurringOverdue, "overdue renewal") : null,
     failedSyncs > 0 ? plural(failedSyncs, "sync error") : null,
     staleSyncs > 0 ? plural(staleSyncs, "stale sync") : null,
@@ -125,7 +132,9 @@ export function summarizeAgency(raw: RawAgencyCounts, now: Date = new Date()): A
   return {
     id: raw.id,
     name: raw.name,
-    status: agencyStatus(raw, connections.length, attentionReasons.length > 0, lastSyncAt !== null),
+    status: suspended
+      ? "suspended"
+      : agencyStatus(raw, connections.length, attentionReasons.length > 0, lastSyncAt !== null),
     employees: raw.employees,
     employeesActive: raw.employeesActive,
     employeesOnboarding: raw.employeesOnboarding,
@@ -136,6 +145,9 @@ export function summarizeAgency(raw: RawAgencyCounts, now: Date = new Date()): A
     lastSyncAt,
     failedSyncs,
     attentionReasons,
+    suspension: suspended
+      ? { reason: raw.statusReason ?? null, since: raw.statusChangedAt ?? null }
+      : null,
   };
 }
 
@@ -155,7 +167,8 @@ function agencyStatus(
 
 /** Agencies that need action first; ties keep the order given. */
 export function sortByAttention(agencies: AgencySummary[]): AgencySummary[] {
-  const rank = (agency: AgencySummary) => (agency.status === "attention" ? 0 : 1);
+  const rank = (agency: AgencySummary) =>
+    agency.status === "attention" ? 0 : agency.status === "suspended" ? 2 : 1;
   return [...agencies].sort((a, b) => rank(a) - rank(b));
 }
 
@@ -163,6 +176,7 @@ export function summarizeTotals(agencies: AgencySummary[], openAccessRequests: n
   return {
     agencies: agencies.length,
     needingAttention: agencies.filter((agency) => agency.status === "attention").length,
+    suspended: agencies.filter((agency) => agency.status === "suspended").length,
     employees: agencies.reduce((sum, agency) => sum + agency.employees, 0),
     employeesOnboarding: agencies.reduce((sum, agency) => sum + agency.employeesOnboarding, 0),
     recurringOverdue: agencies.some((agency) => agency.training)

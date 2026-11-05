@@ -20,6 +20,14 @@ import {
 const PAGE_SIZE = 1000;
 const AGENCY_BATCH_SIZE = 5;
 
+interface TenantRow {
+  id: string;
+  name: string;
+  status: string;
+  status_reason: string | null;
+  status_changed_at: string | null;
+}
+
 interface CountResult {
   count: number | null;
   error: unknown;
@@ -82,7 +90,7 @@ async function loadSource(
 
 async function loadAgency(
   admin: SupabaseClient,
-  tenant: { id: string; name: string },
+  tenant: TenantRow,
   activeConnectors: string[],
   since: string,
 ): Promise<RawAgencyCounts> {
@@ -134,6 +142,9 @@ async function loadAgency(
     recurringTotal,
     recurringOverdue,
     sources,
+    tenantStatus: tenant.status,
+    statusReason: tenant.status_reason,
+    statusChangedAt: tenant.status_changed_at,
   };
 }
 
@@ -142,8 +153,8 @@ async function loadOverview(admin: SupabaseClient, ownTenantId: string) {
   const since = new Date(Date.now() - SYNC_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   const [allTenants, settings, openAccessRequests] = await Promise.all([
-    fetchAll<{ id: string; name: string }>((from, to) =>
-      admin.from("tenants").select("id, name").order("name").order("id").range(from, to)
+    fetchAll<TenantRow>((from, to) =>
+      admin.from("tenants").select("id, name, status, status_reason, status_changed_at").order("name").order("id").range(from, to)
     ),
     fetchAll<{ tenant_id: string; active_connectors: string[] | null }>((from, to) =>
       admin.from("tenant_settings").select("tenant_id, active_connectors").order("tenant_id").range(from, to)

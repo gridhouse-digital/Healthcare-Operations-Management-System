@@ -676,4 +676,5 @@ Source: `docs/bmad/working-notes/2026-06-13-onboarding-gate-per-department-revis
 - [x] Sortable table headers on Applicants, Employees, Training compliance, Recurring compliance, Training Rules and Team Members; Employees gains Hire Date and opens newest hire first
 - [x] Platform Admin agency overview built on feat/platform-overview, with totals-only server function
 - [x] Deploy `platform-overview` and verify with platform admin and tenant admin logins
+- [ ] Agency suspension built on feat/tenant-suspend; production migration and deploy pending approval
 - [ ] Owner review; render /offer/:token, /update-password and /admin/access-requests

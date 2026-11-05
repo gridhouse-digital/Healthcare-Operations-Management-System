@@ -9,6 +9,7 @@ import {
   resolveReentryAnchor,
   toDateOnly,
 } from "../_shared/recurring-compliance-series.ts";
+import { suspendedTenantIds, withoutSuspended } from "../_shared/tenant-status.ts";
 
 // Story 4.2 — sync-training (LearnDash course progress sync)
 //
@@ -1056,9 +1057,10 @@ Deno.serve(async (req: Request) => {
       query = query.eq("tenant_id", filterTenantId);
     }
 
-    const { data: settings, error: settingsErr } = await query;
+    const { data: allSettings, error: settingsErr } = await query;
 
     if (settingsErr) throw settingsErr;
+    const settings = withoutSuspended(allSettings, await suspendedTenantIds(admin));
     if (!settings || settings.length === 0) {
       return withCors(
         new Response(

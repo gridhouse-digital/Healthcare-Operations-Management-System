@@ -3,6 +3,15 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-11-05 - Agency suspension (branch feat/tenant-suspend)
+
+Platform admins can suspend and reactivate an agency from the overview drawer. Records are kept.
+
+- Migration `20261105000001_tenant_status.sql` adds `tenants.status`, `set_tenant_status` (status change and audit row in one transaction) and a `custom_access_token_hook` that refuses tokens for suspended agencies, exempting platform admins.
+- New Edge Function `manage-tenant`. Scheduled jobs skip suspended agencies, and their hires stay queued.
+- Someone already signed in keeps working until their access token expires, because Edge Functions and RLS do not check agency status.
+
+---
 ## 2026-11-05 - Security: role change and deactivate guards
 
 `update-tenant-user-role` trusted its request body. It accepted any role, including `platform_admin`, and it applied the auth update to a body-supplied `userId` that was not tied to the tenant row. A tenant admin could therefore promote an account to platform admin, or overwrite the auth metadata of a user in another tenant and sign them out.
