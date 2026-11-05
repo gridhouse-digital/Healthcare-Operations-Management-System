@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { sessionClaims } from "@/lib/sessionClaims";
 import type {
   TenantSettings,
   ConnectorTestResult,
@@ -133,7 +134,7 @@ export interface SaveOfferLetterSettingsPayload {
 
 async function saveOfferLetterSettings(payload: SaveOfferLetterSettingsPayload): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
-  const tenantId = session?.user?.app_metadata?.tenant_id as string | undefined;
+  const tenantId = sessionClaims(session).tenant_id;
   if (!tenantId) throw new Error("Missing tenant context");
 
   const { error } = await supabase

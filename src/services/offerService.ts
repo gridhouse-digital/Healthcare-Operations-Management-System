@@ -1,9 +1,10 @@
 import { supabase } from '@/lib/supabase';
+import { sessionClaims } from '@/lib/sessionClaims';
 import type { Offer } from '@/types';
 
 async function getTenantId() {
     const { data: { session } } = await supabase.auth.getSession();
-    const tenantId = session?.user?.app_metadata?.tenant_id as string | undefined;
+    const tenantId = sessionClaims(session).tenant_id;
     if (!tenantId) throw new Error('Missing tenant context');
     return tenantId;
 }

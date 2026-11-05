@@ -4,7 +4,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useEffect, useState } from 'react';
 import { settingsService } from '@/services/settingsService';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { navGroups } from './Sidebar';
+import { navGroups, visibleNavItems } from './navigation';
 import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
 import defaultLogoDark from '@/assets/logo-dark.png';
@@ -47,11 +47,7 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
                 {/* Nav: the same list as the desktop sidebar */}
                 <nav aria-label="Main" className="flex-1 overflow-y-auto p-2">
                     {navGroups.map((group) => {
-                        const visibleItems = group.items.filter((item) => {
-                            if (item.adminOnly && !isAdmin) return false;
-                            if (item.platformAdminOnly && !isPlatformAdmin) return false;
-                            return true;
-                        });
+                        const visibleItems = visibleNavItems(group, { isAdmin, isPlatformAdmin });
                         if (visibleItems.length === 0) return null;
 
                         return (

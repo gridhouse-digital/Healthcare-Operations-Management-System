@@ -1,62 +1,10 @@
-import { LayoutDashboard, Users, FileText, Briefcase, BookOpenCheck, Sparkles, PanelLeftClose, PanelLeftOpen, Plug, UserCog, Wrench, Mail, ClipboardCheck, type LucideIcon } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSidebar } from './SidebarContext';
-
-interface NavItem {
-    name: string;
-    href: string;
-    icon: LucideIcon;
-    adminOnly: boolean;
-    isAI: boolean;
-    platformAdminOnly?: boolean;
-}
-
-interface NavGroup {
-    label: string;
-    items: NavItem[];
-}
-
-const navGroups: NavGroup[] = [
-    {
-        label: 'Overview',
-        items: [
-            { name: 'Dashboard', href: '/', icon: LayoutDashboard, adminOnly: false, isAI: false },
-        ],
-    },
-    {
-        label: 'Hiring',
-        items: [
-            { name: 'Applicants', href: '/applicants', icon: Users,     adminOnly: false, isAI: false },
-            { name: 'Offers',     href: '/offers',     icon: FileText,  adminOnly: false, isAI: false },
-        ],
-    },
-    {
-        label: 'Workforce',
-        items: [
-            { name: 'Employees', href: '/employees', icon: Briefcase, adminOnly: false, isAI: false },
-        ],
-    },
-    {
-        label: 'Training',
-        items: [
-            { name: 'Compliance', href: '/training', icon: BookOpenCheck, adminOnly: false, isAI: false },
-        ],
-    },
-    {
-        label: 'AI & Admin',
-        items: [
-            { name: 'AI Dashboard',     href: '/admin/ai-dashboard',    icon: Sparkles, adminOnly: true,  isAI: true },
-            { name: 'Access Requests',  href: '/admin/access-requests', icon: Mail,      adminOnly: true,  platformAdminOnly: true, isAI: false },
-            { name: 'Connectors',        href: '/settings/connectors',   icon: Plug,      adminOnly: true,  isAI: false },
-            { name: 'Training Rules',    href: '/settings/training-rules', icon: ClipboardCheck, adminOnly: true, isAI: false },
-            { name: 'Users',             href: '/settings/users',        icon: UserCog,   adminOnly: true,  isAI: false },
-            { name: 'System Settings',   href: '/settings/system',       icon: Wrench,    adminOnly: true,  isAI: false },
-        ],
-    },
-];
+import { navGroups, visibleNavItems } from './navigation';
 
 export function Sidebar() {
     const location = useLocation();
@@ -86,11 +34,7 @@ export function Sidebar() {
             {/* ── Navigation ── */}
             <nav aria-label="Main" className="flex-1 overflow-y-auto overflow-x-hidden p-2">
                 {navGroups.map((group, gi) => {
-                    const visibleItems = group.items.filter(item => {
-                        if (item.adminOnly && !isAdmin) return false;
-                        if (item.platformAdminOnly && !isPlatformAdmin) return false;
-                        return true;
-                    });
+                    const visibleItems = visibleNavItems(group, { isAdmin, isPlatformAdmin });
                     if (visibleItems.length === 0) return null;
 
                     return (
@@ -165,4 +109,3 @@ export function Sidebar() {
     );
 }
 
-export { navGroups };

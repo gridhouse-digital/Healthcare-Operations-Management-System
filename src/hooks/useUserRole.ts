@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sessionClaims } from '@/lib/sessionClaims';
 
 export type UserRole = 'platform_admin' | 'tenant_admin' | 'hr_admin';
 
@@ -16,7 +17,7 @@ export function useUserRole() {
                     return;
                 }
 
-                const appMetaRole = session.user.app_metadata?.role as UserRole | undefined;
+                const appMetaRole = sessionClaims(session).role as UserRole | undefined;
                 if (appMetaRole) {
                     setRole(appMetaRole);
                 }
@@ -30,7 +31,7 @@ export function useUserRole() {
         fetchRole();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            const appMetaRole = session?.user.app_metadata?.role as UserRole | undefined;
+            const appMetaRole = sessionClaims(session).role as UserRole | undefined;
             setRole(appMetaRole ?? null);
         });
 

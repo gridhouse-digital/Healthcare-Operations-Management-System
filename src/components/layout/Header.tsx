@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Bell, Search, ChevronDown, User, LogOut, Menu } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/lib/supabase';
+import { sessionClaims } from '@/lib/sessionClaims';
 import { useSidebar } from './SidebarContext';
+import { useUserRole } from '@/hooks/useUserRole';
 import { settingsService } from '@/services/settingsService';
 import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
@@ -17,16 +20,38 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/* Only pages proven to show the JWT agency. Applicants can span agencies, and
+   Access Requests and the AI dashboard aren't limited to one. */
+const SINGLE_AGENCY_ROUTES = ['/offers', '/employees', '/training', '/settings'];
+
 interface HeaderProps {
     onOpenMobileNav: () => void;
 }
 
 export function Header({ onOpenMobileNav }: HeaderProps) {
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const { pinned: expanded } = useSidebar();
+    const { isPlatformAdmin } = useUserRole();
     const [userMeta, setUserMeta] = useState<{ fullName: string; role: string }>({ fullName: '', role: '' });
     const [logoLight, setLogoLight] = useState(defaultLogoDark);
     const [logoDark,  setLogoDark]  = useState(defaultLogoLight);
+
+    /* These pages show one agency, so a platform admin must be able to see which */
+    const showsOneAgency = isPlatformAdmin
+        && SINGLE_AGENCY_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+    const { data: viewingAgency } = useQuery({
+        queryKey: ['viewing-agency'],
+        enabled: showsOneAgency,
+        queryFn: async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const tenantId = sessionClaims(session).tenant_id;
+            if (!tenantId) return null;
+            const { data, error } = await supabase.from('tenants').select('name').eq('id', tenantId).maybeSingle();
+            if (error) throw error;
+            return data?.name ?? null;
+        },
+    });
 
     useEffect(() => { loadUser(); loadLogos(); }, []);
 
@@ -34,7 +59,8 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             const fullName = user.user_metadata?.full_name || user.email || 'User';
-            const role = user.app_metadata?.role || 'hr_admin';
+            const { data: { session } } = await supabase.auth.getSession();
+            const role = sessionClaims(session).role || 'hr_admin';
             setUserMeta({ fullName, role });
         }
     };
@@ -119,6 +145,11 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
                 {/* Right: notifications + profile */}
                 <div className="flex items-center gap-1">
+                    {showsOneAgency && viewingAgency && (
+                        <span className="mr-2 min-w-0 max-w-36 truncate text-xs text-muted-foreground sm:max-w-56">
+                            Viewing: {viewingAgency}
+                        </span>
+                    )}
 
                     {/* Notifications */}
                     <button
