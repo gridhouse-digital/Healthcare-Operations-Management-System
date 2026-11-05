@@ -18,6 +18,16 @@ import { SortableHeader } from '@/components/shared/SortableHeader';
 const inputCls = "saas-input";
 const labelCls = "form-label";
 
+/* Some hire dates are stored as a plain date at UTC midnight, others as a real
+   timestamp. The plain ones must not shift back a day in US time zones. */
+function formatHireDate(value: string) {
+    const date = new Date(value);
+    if (date.toISOString().endsWith('T00:00:00.000Z')) {
+        return format(new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()), 'MMM d, yyyy');
+    }
+    return format(date, 'MMM d, yyyy');
+}
+
 const SORT_COLUMNS = {
     name: { value: (row) => `${row.first_name} ${row.last_name}` },
     role: { value: (row) => row.job_title },
@@ -121,6 +131,7 @@ export function EmployeeList() {
     const [recurringRecords, setRecurringRecords] = useState<RecurringComplianceRecord[]>([]);
     const [activeGroupIds, setActiveGroupIds] = useState<string[]>([]);
     const [loadingTraining, setLoadingTraining] = useState(false);
+    const [recurringState, setRecurringState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
 
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -134,15 +145,21 @@ export function EmployeeList() {
     useEffect(() => { loadEmployees(); }, []);
 
     useEffect(() => {
-        if (selectedEmployee) {
-            loadTrainingRecords(selectedEmployee.id);
-            loadRecurringCompliance(selectedEmployee.id);
-            loadActiveComplianceGroups(selectedEmployee.id);
-        } else {
+        if (!selectedEmployee) {
             setTrainingRecords([]);
             setRecurringRecords([]);
             setActiveGroupIds([]);
+            setLoadingTraining(false);
+            return;
         }
+
+        /* A slow response for the previous employee must not land on this one */
+        let active = true;
+        const isCurrent = () => active;
+        loadTrainingRecords(selectedEmployee.id, isCurrent);
+        loadRecurringCompliance(selectedEmployee.id, isCurrent);
+        loadActiveComplianceGroups(selectedEmployee.id, isCurrent);
+        return () => { active = false; };
     }, [selectedEmployee]);
 
     const loadEmployees = async () => {
@@ -157,7 +174,7 @@ export function EmployeeList() {
         }
     };
 
-    const loadTrainingRecords = async (personId: string) => {
+    const loadTrainingRecords = async (personId: string, isCurrent: () => boolean) => {
         setLoadingTraining(true);
         try {
             let activeQuery = await supabase
@@ -182,7 +199,7 @@ export function EmployeeList() {
                     progress_pct: row.completion_pct ?? 0,
                 }));
 
-                setTrainingRecords(normalized);
+                if (isCurrent()) setTrainingRecords(normalized);
 
                 return;
             }
@@ -216,15 +233,16 @@ export function EmployeeList() {
             const combinedRecords = [...normalized, ...assignedRecords]
                 .sort((a, b) => a.course_name.localeCompare(b.course_name));
 
-            setTrainingRecords(combinedRecords);
+            if (isCurrent()) setTrainingRecords(combinedRecords);
         } catch (err) {
             console.error('Failed to load training records', err);
         } finally {
-            setLoadingTraining(false);
+            if (isCurrent()) setLoadingTraining(false);
         }
     };
 
-    const loadRecurringCompliance = async (personId: string) => {
+    const loadRecurringCompliance = async (personId: string, isCurrent: () => boolean) => {
+        setRecurringState('loading');
         try {
             const { data, error: recurringErr } = await supabase
                 .from('v_recurring_compliance_status')
@@ -235,7 +253,10 @@ export function EmployeeList() {
             if (recurringErr) {
                 const message = recurringErr.message || '';
                 if (/relation .* does not exist/i.test(message) || /schema cache/i.test(message)) {
-                    setRecurringRecords([]);
+                    if (isCurrent()) {
+                        setRecurringRecords([]);
+                        setRecurringState('unavailable');
+                    }
                     return;
                 }
                 throw recurringErr;
@@ -248,14 +269,20 @@ export function EmployeeList() {
                 }
             }
 
-            setRecurringRecords(Array.from(latestByRule.values()));
+            if (isCurrent()) {
+                setRecurringRecords(Array.from(latestByRule.values()));
+                setRecurringState('ready');
+            }
         } catch (err) {
             console.error('Failed to load recurring compliance', err);
-            setRecurringRecords([]);
+            if (isCurrent()) {
+                setRecurringRecords([]);
+                setRecurringState('unavailable');
+            }
         }
     };
 
-    const loadActiveComplianceGroups = async (personId: string) => {
+    const loadActiveComplianceGroups = async (personId: string, isCurrent: () => boolean) => {
         try {
             const { data, error: groupsErr } = await supabase
                 .from('employee_group_enrollments')
@@ -266,12 +293,12 @@ export function EmployeeList() {
 
             if (groupsErr) throw groupsErr;
 
-            setActiveGroupIds(
-                Array.from(new Set((data || []).map((row) => row.group_id as string)))
-            );
+            if (isCurrent()) {
+                setActiveGroupIds(Array.from(new Set((data || []).map((row) => row.group_id as string))));
+            }
         } catch (err) {
             console.error('Failed to load active compliance groups', err);
-            setActiveGroupIds([]);
+            if (isCurrent()) setActiveGroupIds([]);
         }
     };
 
@@ -452,7 +479,7 @@ export function EmployeeList() {
                                     </td>
                                     <td className="hidden whitespace-nowrap py-3 pr-4 text-right md:table-cell">
                                         <span className="text-sm tabular-nums text-muted-foreground">
-                                            {employee.hired_at ? format(new Date(employee.hired_at), 'MMM d, yyyy') : '—'}
+                                            {employee.hired_at ? formatHireDate(employee.hired_at) : '—'}
                                         </span>
                                     </td>
                                     <td className="py-3 pr-4">
@@ -606,17 +633,21 @@ export function EmployeeList() {
                                     </div>
                                     <div className="tally-cell">
                                         <p className="zone-label">Recurring</p>
-                                        <p className="data-value mt-2 text-2xl" style={{ color: overdueRecurring > 0 ? 'var(--severity-critical)' : undefined }}>
-                                            {openRecurring}
+                                        <p className="data-value mt-2 text-2xl" style={{ color: recurringState === 'ready' && overdueRecurring > 0 ? 'var(--severity-critical)' : undefined }}>
+                                            {recurringState === 'ready' ? openRecurring : recurringState === 'loading' ? '…' : '—'}
                                         </p>
                                         <p className="mt-2 text-xs text-muted-foreground">
-                                            {overdueRecurring > 0 ? `Open, ${overdueRecurring} overdue` : 'Open items'}
+                                            {recurringState === 'unavailable'
+                                                ? 'Unavailable'
+                                                : recurringState === 'loading'
+                                                    ? 'Loading'
+                                                    : overdueRecurring > 0 ? `Open, ${overdueRecurring} overdue` : 'Open items'}
                                         </p>
                                     </div>
                                     <div className="tally-cell">
                                         <p className="zone-label">Hire Date</p>
                                         <p className="data-value mt-2 text-md">
-                                            {selectedEmployee.hired_at ? format(new Date(selectedEmployee.hired_at), 'MMM d, yyyy') : '—'}
+                                            {selectedEmployee.hired_at ? formatHireDate(selectedEmployee.hired_at) : '—'}
                                         </p>
                                         <p className="mt-2 text-xs text-muted-foreground">{selectedEmployee.profile_source || 'Source unknown'}</p>
                                     </div>
@@ -627,7 +658,7 @@ export function EmployeeList() {
                                         {([
                                             { value: 'overview', label: 'Overview', count: null },
                                             { value: 'training', label: 'Training', count: trainingRecords.length },
-                                            { value: 'compliance', label: 'Recurring Compliance', count: recurringRecords.length },
+                                            { value: 'compliance', label: 'Recurring Compliance', count: recurringState === 'ready' ? recurringRecords.length : '—' },
                                         ] as const).map((tab) => {
                                             const active = drawerTab === tab.value;
                                             return (
@@ -647,12 +678,15 @@ export function EmployeeList() {
                                         })}
                                     </div>
 
+                                    {/* Stays mounted across tabs so its analysis isn't lost */}
+                                    {selectedEmployee.employee_status === 'Onboarding' && (
+                                        <div className="pt-4" hidden={drawerTab !== 'overview'}>
+                                            <OnboardingSummaryPanel employee={selectedEmployee} status={selectedEmployee.employee_status} />
+                                        </div>
+                                    )}
+
                                     {drawerTab === 'overview' && (
                                         <div className="space-y-6 pt-4">
-                                            {selectedEmployee.employee_status === 'Onboarding' && (
-                                                <OnboardingSummaryPanel employee={selectedEmployee} status={selectedEmployee.employee_status} />
-                                            )}
-
                                             <section>
                                                 <h3 className="text-title text-foreground">Contact Information</h3>
                                                 <dl className="mt-1 divide-y divide-border">
@@ -745,8 +779,16 @@ export function EmployeeList() {
                                             </ul>
                                         ) : (
                                             <div className="empty-state">
-                                                <p className="empty-state-title">No recurring compliance records available.</p>
-                                                <p className="empty-state-hint">Recurring compliance will appear when this employee has an active compliance group and a recurring rule is tied to one of that group’s courses.</p>
+                                                {recurringState === 'unavailable' ? (
+                                                    <p className="empty-state-title">Recurring compliance could not be loaded.</p>
+                                                ) : recurringState === 'loading' ? (
+                                                    <p className="empty-state-title">Loading recurring compliance…</p>
+                                                ) : (
+                                                    <>
+                                                        <p className="empty-state-title">No recurring compliance records available.</p>
+                                                        <p className="empty-state-hint">Recurring compliance will appear when this employee has an active compliance group and a recurring rule is tied to one of that group’s courses.</p>
+                                                    </>
+                                                )}
                                             </div>
                                         )
                                     )}

@@ -91,6 +91,22 @@
 /* Light mode: the bone wells become the room, the signals stay and deepen for contrast */
 .light {
     color-scheme: light;
+    /* Restated here because aliases resolved at :root stay dark inside a nested .light */
+    --background: var(--color-paper);
+    --foreground: var(--color-ink);
+    --card: var(--color-paper-2);
+    --card-foreground: var(--color-ink);
+    --popover: var(--color-paper-3);
+    --popover-foreground: var(--color-ink);
+    --primary: var(--color-signal);
+    --primary-foreground: var(--color-accent-ink);
+    --secondary: var(--color-paper-3);
+    --secondary-foreground: var(--color-ink-2);
+    --muted: var(--color-paper-2);
+    --muted-foreground: var(--color-ink-3);
+    --accent: var(--color-paper-3);
+    --accent-foreground: var(--color-ink);
+    --border: var(--color-rule);
     --color-paper:   oklch(95.5% 0.008 75);
     --color-paper-2: oklch(95.5% 0.008 75);
     --color-paper-3: oklch(92% 0.010 75);

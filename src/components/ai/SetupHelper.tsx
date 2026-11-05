@@ -60,7 +60,7 @@ export function SetupHelper() {
 
                     {data.config_suggestions.length > 0 && (
                         <div>
-                            <h4 className="flex items-center gap-2 text-sm font-medium text-foreground dark:text-primary-foreground mb-3">
+                            <h4 className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
                                 <Settings className="w-4 h-4" aria-hidden="true" />
                                 Suggested Configurations
                             </h4>
@@ -74,7 +74,7 @@ export function SetupHelper() {
                                             </span>
                                         </div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <code className="text-sm font-medium text-foreground dark:text-primary-foreground">{suggestion.setting_key}</code>
+                                            <code className="text-sm font-medium text-foreground">{suggestion.setting_key}</code>
                                             <code className="text-sm text-foreground">{suggestion.suggested_value}</code>
                                         </div>
                                         <p className="text-xs text-muted-foreground border-t pt-2 mt-2">

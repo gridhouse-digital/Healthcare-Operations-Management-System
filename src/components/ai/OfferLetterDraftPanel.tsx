@@ -338,7 +338,7 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
                 <div className="p-6 border rounded-lg bg-card shadow-sm">
                     <div className="mb-4 pb-4 border-b">
                         <label className="block text-xs font-medium text-muted-foreground mb-1">Subject</label>
-                        <div className="text-foreground dark:text-primary-foreground font-medium">{data?.subject}</div>
+                        <div className="text-foreground font-medium">{data?.subject}</div>
                     </div>
 
                     <div className="relative">
@@ -392,7 +392,7 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
                     {/* Modal Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted">
                         <div>
-                            <h2 className="text-lg font-medium text-foreground dark:text-primary-foreground">Offer Letter Preview</h2>
+                            <h2 className="text-lg font-medium text-foreground">Offer Letter Preview</h2>
                             <p className="text-sm text-muted-foreground">{data?.subject}</p>
                         </div>
                         <button

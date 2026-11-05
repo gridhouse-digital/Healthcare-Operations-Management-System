@@ -1,7 +1,8 @@
 /* The shape of a working page, shown while its data loads */
 export function PageSkeleton({ rows = 6, label = 'Loading' }: { rows?: number; label?: string }) {
     return (
-        <div className="space-y-6" aria-busy="true" aria-label={label}>
+        <div className="space-y-6" aria-busy="true">
+            <p role="status" className="visually-hidden">{label}</p>
             <div className="space-y-2">
                 <div className="h-8 w-56 rounded-md ai-shimmer" />
                 <div className="h-3 w-80 max-w-full rounded ai-shimmer" />

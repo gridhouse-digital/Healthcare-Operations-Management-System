@@ -69,7 +69,9 @@ export function Sidebar() {
     return (
         <aside
             onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
+            onMouseLeave={(event) => {
+                if (!event.currentTarget.querySelector(':focus-visible')) setHovered(false);
+            }}
             onFocus={() => setHovered(true)}
             onBlur={(event) => {
                 if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHovered(false);

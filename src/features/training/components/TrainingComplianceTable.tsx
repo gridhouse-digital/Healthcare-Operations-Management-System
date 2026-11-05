@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ArrowRight, MoreHorizontal, UserRound } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,9 +9,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { SortableHeader } from '@/components/shared/SortableHeader';
-import { useTableSort, type SortColumn } from '@/hooks/useTableSort';
+import type { SortDirection } from '@/hooks/useTableSort';
 import type { TrainingEmployee } from '../types';
-import type { GateSummary } from '../utils/compliancePresentation';
+import type { GateSummary, TrainingSortKey } from '../utils/compliancePresentation';
 import {
   assignmentLabel,
   completionLabel,
@@ -25,6 +24,10 @@ interface TrainingComplianceTableProps {
   gateSummaries: Map<string, GateSummary>;
   selectedEmployeeId?: string | null;
   onOpenEmployee: (employeeId: string) => void;
+}
+
+interface SortableTrainingTableProps extends TrainingComplianceTableProps {
+  sortProps: (key: TrainingSortKey) => { direction: SortDirection | null; onSort: () => void };
 }
 
 function formatActivity(value: string | null) {
@@ -43,17 +46,8 @@ export function TrainingComplianceTable({
   gateSummaries,
   selectedEmployeeId,
   onOpenEmployee,
-}: TrainingComplianceTableProps) {
-  const sortColumns = useMemo(() => ({
-    name: { value: (row) => `${row.first_name} ${row.last_name}` },
-    assignment: { value: (row) => row.coursesAssigned || null, kind: 'number' },
-    completion: { value: (row) => (row.coursesAssigned > 0 ? row.completionPct : null), kind: 'number' },
-    gate: { value: (row) => gateSummaries.get(row.person_id)?.label },
-    status: { value: (row) => row.complianceStatus },
-    activity: { value: (row) => row.lastActivity, kind: 'date' },
-  } satisfies Record<string, SortColumn<TrainingEmployee>>), [gateSummaries]);
-  const { sortedRows, sortProps } = useTableSort(employees, sortColumns);
-
+  sortProps,
+}: SortableTrainingTableProps) {
   return (
     <div className="hidden border-t border-border xl:block">
       <table className="w-full table-fixed">
@@ -69,7 +63,7 @@ export function TrainingComplianceTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
-          {sortedRows.map((employee) => {
+          {employees.map((employee) => {
             const gate = gateSummaries.get(employee.person_id);
             const edge = priorityEdgeClass(employee, gate);
             const selected = selectedEmployeeId === employee.person_id;

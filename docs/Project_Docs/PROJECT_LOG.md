@@ -3,6 +3,18 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-11-05 - PR 28 review fixes (branch hallmark-redesign)
+
+Addressed the CodeRabbit review. Frontend only.
+
+- Training sorting now covers every matching employee before the 25-row page slice, and resets to page 1. It previously reordered only the current page.
+- `SlideOver` moves focus in, traps Tab, restores focus on close, and ignores Escape already handled by a nested menu.
+- Employees drawer: late responses for a previous employee are dropped, the Recurring tally shows loading and unavailable states instead of 0, and the onboarding analysis survives tab changes.
+- Hire dates stored at UTC midnight (4 of 42 live rows) display as calendar dates; real timestamps are unchanged.
+- Dashboard onboarding shows "Not tracked yet" instead of a hard-coded 0%.
+- Dark-mode text fix in the offer draft panel and setup helper, `.light` restates semantic aliases for nested light containers, the sidebar stays open for keyboard focus, and `PageSkeleton` announces its label.
+
+---
 ## 2026-11-05 - CI: Supabase config section renamed
 
 Tenant Isolation failed on PR 28 before any test ran: CI installs the latest Supabase CLI, which no longer accepts `[inbucket]` in `supabase/config.toml`. Renamed the section to `[local_smtp]`. Local emulator config only; nothing deployed changes.

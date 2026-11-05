@@ -36,19 +36,22 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     });
 
     const [hovered, setHoveredState] = useState(false);
+    const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const togglePin = useCallback(() => {
         setPinned(prev => {
             const next = !prev;
             try { localStorage.setItem(PIN_KEY, String(next)); } catch {}
             // When collapsing (unpinning), immediately clear hover so sidebar closes
-            if (!next) setHoveredState(false);
+            if (!next) {
+                if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                setHoveredState(false);
+            }
             return next;
         });
     }, []);
 
     // A short intent delay, so a mouse passing over the rail doesn't open the menu
-    const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const setHovered = useCallback((val: boolean) => {
         if (hoverTimer.current) clearTimeout(hoverTimer.current);
         if (val) {

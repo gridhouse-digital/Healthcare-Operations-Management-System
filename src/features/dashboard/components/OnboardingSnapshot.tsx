@@ -1,24 +1,10 @@
 import { GraduationCap, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { cn } from '@/lib/utils';
 import type { OnboardingEmployee } from '@/services/dashboardService';
 
 interface OnboardingSnapshotProps {
     employees: OnboardingEmployee[];
     loading?: boolean;
-}
-
-function ProgressTrack({ value }: { value: number }) {
-    const pct = Math.min(100, Math.max(0, value));
-    const color = pct >= 40 ? 'bg-signal' : 'bg-accent-2';
-    return (
-        <div className="h-1 w-full rounded-full bg-secondary overflow-hidden">
-            <div
-                className={cn('h-full rounded-full', color)}
-                style={{ width: `${pct}%` }}
-            />
-        </div>
-    );
 }
 
 export function OnboardingSnapshot({ employees, loading }: OnboardingSnapshotProps) {
@@ -67,11 +53,9 @@ export function OnboardingSnapshot({ employees, loading }: OnboardingSnapshotPro
                                         {emp.role}
                                     </p>
                                 </div>
-                                <span className="text-[12px] font-medium tabular-nums text-foreground/80 flex-shrink-0">
-                                    {emp.progress}%
-                                </span>
+                                {/* Course progress isn't computed here yet, so no percentage is shown */}
+                                <span className="text-xs text-muted-foreground flex-shrink-0">Not tracked yet</span>
                             </div>
-                            <ProgressTrack value={emp.progress} />
                         </div>
                     ))}
                 </div>

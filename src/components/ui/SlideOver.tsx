@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -11,15 +11,53 @@ interface SlideOverProps {
     side?: 'left' | 'right';
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side = 'right' }: SlideOverProps) {
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    /* Focus moves in on open and returns to the opener on close */
+    useEffect(() => {
+        if (!isOpen) return;
+        const opener = document.activeElement as HTMLElement | null;
+        panelRef.current?.focus();
+        return () => opener?.focus?.();
+    }, [isOpen]);
+
     useEffect(() => {
         if (!isOpen) return;
         const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onClose();
+            /* A nested menu that closed on this Escape marks it handled */
+            if (event.key === 'Escape' && !event.defaultPrevented) onClose();
         };
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [isOpen, onClose]);
+
+    /* Keep Tab inside the drawer. Menus portalled out of it handle their own keys. */
+    const handlePanelKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+        const panel = panelRef.current;
+        if (event.key !== 'Tab' || event.defaultPrevented || !panel) return;
+        if (!panel.contains(document.activeElement)) return;
+
+        const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE))
+            .filter((element) => element.offsetParent !== null);
+        if (focusable.length === 0) {
+            event.preventDefault();
+            return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        if (event.shiftKey && (active === first || active === panel)) {
+            event.preventDefault();
+            last.focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -39,10 +77,13 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
 
             {/* Panel */}
             <div
+                ref={panelRef}
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                className={`drawer-surface fixed top-0 ${side === 'right' ? 'right-0' : 'left-0'} h-full ${widthClasses[width]} w-full z-50 overflow-y-auto`}
+                tabIndex={-1}
+                onKeyDown={handlePanelKeyDown}
+                className={`drawer-surface focus:outline-none fixed top-0 ${side === 'right' ? 'right-0' : 'left-0'} h-full ${widthClasses[width]} w-full z-50 overflow-y-auto`}
                 style={{
                     background: 'var(--card)',
                     borderLeft: side === 'right' ? '1px solid var(--border)' : 'none',

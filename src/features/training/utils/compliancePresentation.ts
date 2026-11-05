@@ -1,3 +1,4 @@
+import type { SortColumn } from '@/hooks/useTableSort';
 import type { ComplianceStatus, TrainingEmployee } from '../types';
 import type { OnboardingGateRow } from '../hooks/useOnboardingGate';
 
@@ -82,6 +83,21 @@ export function summarizeGate(rows: OnboardingGateRow[] | undefined, unavailable
     completed,
     total,
     label: 'Requirements incomplete',
+  };
+}
+
+export type TrainingSortKey = 'name' | 'assignment' | 'completion' | 'gate' | 'status' | 'activity';
+
+export function trainingSortColumns(
+  gateSummaries: Map<string, GateSummary>,
+): Record<TrainingSortKey, SortColumn<TrainingEmployee>> {
+  return {
+    name: { value: (row) => `${row.first_name} ${row.last_name}` },
+    assignment: { value: (row) => row.coursesAssigned || null, kind: 'number' },
+    completion: { value: (row) => (row.coursesAssigned > 0 ? row.completionPct : null), kind: 'number' },
+    gate: { value: (row) => gateSummaries.get(row.person_id)?.label },
+    status: { value: (row) => row.complianceStatus },
+    activity: { value: (row) => row.lastActivity, kind: 'date' },
   };
 }
 

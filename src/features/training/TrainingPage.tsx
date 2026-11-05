@@ -18,11 +18,14 @@ import {
 import { TrainingComplianceSkeleton } from './components/TrainingComplianceSkeleton';
 import { EmployeeComplianceDrawer } from './components/EmployeeComplianceDrawer';
 import { Button } from '@/components/ui/button';
+import { useTableSort } from '@/hooks/useTableSort';
 import type { TrainingEmployee } from './types';
 import {
   employeeHasAdjustments,
   employeeNeedsAction,
+  trainingSortColumns,
   type GateSummary,
+  type TrainingSortKey,
 } from './utils/compliancePresentation';
 
 const PAGE_SIZE = 25;
@@ -120,10 +123,23 @@ export function TrainingPage() {
     [employees, filters, summaryFilter, gateSummaries],
   );
 
+  const sortColumns = useMemo(() => trainingSortColumns(gateSummaries), [gateSummaries]);
+  const { sortedRows, sortProps } = useTableSort(filtered, sortColumns);
+  const sortFromFirstPage = (key: TrainingSortKey) => {
+    const header = sortProps(key);
+    return {
+      direction: header.direction,
+      onSort: () => {
+        header.onSort();
+        setPage(1);
+      },
+    };
+  };
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pageStart = (currentPage - 1) * PAGE_SIZE;
-  const pageEmployees = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+  const pageEmployees = sortedRows.slice(pageStart, pageStart + PAGE_SIZE);
 
   const reportingDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -263,6 +279,7 @@ export function TrainingPage() {
           ) : (
             <>
               <TrainingComplianceTable
+                sortProps={sortFromFirstPage}
                 employees={pageEmployees}
                 gateSummaries={gateSummaries}
                 selectedEmployeeId={employeeId}
