@@ -3,13 +3,13 @@ import { tenantGuard } from "../_shared/tenant-guard.ts";
 import { handleError, errorResponse } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
+import { blockedUserChange, isAssignableRole } from "../_shared/role-change.ts";
 
 // FR-19: Role change + forced session invalidation.
 
 interface UpdateRoleBody {
-  userId: string;        // auth.users.id
   tenantUserId: string;  // tenant_users.id
-  role: "tenant_admin" | "hr_admin";
+  role: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -27,10 +27,14 @@ Deno.serve(async (req: Request) => {
     }
 
     const body = await req.json() as UpdateRoleBody;
-    const { userId, tenantUserId, role } = body;
+    const { tenantUserId, role } = body;
 
-    if (!userId || !tenantUserId || !role) {
-      return withCors(errorResponse("MISSING_FIELDS", "userId, tenantUserId, role required", 400), req);
+    if (!tenantUserId || !role) {
+      return withCors(errorResponse("MISSING_FIELDS", "tenantUserId, role required", 400), req);
+    }
+
+    if (!isAssignableRole(role)) {
+      return withCors(errorResponse("INVALID_ROLE", "role must be tenant_admin or hr_admin", 400), req);
     }
 
     const adminUrl = Deno.env.get("SUPABASE_URL")!;
@@ -39,13 +43,25 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    // Fetch current role for audit before value
-    const { data: current } = await adminClient
+    // The target comes from this tenant's row, never from the request body
+    const { data: target, error: targetError } = await adminClient
       .from("tenant_users")
-      .select("role")
+      .select("user_id, role")
       .eq("id", tenantUserId)
       .eq("tenant_id", ctx.tenantId)
-      .single();
+      .maybeSingle();
+
+    if (targetError) throw targetError;
+    if (!target) {
+      return withCors(errorResponse("NOT_FOUND", "User not found in this tenant", 404), req);
+    }
+
+    const blocked = blockedUserChange({
+      actorUserId: ctx.userId,
+      targetUserId: target.user_id,
+      targetRole: target.role,
+    });
+    if (blocked) return withCors(errorResponse("FORBIDDEN", blocked, 403), req);
 
     // Update tenant_users role
     const { error: updateError } = await adminClient
@@ -57,13 +73,13 @@ Deno.serve(async (req: Request) => {
     if (updateError) throw updateError;
 
     // Update auth user app_metadata.role so new JWTs reflect the change
-    const { error: authError } = await adminClient.auth.admin.updateUserById(userId, {
+    const { error: authError } = await adminClient.auth.admin.updateUserById(target.user_id, {
       app_metadata: { tenant_id: ctx.tenantId, role },
     });
     if (authError) throw authError;
 
     // Force session invalidation — sign out all sessions for this user
-    await adminClient.auth.admin.signOut(userId, "global");
+    await adminClient.auth.admin.signOut(target.user_id, "global");
 
     void logAudit({
       tenantId: ctx.tenantId,
@@ -71,7 +87,7 @@ Deno.serve(async (req: Request) => {
       action: "user.role_changed",
       tableName: "tenant_users",
       recordId: tenantUserId,
-      before: { role: (current as { role: string } | null)?.role },
+      before: { role: target.role },
       after: { role },
     });
 

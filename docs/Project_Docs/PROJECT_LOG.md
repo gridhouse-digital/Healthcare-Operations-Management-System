@@ -3,6 +3,16 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-11-05 - Security: role change and deactivate guards
+
+`update-tenant-user-role` trusted its request body. It accepted any role, including `platform_admin`, and it applied the auth update to a body-supplied `userId` that was not tied to the tenant row. A tenant admin could therefore promote an account to platform admin, or overwrite the auth metadata of a user in another tenant and sign them out.
+
+- Roles are now limited to `tenant_admin` and `hr_admin`, and the target comes from the tenant's own row.
+- Nobody can change their own role or deactivate themselves, and platform admin accounts cannot be changed through these functions. This also stops the last platform admin being demoted.
+- The Users page hides the controls on those rows.
+- `audit_log` shows no misuse: the only `user.role_changed` event is the owner's accidental self-demotion on 2026-11-05, restored the same day by a direct update to `tenant_users` and `auth.users`.
+
+---
 ## 2026-11-05 - PR 28 review fixes (branch hallmark-redesign)
 
 Addressed the CodeRabbit review. Frontend only.
