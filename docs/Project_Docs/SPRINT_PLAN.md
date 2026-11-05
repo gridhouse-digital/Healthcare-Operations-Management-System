@@ -667,3 +667,11 @@ Source: `docs/bmad/working-notes/2026-06-13-onboarding-gate-per-department-revis
 - [x] `OnboardingGateCard`/`useOnboardingGate` still consume the same view columns; backfill script keeps reset-then-resolve and preflights flagged mappings.
 - [x] Tests: `deno test _shared/tests/` 131/0; RLS suite updated with `v_onboarding_gate` cross-tenant coverage + two-department contract (live assertions skipped locally because env vars absent); `npm run build` clean; targeted touched-file ESLint 0 errors. Full `npm run lint` remains blocked by pre-existing repo lint debt (86 problems).
 - [ ] Deploy from `main` after sign-off only: migration -> `convert-applicant`, `process-hire`, `onboard-employee`, `save-ld-mappings`; owner flags groups 54 and 1428; run backfill identify first, then `--apply` only after approval.
+
+## UI — Hallmark Dusk redesign [IMPLEMENTED — uncommitted on hallmark-redesign]
+
+- [x] Dusk tokens, fonts and shadcn role mapping; Light mode as a bone palette
+- [x] Shell, dashboard, training, AI dashboard and auth screens restyled; routes and wiring kept
+- [x] Type check, production build and Hallmark sweep pass (0 FAIL, 0 REFLEX)
+- [x] Sortable table headers on Applicants, Employees, Training compliance, Recurring compliance, Training Rules and Team Members; Employees gains Hire Date and opens newest hire first
+- [ ] Owner review; render /offer/:token, /update-password and /admin/access-requests

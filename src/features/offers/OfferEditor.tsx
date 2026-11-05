@@ -16,8 +16,8 @@ interface OfferFormData {
     salary: number;
 }
 
-const fieldWithIconCls = 'w-full h-9 pl-8 pr-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50';
-const labelCls = 'block text-[11px] font-medium tracking-[-0.01em] text-muted-foreground mb-1.5';
+const fieldWithIconCls = "saas-input pl-9";
+const labelCls = "form-label";
 
 export function OfferEditor() {
     const navigate = useNavigate();
@@ -84,19 +84,19 @@ export function OfferEditor() {
     return (
         <div className="space-y-5">
             {/* Header */}
-            <div className="flex items-center gap-3 pl-1">
+            <div className="flex items-center gap-3">
                 <button
                     onClick={() => navigate('/offers')}
                     className="h-7 w-7 inline-flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
-                >
-                    <ArrowLeft size={14} />
+                 aria-label="Back">
+                    <ArrowLeft size={14} aria-hidden="true" />
                 </button>
                 <div>
-                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05 }}
+                    <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 500, lineHeight: 1.05 }}
                         className="text-foreground">
                         {id ? 'Edit Offer' : 'Create Offer'}
                     </h1>
-                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}
+                    <p style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', }}
                         className="text-muted-foreground mt-0.5">
                         {id ? 'Update offer details' : 'New offer letter'}
                     </p>
@@ -111,7 +111,7 @@ export function OfferEditor() {
                         <div>
                             <label className={labelCls}>Applicant</label>
                             <div className="relative">
-                                <User size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                <User size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
                                 <Controller
                                     control={control}
                                     name="applicant_id"
@@ -131,7 +131,7 @@ export function OfferEditor() {
                                 />
                             </div>
                             {errors.applicant_id && (
-                                <p className="mt-1.5 text-[11px] text-destructive">{errors.applicant_id.message}</p>
+                                <p className="mt-1.5 text-xs text-destructive">{errors.applicant_id.message}</p>
                             )}
                         </div>
 
@@ -140,7 +140,7 @@ export function OfferEditor() {
                             <div>
                                 <label className={labelCls}>Position Title</label>
                                 <div className="relative">
-                                    <Briefcase size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                    <Briefcase size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
                                     <input
                                         type="text"
                                         placeholder="e.g. Registered Nurse"
@@ -149,7 +149,7 @@ export function OfferEditor() {
                                     />
                                 </div>
                                 {errors.position_title && (
-                                    <p className="mt-1.5 text-[11px] text-destructive">{errors.position_title.message}</p>
+                                    <p className="mt-1.5 text-xs text-destructive">{errors.position_title.message}</p>
                                 )}
                             </div>
 
@@ -157,7 +157,7 @@ export function OfferEditor() {
                             <div>
                                 <label className={labelCls}>Pay Rate</label>
                                 <div className="relative">
-                                    <DollarSign size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                    <DollarSign size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
                                     <input
                                         type="number"
                                         placeholder="0.00"
@@ -171,7 +171,7 @@ export function OfferEditor() {
                             <div>
                                 <label className={labelCls}>Start Date</label>
                                 <div className="relative">
-                                    <Calendar size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                                    <Calendar size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" aria-hidden="true" />
                                     <input
                                         type="date"
                                         {...register('start_date', { required: 'Start date is required' })}
@@ -179,7 +179,7 @@ export function OfferEditor() {
                                     />
                                 </div>
                                 {errors.start_date && (
-                                    <p className="mt-1.5 text-[11px] text-destructive">{errors.start_date.message}</p>
+                                    <p className="mt-1.5 text-xs text-destructive">{errors.start_date.message}</p>
                                 )}
                             </div>
                         </div>
@@ -188,16 +188,16 @@ export function OfferEditor() {
                             <button
                                 type="button"
                                 onClick={() => navigate('/offers')}
-                                className="inline-flex items-center h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                                className="inline-flex items-center h-8 px-4 rounded-full border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="inline-flex items-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="inline-flex items-center gap-2 h-8 px-4 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-accent-hi transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                <Save size={13} />
+                                <Save size={14} aria-hidden="true" />
                                 {loading ? 'Saving…' : 'Save Offer'}
                             </button>
                         </div>

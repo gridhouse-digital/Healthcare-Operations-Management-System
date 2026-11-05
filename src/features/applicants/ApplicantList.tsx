@@ -9,39 +9,26 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { AppSelect } from '@/components/ui/AppSelect';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTableSort, type SortColumn } from '@/hooks/useTableSort';
+import { SortableHeader } from '@/components/shared/SortableHeader';
+import type { Applicant } from '@/types';
 
-const SOURCE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-    jotform:  { bg: 'color-mix(in srgb, var(--severity-medium) 12%, transparent)', text: 'var(--severity-high)', border: 'color-mix(in srgb, var(--severity-medium) 22%, transparent)' },
-    bamboohr: { bg: 'color-mix(in srgb, var(--severity-low) 12%, transparent)', text: 'var(--severity-low)', border: 'color-mix(in srgb, var(--severity-low) 22%, transparent)' },
-    jazzhr:   { bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', text: 'var(--primary)', border: 'color-mix(in srgb, var(--primary) 22%, transparent)' },
-};
+const STATUS_TABS = ['New', 'Screening', 'Interview', 'Offer', 'Hired', 'Rejected'];
 
-function SourceBadge({ source }: { source?: string }) {
+function sourceLabel(source?: string) {
     const s = source?.toLowerCase() || 'unknown';
-    const label = s === 'bamboohr' ? 'BambooHR' : s === 'jazzhr' ? 'JazzHR' : s === 'jotform' ? 'JotForm' : s;
-    const colors = SOURCE_COLORS[s];
-
-    if (!colors) {
-        return (
-            <span className="text-[10px] font-semibold uppercase tracking-[0.03em] text-muted-foreground/50">
-                {label}
-            </span>
-        );
-    }
-
-    return (
-        <span
-            className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.03em]"
-            style={{
-                background: colors.bg,
-                color: colors.text,
-                borderColor: colors.border,
-            }}
-        >
-            {label}
-        </span>
-    );
+    return s === 'bamboohr' ? 'BambooHR' : s === 'jazzhr' ? 'JazzHR' : s === 'jotform' ? 'JotForm' : s;
 }
+
+const SORT_COLUMNS = {
+    name: { value: (row) => `${row.first_name} ${row.last_name}` },
+    position: { value: (row) => row.position_applied },
+    status: { value: (row) => row.status },
+    source: { value: (row) => sourceLabel(row.source) },
+    applied: { value: (row) => row.created_at, kind: 'date' },
+} satisfies Record<string, SortColumn<Applicant>>;
+
+const DEFAULT_SORT = { key: 'applied', direction: 'desc' } as const;
 
 export function ApplicantList() {
     const { isPlatformAdmin } = useUserRole();
@@ -75,10 +62,20 @@ export function ApplicantList() {
             applicant.email.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesStatus && matchesRole && matchesSearch;
     });
+    const { sortedRows: sortedApplicants, sortProps } = useTableSort(filteredApplicants, SORT_COLUMNS, DEFAULT_SORT);
 
     if (loading) return (
-        <div className="flex items-center justify-center h-64">
-            <div className="w-5 h-5 rounded-full border-2 border-border border-t-primary animate-spin" />
+        <div className="space-y-6" aria-busy="true" aria-label="Loading applicants">
+            <div className="h-9 w-48 rounded-md ai-shimmer" />
+            <div className="divide-y divide-border border-y border-border">
+                {[1, 2, 3, 4, 5, 6].map((row) => (
+                    <div key={row} className="flex items-center gap-3 py-3">
+                        <div className="h-9 w-9 rounded-full ai-shimmer" />
+                        <div className="h-3 w-1/4 rounded ai-shimmer" />
+                        <div className="ml-auto h-3 w-1/5 rounded ai-shimmer" />
+                    </div>
+                ))}
+            </div>
         </div>
     );
     if (error) return (
@@ -89,17 +86,24 @@ export function ApplicantList() {
         </div>
     );
 
+    const countFor = (status: string) => applicants.filter((applicant) => applicant.status === status).length;
+    const tenantName = isPlatformAdmin && tenantFilter !== 'all'
+        ? tenantOptions.find((tenant) => tenant.id === tenantFilter)?.name ?? 'Selected tenant'
+        : null;
+
     return (
-        <div className="space-y-4 animate-fade-in">
+        <div className="space-y-6">
             {/* ── Page header ── */}
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                <div className="pl-1">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
                     <h1 className="page-header-title">Applicants</h1>
-                    <p className="page-header-meta">
-                        {filteredApplicants.length} records
-                        {isPlatformAdmin && tenantFilter !== 'all' && ` · ${tenantOptions.find((tenant) => tenant.id === tenantFilter)?.name ?? 'Selected tenant'}`}
-                        {filterStatus !== 'all' && ` · ${filterStatus}`}
-                        {searchTerm && ` · "${searchTerm}"`}
+                    <p className="page-header-meta tabular-nums">
+                        {[
+                            `${filteredApplicants.length} records`,
+                            tenantName,
+                            filterStatus !== 'all' ? filterStatus : null,
+                            searchTerm ? `“${searchTerm}”` : null,
+                        ].filter(Boolean).join(', ')}
                     </p>
                 </div>
                 <Button
@@ -110,163 +114,156 @@ export function ApplicantList() {
                         });
                     }}
                     disabled={syncMutation.isPending}
-                    size="sm"
                     className="w-full sm:w-auto"
                 >
-                    <RefreshCw size={13} strokeWidth={2.25} className={syncMutation.isPending ? 'animate-spin' : ''} />
+                    <RefreshCw size={14} strokeWidth={1.75} aria-hidden="true" className={syncMutation.isPending ? 'animate-spin' : ''} />
                     {syncMutation.isPending ? 'Syncing…' : 'Sync JotForm'}
                 </Button>
             </div>
 
-            {/* ── Filter toolbar ── */}
-            <div className="flex items-center gap-2 flex-wrap">
-                {/* Search */}
-                <div className="relative flex-1 min-w-[180px] max-w-[300px]">
-                    <Search
-                        size={13}
-                        strokeWidth={2}
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 pointer-events-none"
-                    />
-                    <input
-                        type="text"
-                        placeholder="Search name or email…"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="
-                            w-full h-8 pl-8 pr-3
-                            bg-card border border-border rounded-md
-                            text-[13px] font-medium text-foreground
-                            placeholder:text-muted-foreground/35
-                            focus:outline-none focus:ring-1 focus:ring-primary/40 focus:border-primary/50
-                            transition-all
-                        "
-                    />
+            <div>
+                {/* ── The pipeline: status as a ruled list ── */}
+                <div className="tab-bar" aria-label="Filter by status">
+                    {[{ value: 'all', label: 'All statuses', count: applicants.length }, ...STATUS_TABS.map((status) => ({ value: status, label: status, count: countFor(status) }))].map((tab) => {
+                        const active = filterStatus === tab.value;
+                        return (
+                            <button
+                                key={tab.value}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => setFilterStatus(tab.value)}
+                                className={`tab-item${active ? ' active' : ''}`}
+                            >
+                                {tab.label}
+                                <span className={`tab-count ${active ? 'tab-count-active' : 'tab-count-inactive'}`}>{tab.count}</span>
+                            </button>
+                        );
+                    })}
                 </div>
 
-                {/* Role select */}
-                <AppSelect
-                    value={filterRole}
-                    onValueChange={setFilterRole}
-                    options={[
-                        { value: 'all', label: 'All roles' },
-                        ...availableRoles.map((role) => ({ value: role, label: role })),
-                    ]}
-                    className="h-8 bg-card border border-border text-[13px] font-medium focus:ring-1 focus:ring-primary/40 transition-all"
-                />
+                {/* ── Filter toolbar ── */}
+                <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center">
+                    <div className="relative min-w-0 flex-1 sm:max-w-sm">
+                        <Search size={14} strokeWidth={1.75} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            type="text"
+                            aria-label="Search applicants by name or email"
+                            placeholder="Search name or email…"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="saas-input pl-9"
+                        />
+                    </div>
 
-                {isPlatformAdmin && (
                     <AppSelect
-                        value={tenantFilter}
-                        onValueChange={setTenantFilter}
+                        value={filterRole}
+                        onValueChange={setFilterRole}
                         options={[
-                            { value: 'all', label: 'All tenants' },
-                            ...tenantOptions.map((tenant) => ({ value: tenant.id, label: tenant.name })),
+                            { value: 'all', label: 'All roles' },
+                            ...availableRoles.map((role) => ({ value: role, label: role })),
                         ]}
-                        className="h-8 bg-card border border-border text-[13px] font-medium focus:ring-1 focus:ring-primary/40 transition-all"
+                        className="min-h-10 sm:w-56"
                     />
-                )}
 
-                {/* Status select */}
-                <AppSelect
-                    value={filterStatus}
-                    onValueChange={setFilterStatus}
-                    options={[
-                        { value: 'all', label: 'All statuses' },
-                        { value: 'New', label: 'New' },
-                        { value: 'Screening', label: 'Screening' },
-                        { value: 'Interview', label: 'Interview' },
-                        { value: 'Offer', label: 'Offer' },
-                        { value: 'Hired', label: 'Hired' },
-                        { value: 'Rejected', label: 'Rejected' },
-                    ]}
-                    className="h-8 bg-card border border-border text-[13px] font-medium focus:ring-1 focus:ring-primary/40 transition-all"
-                />
-            </div>
+                    {isPlatformAdmin && (
+                        <AppSelect
+                            value={tenantFilter}
+                            onValueChange={setTenantFilter}
+                            options={[
+                                { value: 'all', label: 'All tenants' },
+                                ...tenantOptions.map((tenant) => ({ value: tenant.id, label: tenant.name })),
+                            ]}
+                            className="min-h-10 sm:w-56"
+                        />
+                    )}
+                </div>
 
-            {/* ── Table ── */}
-            <div className="bg-card rounded-lg border border-border overflow-hidden">
-                <div className="overflow-x-auto">
+                {/* ── The list: rules only, no box around it ── */}
+                <div className="overflow-x-auto border-t border-border">
                     <table className="w-full">
                         <thead>
-                            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--muted)' }}>
-                                <th className="px-4 py-2.5 text-left zone-label">Applicant</th>
-                                <th className="px-4 py-2.5 text-left zone-label">Position</th>
-                                <th className="px-4 py-2.5 text-left zone-label">Status</th>
-                                <th className="px-4 py-2.5 text-left zone-label hidden md:table-cell">Applied</th>
-                                <th className="px-4 py-2.5 text-left zone-label hidden lg:table-cell">Source</th>
-                                <th className="px-4 py-2.5 text-right zone-label w-16"></th>
+                            <tr className="border-b border-border">
+                                <SortableHeader label="Applicant" {...sortProps('name')} className="py-3 pr-4 text-left" />
+                                <SortableHeader label="Position" {...sortProps('position')} className="hidden py-3 pr-4 text-left sm:table-cell" />
+                                <SortableHeader label="Status" {...sortProps('status')} className="hidden py-3 pr-4 text-left sm:table-cell" />
+                                <SortableHeader label="Source" {...sortProps('source')} className="hidden py-3 pr-4 text-left lg:table-cell" />
+                                <SortableHeader label="Applied" {...sortProps('applied')} className="hidden py-3 pr-4 text-right md:table-cell" />
+                                <th className="w-16 py-3 text-right zone-label"><span className="visually-hidden">Actions</span></th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-border/50">
-                            {filteredApplicants.map((applicant, i) => (
+                        <tbody className="divide-y divide-border">
+                            {sortedApplicants.map((applicant) => (
                                 <tr
                                     key={applicant.id}
-                                    className="animate-reveal-right transition-colors duration-75 cursor-pointer group"
-                                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--secondary)'}
-                                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
-                                    style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
+                                    className="table-row-interactive group"
                                     onClick={() => navigate(`/applicants/${applicant.id}`)}
                                 >
                                     {/* Name + email */}
-                                    <td className="px-4 py-3">
+                                    <td className="max-w-0 py-3 pr-4 sm:max-w-none">
                                         <div className="flex items-center gap-3">
-                                            {/* Monogram */}
-                                            <div
-                                                className="w-7 h-7 rounded-md text-[10px] font-bold flex items-center justify-center flex-shrink-0 select-none"
-                                                style={{ background: 'color-mix(in srgb, var(--primary) 14%, transparent)', color: 'var(--primary)' }}
+                                            <span
+                                                aria-hidden="true"
+                                                className="flex h-9 w-9 flex-shrink-0 select-none items-center justify-center rounded-full bg-secondary text-xs font-medium text-secondary-foreground"
                                             >
                                                 {applicant.first_name?.[0]}{applicant.last_name?.[0]}
-                                            </div>
+                                            </span>
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-foreground leading-none truncate">
+                                                <p className="truncate text-sm font-medium text-foreground">
                                                     {applicant.first_name} {applicant.last_name}
                                                 </p>
-                                                <p className="text-[11px] text-muted-foreground/55 font-medium mt-0.5 truncate">
+                                                <p className="truncate text-xs text-muted-foreground">
                                                     {applicant.email}
                                                 </p>
+                                                <p className="truncate text-xs text-muted-foreground sm:hidden">
+                                                    {applicant.position_applied}
+                                                </p>
+                                                <div className="mt-1 sm:hidden">
+                                                    <StatusBadge status={applicant.status} size="sm" />
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
 
                                     {/* Position */}
-                                    <td className="px-4 py-3">
-                                        <span className="text-[13px] font-medium text-foreground/80">{applicant.position_applied}</span>
+                                    <td className="hidden py-3 pr-4 sm:table-cell">
+                                        <span className="text-sm text-secondary-foreground">{applicant.position_applied}</span>
                                     </td>
 
                                     {/* Status */}
-                                    <td className="px-4 py-3">
+                                    <td className="hidden py-3 pr-4 sm:table-cell">
                                         <StatusBadge status={applicant.status} size="sm" />
                                     </td>
 
+                                    {/* Source */}
+                                    <td className="hidden py-3 pr-4 lg:table-cell">
+                                        <span className="text-sm text-muted-foreground">{sourceLabel(applicant.source)}</span>
+                                    </td>
+
                                     {/* Date */}
-                                    <td className="px-4 py-3 hidden md:table-cell">
-                                        <span className="text-[12px] text-muted-foreground/60 font-medium tabular-nums">
+                                    <td className="hidden whitespace-nowrap py-3 pr-4 text-right md:table-cell">
+                                        <span className="text-sm tabular-nums text-muted-foreground">
                                             {format(new Date(applicant.created_at), 'MMM d, yyyy')}
                                         </span>
                                     </td>
 
-                                    {/* Source */}
-                                    <td className="px-4 py-3 hidden lg:table-cell">
-                                        <SourceBadge source={applicant.source} />
-                                    </td>
-
                                     {/* Action */}
-                                    <td className="px-4 py-3 text-right">
+                                    <td className="py-3 text-right">
                                         <button
+                                            type="button"
                                             onClick={(e) => { e.stopPropagation(); navigate(`/applicants/${applicant.id}`); }}
-                                            className="text-[12px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="min-h-8 text-sm font-medium text-primary transition-opacity hover:text-accent-hi focus-visible:opacity-100 lg:opacity-0 lg:group-hover:opacity-100"
                                         >
-                                            Open →
+                                            Open
                                         </button>
                                     </td>
                                 </tr>
                             ))}
                             {filteredApplicants.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-14 text-center">
-                                        <p className="text-[13px] font-medium text-muted-foreground/40">
-                                            No applicants match your filters
-                                        </p>
+                                    <td colSpan={6}>
+                                        <div className="empty-state">
+                                            <p className="empty-state-title">No applicants match your filters</p>
+                                        </div>
                                     </td>
                                 </tr>
                             )}

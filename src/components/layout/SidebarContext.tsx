@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 
 interface SidebarContextValue {
     /** Whether sidebar is pinned open (user clicked to lock it) */
@@ -47,8 +47,15 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
         });
     }, []);
 
+    // A short intent delay, so a mouse passing over the rail doesn't open the menu
+    const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const setHovered = useCallback((val: boolean) => {
-        setHoveredState(val);
+        if (hoverTimer.current) clearTimeout(hoverTimer.current);
+        if (val) {
+            hoverTimer.current = setTimeout(() => setHoveredState(true), 160);
+        } else {
+            setHoveredState(false);
+        }
     }, []);
 
     const expanded = pinned || hovered;

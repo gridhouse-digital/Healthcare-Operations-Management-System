@@ -30,7 +30,7 @@ export function QuickActions() {
     return (
         <section className="animate-reveal-up delay-200 bg-card rounded-lg border border-border overflow-hidden">
             <div className="px-5 py-3.5 border-b border-border">
-                <h3 className="text-[13px] font-semibold text-foreground">Quick Access</h3>
+                <h3 className="text-[13px] font-medium text-foreground">Quick Access</h3>
             </div>
             <div className="p-2">
                 {actions.map((action, i) => {
@@ -51,15 +51,15 @@ export function QuickActions() {
                                 className="flex-shrink-0 w-7 h-7 rounded-md flex items-center justify-center"
                                 style={
                                     action.intent === 'primary'
-                                        ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', color: 'var(--primary)' }
+                                        ? { background: 'color-mix(in oklab, var(--primary) 12%, transparent)', color: 'var(--primary)' }
                                         : { background: 'var(--secondary)', color: 'var(--muted-foreground)' }
                                 }
                             >
                                 <Icon size={14} strokeWidth={1.75} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-[13px] font-semibold text-foreground leading-none">{action.name}</p>
-                                <p className="text-[11px] text-muted-foreground/60 font-medium mt-0.5 truncate">{action.description}</p>
+                                <p className="text-[13px] font-medium text-foreground leading-none">{action.name}</p>
+                                <p className="text-xs text-muted-foreground font-medium mt-0.5 truncate">{action.description}</p>
                             </div>
                             <ArrowRight
                                 size={12}

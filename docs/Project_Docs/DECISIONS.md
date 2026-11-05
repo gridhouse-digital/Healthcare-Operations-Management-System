@@ -541,3 +541,23 @@ restore the pre-C2 reachability.)
 
 After deploy, `get_advisors(security)` should leave only `respond_to_offer` (intentional
 anon offer-response path) and `leaked_password` (owner dashboard toggle).
+
+---
+
+## 2026-11-04 - Dusk design system with one kept red
+
+**Decision:** the frontend adopts Hallmark's Dusk theme, recorded in `design.md`. One muted red (`--color-error`) stays for expired compliance and destructive actions, though Dusk bans a third signal colour. Light mode stays, as a designed bone palette.
+
+**Why:** urgent compliance states must stay unmistakable, and the Light/Dark toggle is existing functionality.
+
+**Rollback:** revert the redesign diff; no schema or backend change is involved.
+
+---
+
+## 2026-11-05 - Light mode is the default theme
+
+**Decision:** new users and browsers with no saved choice start in Light mode. A saved Light or Dark choice is respected.
+
+**Why:** owner request.
+
+**Rollback:** set `defaultTheme` back to `dark` in `src/App.tsx` and the fallback in the `index.html` script.

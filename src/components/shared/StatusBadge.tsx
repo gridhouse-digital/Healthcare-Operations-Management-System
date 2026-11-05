@@ -1,10 +1,4 @@
-
-/*
- * StatusBadge — Clinical Authority Design System
- * Uses left dot + label pattern for immediate visual scanning.
- * Colors map to real clinical workflow states, not just aesthetic choices.
- * Dark-first: no dark: prefixes — uses single values appropriate for dark zinc canvas.
- */
+import { CheckCircle2, Circle, CircleDashed, CircleDot, Clock, XCircle, type LucideIcon } from 'lucide-react';
 
 export type StatusType =
     | 'New'
@@ -25,63 +19,60 @@ export type StatusType =
     | 'Suspended'
     | 'Terminated';
 
+export type StatusTone = 'neutral' | 'active' | 'done' | 'waiting' | 'critical' | 'untracked';
+
 interface StatusBadgeProps {
     status: StatusType | string;
+    /** Sets the tone for a status outside the workflow list below */
+    tone?: StatusTone;
     size?: 'sm' | 'md';
 }
 
-// dot color | text color | bg | border — all dark-first, no dark: prefixes
-const statusMap: Record<string, { dot: string; text: string; bg: string; border: string }> = {
-    'New':                  { dot: 'hsl(0 0% 42%)',         text: 'hsl(0 0% 56%)',        bg: 'hsl(0 0% 100% / 0.04)',        border: 'hsl(0 0% 100% / 0.08)' },
-    'Screening':            { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
-    'Interview':            { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
-    'Offer':                { dot: 'var(--chart-5)',         text: 'color-mix(in srgb, var(--chart-5) 82%, white 18%)', bg: 'color-mix(in srgb, var(--chart-5) 12%, transparent)', border: 'color-mix(in srgb, var(--chart-5) 20%, transparent)' },
-    'Accepted':             { dot: 'var(--chart-5)',         text: 'color-mix(in srgb, var(--chart-5) 82%, white 18%)', bg: 'color-mix(in srgb, var(--chart-5) 12%, transparent)', border: 'color-mix(in srgb, var(--chart-5) 20%, transparent)' },
-    'Sent':                 { dot: 'var(--chart-5)',         text: 'color-mix(in srgb, var(--chart-5) 82%, white 18%)', bg: 'color-mix(in srgb, var(--chart-5) 12%, transparent)', border: 'color-mix(in srgb, var(--chart-5) 20%, transparent)' },
-    'Hired':                { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
-    'Pending_Approval':     { dot: 'hsl(38 96% 52%)',        text: 'hsl(38 90% 60%)',       bg: 'hsl(38 96% 48% / 0.08)',       border: 'hsl(38 96% 48% / 0.20)' },
-    'Onboarding':           { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
-    'Onboarding Started':   { dot: 'var(--primary)',         text: 'color-mix(in srgb, var(--primary) 88%, white 12%)', bg: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: 'color-mix(in srgb, var(--primary) 24%, transparent)' },
-    'Onboarding Completed': { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
-    'Active':               { dot: 'hsl(152 58% 42%)',       text: 'hsl(152 54% 56%)',      bg: 'hsl(152 58% 38% / 0.10)',      border: 'hsl(152 58% 38% / 0.20)' },
-    'Rejected':             { dot: 'hsl(4 82% 56%)',         text: 'hsl(4 76% 66%)',        bg: 'hsl(4 82% 52% / 0.08)',        border: 'hsl(4 82% 52% / 0.20)' },
-    'Declined':             { dot: 'hsl(4 82% 56%)',         text: 'hsl(4 76% 66%)',        bg: 'hsl(4 82% 52% / 0.08)',        border: 'hsl(4 82% 52% / 0.20)' },
-    'Terminated':           { dot: 'hsl(4 82% 56%)',         text: 'hsl(4 76% 66%)',        bg: 'hsl(4 82% 52% / 0.08)',        border: 'hsl(4 82% 52% / 0.20)' },
-    'Suspended':            { dot: 'hsl(22 90% 54%)',        text: 'hsl(22 88% 62%)',       bg: 'hsl(22 90% 50% / 0.08)',       border: 'hsl(22 90% 50% / 0.20)' },
-    'Draft':                { dot: 'hsl(0 0% 38%)',          text: 'hsl(0 0% 52%)',         bg: 'hsl(0 0% 100% / 0.04)',        border: 'hsl(0 0% 100% / 0.08)' },
+/* Every status carries an icon and a word, so colour is never the only signal */
+const tones: Record<StatusTone, { chip: string; icon: LucideIcon }> = {
+    neutral:   { chip: 'status-chip-muted', icon: Circle },
+    active:    { chip: 'status-chip-cyan',  icon: CircleDot },
+    done:      { chip: 'status-chip-green', icon: CheckCircle2 },
+    waiting:   { chip: 'status-chip-amber', icon: Clock },
+    critical:  { chip: 'status-chip-red',   icon: XCircle },
+    untracked: { chip: 'status-chip-muted', icon: CircleDashed },
 };
 
-const defaultStyle = statusMap['New'];
+const toneByStatus: Record<string, StatusTone> = {
+    'New': 'neutral',
+    'Draft': 'neutral',
+    'Screening': 'active',
+    'Interview': 'active',
+    'Offer': 'active',
+    'Accepted': 'active',
+    'Sent': 'active',
+    'Hired': 'done',
+    'Onboarding': 'active',
+    'Onboarding Started': 'active',
+    'Onboarding Completed': 'done',
+    'Active': 'done',
+    'Pending_Approval': 'waiting',
+    'Suspended': 'waiting',
+    'Rejected': 'critical',
+    'Declined': 'critical',
+    'Terminated': 'critical',
+};
 
-export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-    const s = statusMap[status] ?? defaultStyle;
+/* Stored values like Pending_Approval or ACTIVE read as plain words on screen */
+function displayLabel(status: string) {
+    const words = status.replace(/_/g, ' ');
+    return words === words.toUpperCase() && words.length > 2
+        ? words.charAt(0) + words.slice(1).toLowerCase()
+        : words;
+}
 
-    const padding = size === 'sm' ? '2px 6px' : '2px 8px';
-    const fontSize = size === 'sm' ? '10px' : '11px';
-    const gap = size === 'sm' ? '4px' : '5px';
-    const dotSize = size === 'sm' ? '5px' : '6px';
+export function StatusBadge({ status, tone }: StatusBadgeProps) {
+    const { chip, icon: Icon } = tones[tone ?? toneByStatus[status] ?? 'neutral'];
 
     return (
-        <span
-            className="inline-flex items-center rounded-full font-semibold tracking-[0.03em]"
-            style={{
-                padding,
-                fontSize,
-                gap,
-                color: s.text,
-                background: s.bg,
-                border: `1px solid ${s.border}`,
-            }}
-        >
-            <span
-                className="flex-shrink-0 rounded-full"
-                style={{
-                    width: dotSize,
-                    height: dotSize,
-                    background: s.dot,
-                }}
-            />
-            {status}
+        <span className={`status-chip gap-1.5 ${chip}`}>
+            <Icon size={14} strokeWidth={1.75} aria-hidden="true" />
+            {displayLabel(status)}
         </span>
     );
 }

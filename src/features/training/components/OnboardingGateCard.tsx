@@ -1,4 +1,5 @@
 import { ShieldCheck, CheckCircle2, Circle } from 'lucide-react';
+import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useOnboardingGate } from '../hooks/useOnboardingGate';
 
 // Onboarding completion gate — read-only visibility (handoff §5d).
@@ -19,12 +20,10 @@ export function OnboardingGateCard({ personId }: { personId?: string }) {
     <section className="saas-card p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <ShieldCheck size={14} strokeWidth={2} style={{ color: 'var(--primary)' }} />
-          <h3 className="text-sm font-semibold text-foreground">Onboarding Gate</h3>
+          <ShieldCheck size={14} strokeWidth={1.75} style={{ color: 'var(--primary)' }} aria-hidden="true" />
+          <h3 className="text-sm font-medium text-foreground">Onboarding Gate</h3>
         </div>
-        <span className={allComplete ? 'status-chip status-chip-green' : 'status-chip status-chip-amber'}>
-          {completed} of {rows.length} complete
-        </span>
+        <StatusBadge status={`${completed} of ${rows.length} complete`} tone={allComplete ? 'done' : 'waiting'} />
       </div>
 
       <p className="mb-3 text-xs text-muted-foreground">
@@ -32,32 +31,33 @@ export function OnboardingGateCard({ personId }: { personId?: string }) {
         stays in Onboarding until every course below is complete.
       </p>
 
-      <div className="space-y-2">
+      <div>
         {rows.map((row) => {
           const isComplete = row.effective_status === 'completed';
           return (
             <div
               key={row.course_id}
-              className="flex items-start justify-between gap-3 rounded-md border border-border bg-card px-3 py-2"
+              className="flex items-start justify-between gap-3 border-t border-border py-2 first:border-t-0"
             >
               <div className="flex min-w-0 items-start gap-2">
                 {isComplete ? (
-                  <CheckCircle2 size={14} strokeWidth={2} className="mt-0.5 shrink-0" style={{ color: 'hsl(152 54% 56%)' }} />
+                  <CheckCircle2 size={14} strokeWidth={1.75} className="mt-0.5 shrink-0" style={{ color: 'var(--color-signal)' }} aria-hidden="true" />
                 ) : (
-                  <Circle size={14} strokeWidth={2} className="mt-0.5 shrink-0 text-muted-foreground" />
+                  <Circle size={14} strokeWidth={1.75} className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 )}
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium text-foreground">
+                  <p className="text-sm text-foreground">
                     {row.course_name ?? `Course #${row.course_id}`}
                   </p>
                   {!row.has_record && !isComplete ? (
-                    <p className="text-[11px] text-muted-foreground">No training record yet</p>
+                    <p className="text-xs text-muted-foreground">No training record yet</p>
                   ) : null}
                 </div>
               </div>
-              <span className="whitespace-nowrap text-xs text-muted-foreground">
-                {row.effective_status.replace('_', ' ')}
-              </span>
+              <StatusBadge
+                status={row.effective_status.replace('_', ' ').replace(/^./, (c) => c.toUpperCase())}
+                tone={isComplete ? 'done' : row.effective_status === 'in_progress' ? 'waiting' : 'neutral'}
+              />
             </div>
           );
         })}

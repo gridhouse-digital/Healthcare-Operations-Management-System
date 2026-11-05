@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageSkeleton } from '@/components/shared/PageSkeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApplicantDetails } from '@/hooks/useApplicantDetails';
@@ -105,26 +106,26 @@ export function ApplicantDetailsPage() {
                     <button
                         onClick={() => navigate('/applicants')}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
-                    >
-                        <ArrowLeft size={16} strokeWidth={2} />
+                     aria-label="Back">
+                        <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
                     </button>
                     <div>
-                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05 }}>
+                        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 500, lineHeight: 1.05 }}>
                             Add Applicant
                         </h1>
                     </div>
                 </div>
-                <div className="bg-card border border-border rounded-lg p-12 text-center">
-                    <UserPlus size={36} className="mx-auto mb-4 text-muted-foreground/30" strokeWidth={1.25} />
-                    <h2 className="text-[15px] font-semibold text-foreground mb-2">
+                <div className="saas-card p-12 text-center">
+                    <UserPlus size={36} className="mx-auto mb-4 text-muted-foreground" strokeWidth={1.25} aria-hidden="true" />
+                    <h2 className="text-[15px] font-medium text-foreground mb-2">
                         Applicants are added through JotForm
                     </h2>
-                    <p className="text-[13px] text-muted-foreground mb-6 max-w-md mx-auto">
+                    <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
                         New applicants submit their information via the JotForm application system. Use the Sync button on the list page to import them.
                     </p>
                     <button
                         onClick={() => navigate('/applicants')}
-                        className="h-8 px-4 bg-primary text-primary-foreground rounded-md text-[13px] font-semibold hover:bg-primary/90 transition-colors"
+                        className="h-8 px-4 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-accent-hi transition-colors"
                     >
                         View Applicants
                     </button>
@@ -134,20 +135,18 @@ export function ApplicantDetailsPage() {
     }
 
     if (isLoading) return (
-        <div className="flex items-center justify-center h-64">
-            <div className="w-5 h-5 rounded-full border-2 border-border border-t-primary animate-spin" />
-        </div>
+        <PageSkeleton label="Loading applicant" />
     );
     if (error) return (
             <div className="severity-critical rounded-md border border-destructive/20 bg-destructive/6 p-4">
-                <p className="text-[13px] font-semibold text-destructive">
+                <p className="text-sm font-medium text-destructive">
                 Failed to load applicant: {error.message}
             </p>
         </div>
     );
     if (!applicant) return (
         <div className="p-8 text-center">
-            <p className="text-[13px] text-muted-foreground/50">Applicant not found</p>
+            <p className="text-sm text-muted-foreground">Applicant not found</p>
         </div>
     );
 
@@ -259,17 +258,17 @@ export function ApplicantDetailsPage() {
                     <button
                         onClick={() => navigate('/applicants')}
                         className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
-                    >
-                        <ArrowLeft size={16} strokeWidth={2} />
+                     aria-label="Back">
+                        <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
                     </button>
                     <div>
                         <h1
                             className="text-foreground"
-                            style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.05 }}
+                            style={{ fontFamily: 'var(--font-display)', fontSize: '1.875rem', fontWeight: 500, lineHeight: 1.05 }}
                         >
                             {applicantFirstName} {applicantLastName}
                         </h1>
-                        <p className="mt-0.5 text-muted-foreground/80" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', letterSpacing: '-0.01em' }}>
+                        <p className="mt-0.5 text-muted-foreground" style={{ fontFamily: 'var(--font-sans)', fontSize: '0.8rem', }}>
                             Applicant Profile
                         </p>
                     </div>
@@ -281,27 +280,27 @@ export function ApplicantDetailsPage() {
             <div className="flex gap-2 flex-wrap">
                 <button
                     onClick={handleSendOffer}
-                    className="flex items-center gap-2 h-8 px-4 rounded-md bg-[var(--severity-low)] text-white text-[13px] font-semibold transition-colors hover:opacity-90"
+                    className="flex items-center gap-2 h-9 px-4 rounded-full border border-input text-foreground text-sm font-medium transition-colors hover:opacity-90"
                 >
                     Send Offer
                 </button>
                 <button
                     onClick={handleMoveToEmployee}
                     disabled={moveToEmployeeLoading || hasEmployeeRecord}
-                    className="flex items-center gap-2 h-8 px-4 bg-primary text-primary-foreground rounded-md text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 h-8 px-4 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-accent-hi transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                    <UserCheck size={13} strokeWidth={2} />
+                    <UserCheck size={14} strokeWidth={1.75} aria-hidden="true" />
                     {moveToEmployeeLoading ? 'Moving…' : hasEmployeeRecord ? 'Already Employee' : 'Move to Employees'}
                 </button>
                 <button
                     onClick={() => handleStatusUpdate('Interview')}
-                    className="flex items-center gap-2 h-8 px-4 rounded-md bg-[var(--severity-medium)] text-white text-[13px] font-semibold transition-colors hover:opacity-90"
+                    className="flex items-center gap-2 h-9 px-4 rounded-full border border-input text-accent-2 text-sm font-medium transition-colors hover:opacity-90"
                 >
                     Interview
                 </button>
                 <button
                     onClick={() => handleStatusUpdate('Rejected')}
-                    className="flex items-center gap-2 h-8 px-4 rounded-md bg-destructive text-white text-[13px] font-semibold transition-colors hover:opacity-90"
+                    className="flex items-center gap-2 h-9 px-4 rounded-full border border-error/40 text-error text-sm font-medium transition-colors hover:opacity-90"
                 >
                     Reject
                 </button>
@@ -311,10 +310,10 @@ export function ApplicantDetailsPage() {
                 {/* Main Info Column */}
                 <div className="lg:col-span-2 space-y-5">
                     {/* Personal Information */}
-                    <div className="bg-card border border-border rounded-lg overflow-hidden">
+                    <div className="panel">
                         <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border">
-                            <FileText size={13} strokeWidth={2} className="text-primary" />
-                            <h3 className="text-[13px] font-semibold text-foreground">Personal Information</h3>
+                            <FileText size={14} strokeWidth={1.75} className="text-primary" aria-hidden="true" />
+                            <h3 className="text-sm font-medium text-foreground">Personal Information</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-0 divide-y divide-border/50 md:divide-y-0">
                             {[
@@ -326,8 +325,8 @@ export function ApplicantDetailsPage() {
                                 <div key={label} className="px-5 py-3.5">
                                     <p className="zone-label mb-1">{label}</p>
                                     <div className="flex items-center gap-2">
-                                        <Icon size={12} strokeWidth={1.75} className="text-muted-foreground/40 flex-shrink-0" />
-                                        <span className="text-[13px] font-medium text-foreground">{value}</span>
+                                        <Icon size={14} strokeWidth={1.75} className="text-muted-foreground flex-shrink-0" />
+                                        <span className="text-sm font-medium text-foreground">{value}</span>
                                     </div>
                                 </div>
                             ))}
@@ -335,10 +334,10 @@ export function ApplicantDetailsPage() {
                     </div>
 
                     {/* Requirements */}
-                    <div className="bg-card border border-border rounded-lg overflow-hidden">
+                    <div className="panel">
                         <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-border">
-                            <Shield size={13} strokeWidth={2} className="text-primary" />
-                            <h3 className="text-[13px] font-semibold text-foreground">Requirements</h3>
+                            <Shield size={14} strokeWidth={1.75} className="text-primary" aria-hidden="true" />
+                            <h3 className="text-sm font-medium text-foreground">Requirements</h3>
                         </div>
                         <div className="divide-y divide-border/50">
                             {[
@@ -355,13 +354,13 @@ export function ApplicantDetailsPage() {
                                     <div key={req.key} className="flex items-center justify-between px-5 py-3 hover:bg-secondary/30 transition-colors">
                                         <div className="flex items-center gap-3">
                                             {isSubmitted ? (
-                                                <CheckCircle size={14} strokeWidth={2} className="flex-shrink-0 text-[var(--severity-low)]" />
+                                                <CheckCircle size={14} strokeWidth={1.75} className="flex-shrink-0 text-[var(--severity-low)]" aria-hidden="true" />
                                             ) : (
-                                                <AlertCircle size={14} strokeWidth={2} className="flex-shrink-0 text-[var(--severity-medium)]" />
+                                                <AlertCircle size={14} strokeWidth={1.75} className="flex-shrink-0 text-[var(--severity-medium)]" aria-hidden="true" />
                                             )}
                                             <div>
-                                                <p className="text-[13px] font-medium text-foreground">{req.label}</p>
-                                                <p className="text-[11px] text-muted-foreground/55 mt-0.5">
+                                                <p className="text-sm font-medium text-foreground">{req.label}</p>
+                                                <p className="text-xs text-muted-foreground mt-0.5">
                                                     {isSubmitted
                                                         ? `Submitted ${new Date(submission.created_at).toLocaleDateString()}`
                                                         : 'Not submitted yet'}
@@ -371,15 +370,15 @@ export function ApplicantDetailsPage() {
                                         {isSubmitted ? (
                                             <button
                                                 onClick={() => setViewingDoc({ url: submission.url, title: req.label })}
-                                                className="flex items-center gap-1 text-[12px] font-semibold text-primary hover:text-primary/70 transition-colors"
+                                                className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/70 transition-colors"
                                             >
-                                                View <ExternalLink size={11} strokeWidth={2} />
+                                                View <ExternalLink size={14} strokeWidth={1.75} aria-hidden="true" />
                                             </button>
                                         ) : (
                                             <button
                                                 onClick={() => handleRequestRequirement(req.key, req.label, submission?.formUrl)}
                                                 disabled={requestLoading[req.key]}
-                                                className="text-[12px] font-semibold text-primary hover:text-primary/70 transition-colors disabled:opacity-40"
+                                                className="text-xs font-medium text-primary hover:text-primary/70 transition-colors disabled:opacity-40"
                                             >
                                                 Request
                                             </button>
@@ -402,15 +401,15 @@ export function ApplicantDetailsPage() {
 
             {/* Document Viewer Modal */}
             {viewingDoc && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-shade/80 p-4">
                     <div className="bg-card border border-border w-full h-full max-w-6xl rounded-lg overflow-hidden flex flex-col">
-                        <div className="flex items-center justify-between px-5 py-3.5 border-b border-border">
-                            <h3 className="text-[13px] font-semibold text-foreground">{viewingDoc.title}</h3>
+                        <div className="panel-header justify-between">
+                            <h3 className="text-sm font-medium text-foreground">{viewingDoc.title}</h3>
                             <button
                                 onClick={() => setViewingDoc(null)}
                                 className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
-                            >
-                                <X size={15} strokeWidth={2} />
+                             aria-label="Close">
+                                <X size={16} strokeWidth={1.75} aria-hidden="true" />
                             </button>
                         </div>
                         <div className="flex-1 bg-muted relative">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Plug, Pencil, Trash2, Plus, Check, X } from "lucide-react";
+import { Pencil, Trash2, Plus, Check, X } from "lucide-react";
 import {
   useTenantSettings,
   useTestConnector,
@@ -21,11 +21,10 @@ import { Button } from "@/components/ui/button";
 // Shared styles (matches SystemSettingsPage)
 // ---------------------------------------------------------------------------
 
-const inputCls =
-  "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50";
+const inputCls = "saas-input";
 const labelCls = "form-label";
-const helperCls = "mt-1 text-[12px] tracking-[0.01em] text-muted-foreground";
-const sectionCls = "saas-card p-5 space-y-4";
+const helperCls = "mt-1 text-xs text-muted-foreground";
+const sectionCls = "saas-card p-6 space-y-4";
 
 function normalizeMapping(mapping: LdGroupMapping): LdGroupMapping {
   return {
@@ -89,8 +88,8 @@ function BambooHRConnector({ configured, savedSubdomain }: { configured: boolean
     <div className={sectionCls}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-semibold text-foreground">BambooHR</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-sm font-medium text-foreground">BambooHR</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Polls every 15 minutes for new hires
           </p>
         </div>
@@ -106,7 +105,7 @@ function BambooHRConnector({ configured, savedSubdomain }: { configured: boolean
             className={inputCls}
           />
           <p className={helperCls}>
-            yourcompany.bamboohr.com &rarr; enter <span className="text-foreground/70">yourcompany</span>
+            yourcompany.bamboohr.com &rarr; enter <span className="text-secondary-foreground">yourcompany</span>
           </p>
         </div>
 
@@ -241,8 +240,8 @@ function JazzHRConnector({ configured, isTenantAdmin }: { configured: boolean; i
     <div className={sectionCls}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-semibold text-foreground">JazzHR</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-sm font-medium text-foreground">JazzHR</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Polls every 15 minutes for applicants whose JazzHR stage contains "hired"
           </p>
         </div>
@@ -294,8 +293,8 @@ function JazzHRConnector({ configured, isTenantAdmin }: { configured: boolean; i
         <div className="pt-3 border-t border-border space-y-3">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-[12px] font-medium text-foreground">Sync hired applicants now</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-xs font-medium text-foreground">Sync hired applicants now</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Manually run the JazzHR hire detector for this tenant and import hired candidates into Applicants.
               </p>
             </div>
@@ -412,8 +411,8 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
     <div className={sectionCls}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-semibold text-foreground">WordPress / LearnDash</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-sm font-medium text-foreground">WordPress / LearnDash</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Creates WP users and enrolls into LearnDash training groups
           </p>
         </div>
@@ -476,8 +475,8 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
         <div className="pt-3 border-t border-border space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[12px] font-medium text-foreground">Sync WordPress Users</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-xs font-medium text-foreground">Sync WordPress Users</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Import existing WordPress/LearnDash subscribers as employees
               </p>
             </div>
@@ -497,8 +496,8 @@ function WordPressConnector({ configured, savedSiteUrl, isTenantAdmin }: { confi
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[12px] font-medium text-foreground">Sync LearnDash Training</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              <p className="text-xs font-medium text-foreground">Sync LearnDash Training</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Pull course progress for all employees from LearnDash
               </p>
             </div>
@@ -575,8 +574,8 @@ function JotFormConnector({
     <div className={sectionCls}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-[13px] font-semibold text-foreground">JotForm</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-sm font-medium text-foreground">JotForm</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Ingests applicant credentials and policy documents
           </p>
         </div>
@@ -671,7 +670,7 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
           />
         </td>
         <td className="px-4 py-3">
-          <label className="inline-flex items-center gap-2 text-[13px] text-foreground">
+          <label className="inline-flex items-center gap-2 text-sm text-foreground">
             <input type="checkbox" {...register("is_onboarding")} />
             <span>Onboarding group</span>
           </label>
@@ -682,15 +681,15 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
               onClick={handleSubmit(onSave)}
               className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors"
               title="Save"
-            >
-              <Check size={14} />
+             aria-label="Save">
+              <Check size={14} aria-hidden="true" />
             </button>
             <button
               onClick={onCancel}
               className="p-1.5 rounded-md text-muted-foreground hover:bg-muted/20 transition-colors"
               title="Cancel"
-            >
-              <X size={14} />
+             aria-label="Cancel">
+              <X size={14} aria-hidden="true" />
             </button>
           </div>
         </td>
@@ -700,10 +699,10 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
 
   return (
     <tr className="border-b border-border hover:bg-muted/5 transition-colors">
-      <td className="px-4 py-3 text-foreground text-[13px]">{mapping.job_title}</td>
-      <td className="px-4 py-3 text-muted-foreground text-[13px] font-mono">{mapping.group_id}</td>
+      <td className="px-4 py-3 text-foreground text-sm">{mapping.job_title}</td>
+      <td className="px-4 py-3 text-muted-foreground text-sm font-mono">{mapping.group_id}</td>
       <td className="px-4 py-3">
-        <label className="inline-flex items-center gap-2 text-[13px] text-foreground">
+        <label className="inline-flex items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"
             checked={mapping.is_onboarding === true}
@@ -719,15 +718,15 @@ function MappingRow({ mapping, onEdit, onDelete }: MappingRowProps) {
             onClick={() => setEditing(true)}
             className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
             title="Edit"
-          >
-            <Pencil size={14} />
+           aria-label="Edit">
+            <Pencil size={14} aria-hidden="true" />
           </button>
           <button
             onClick={onDelete}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-error hover:bg-error/20 transition-colors"
             title="Delete"
-          >
-            <Trash2 size={14} />
+           aria-label="Delete">
+            <Trash2 size={14} aria-hidden="true" />
           </button>
         </div>
       </td>
@@ -765,7 +764,7 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
         />
       </td>
       <td className="px-4 py-3">
-        <label className="inline-flex items-center gap-2 text-[13px] text-foreground">
+        <label className="inline-flex items-center gap-2 text-sm text-foreground">
           <input type="checkbox" {...register("is_onboarding")} />
           <span>Onboarding group</span>
         </label>
@@ -776,15 +775,15 @@ function AddRow({ onAdd, onCancel }: AddRowProps) {
             onClick={handleSubmit(onAdd)}
             className="p-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors"
             title="Add"
-          >
-            <Check size={14} />
+           aria-label="Add">
+            <Check size={14} aria-hidden="true" />
           </button>
           <button
             onClick={onCancel}
             className="p-1.5 rounded-md text-muted-foreground hover:bg-muted/20 transition-colors"
             title="Cancel"
-          >
-            <X size={14} />
+           aria-label="Cancel">
+            <X size={14} aria-hidden="true" />
           </button>
         </div>
       </td>
@@ -832,9 +831,9 @@ function LdGroupMappingsSection() {
   if (isLoading) {
     return (
       <div className={sectionCls}>
-        <p className="text-[13px] font-semibold text-foreground">LearnDash Group Mappings</p>
+        <p className="text-sm font-medium text-foreground">LearnDash Group Mappings</p>
         <div className="flex items-center justify-center h-20">
-          <span className="text-[13px] text-muted-foreground">Loading mappings&hellip;</span>
+          <span className="text-sm text-muted-foreground">Loading mappings&hellip;</span>
         </div>
       </div>
     );
@@ -843,8 +842,8 @@ function LdGroupMappingsSection() {
   return (
     <div className="saas-card overflow-hidden">
       <div className="p-5 pb-0">
-        <p className="text-[13px] font-semibold text-foreground">LearnDash Group Mappings</p>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
+        <p className="text-sm font-medium text-foreground">LearnDash Group Mappings</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Map job titles to LearnDash group IDs. New hires are automatically enrolled
           in the matching groups when onboarded.
         </p>
@@ -869,7 +868,7 @@ function LdGroupMappingsSection() {
           <tbody>
             {displayed.length === 0 && !adding && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-[13px]">
+                <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground text-sm">
                   No mappings yet. Add your first job title &rarr; group ID mapping below.
                 </td>
               </tr>
@@ -898,7 +897,7 @@ function LdGroupMappingsSection() {
             size="sm"
             className="px-0"
           >
-            <Plus size={14} />
+            <Plus size={14} aria-hidden="true" />
             Add Mapping
           </Button>
         </div>
@@ -918,7 +917,7 @@ export function ConnectorSettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="text-[13px] text-muted-foreground">Loading settings&hellip;</span>
+        <span className="text-sm text-muted-foreground">Loading settings&hellip;</span>
       </div>
     );
   }
@@ -926,18 +925,15 @@ export function ConnectorSettingsPage() {
   if (error || !settings) {
     return (
       <div className="rounded-lg border border-destructive/15 bg-destructive/8 p-5">
-        <p className="text-[13px] text-destructive">Failed to load connector settings.</p>
+        <p className="text-sm text-destructive">Failed to load connector settings.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="pl-1">
-        <div className="flex items-center gap-2">
-          <Plug size={18} className="text-primary" />
-          <h1 className="page-header-title">Connector Settings</h1>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="page-header-title">Connector Settings</h1>
         <p className="page-header-meta">
           Configure your ATS integrations. API keys are encrypted at rest and
           never returned to the browser after saving.

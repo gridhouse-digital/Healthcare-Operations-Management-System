@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface SlideOverProps {
@@ -11,6 +12,15 @@ interface SlideOverProps {
 }
 
 export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side = 'right' }: SlideOverProps) {
+    useEffect(() => {
+        if (!isOpen) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isOpen, onClose]);
+
     if (!isOpen) return null;
 
     const widthClasses = {
@@ -19,22 +29,25 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
         xl: 'max-w-4xl',
     };
 
-    return (
+    return createPortal(
         <>
             {/* Backdrop */}
             <div
-                className="fixed inset-0 z-40 bg-background/72 transition-opacity backdrop-blur-sm"
+                className="fixed inset-0 z-40 bg-background/72 transition-opacity"
                 onClick={onClose}
             />
 
             {/* Panel */}
             <div
-                className={`fixed top-0 ${side === 'right' ? 'right-0' : 'left-0'} h-full ${widthClasses[width]} w-full z-50 overflow-y-auto`}
+                role="dialog"
+                aria-modal="true"
+                aria-label={title}
+                className={`drawer-surface fixed top-0 ${side === 'right' ? 'right-0' : 'left-0'} h-full ${widthClasses[width]} w-full z-50 overflow-y-auto`}
                 style={{
                     background: 'var(--card)',
                     borderLeft: side === 'right' ? '1px solid var(--border)' : 'none',
                     borderRight: side === 'left' ? '1px solid var(--border)' : 'none',
-                    boxShadow: 'var(--shadow-2xl, 0 20px 60px hsl(0 0% 0% / 0.6))',
+                    boxShadow: 'var(--shadow-2xl)',
                 }}
             >
                 {/* Header */}
@@ -46,25 +59,19 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
                     }}
                 >
                     <h2
-                        className="text-[15px] font-semibold tracking-[-0.015em]"
+                        className="text-section"
                         style={{ color: 'var(--foreground)' }}
                     >
                         {title}
                     </h2>
                     <button
+                        type="button"
+                        aria-label="Close"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-secondary"
                         style={{ color: 'var(--muted-foreground)' }}
-                        onMouseEnter={e => {
-                            (e.currentTarget as HTMLButtonElement).style.background = 'var(--secondary)';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--foreground)';
-                        }}
-                        onMouseLeave={e => {
-                            (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                            (e.currentTarget as HTMLButtonElement).style.color = 'var(--muted-foreground)';
-                        }}
                     >
-                        <X size={16} strokeWidth={1.75} />
+                        <X size={16} strokeWidth={1.75} aria-hidden="true" />
                     </button>
                 </div>
 
@@ -73,6 +80,7 @@ export function SlideOver({ isOpen, onClose, title, children, width = 'lg', side
                     {children}
                 </div>
             </div>
-        </>
+        </>,
+        document.body,
     );
 }

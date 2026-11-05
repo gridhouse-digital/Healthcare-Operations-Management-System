@@ -246,27 +246,27 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
 
     if (!data && !loading && !error) {
         return (
-            <div className="p-6 border rounded-lg bg-white dark:bg-gray-800 text-center">
-                <FileText className="w-12 h-12 text-green-500 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold mb-2">AI Offer Letter Drafter</h3>
-                <p className="text-gray-500 mb-4 max-w-md mx-auto">
+            <div className="p-6 border rounded-lg bg-card text-center">
+                <FileText className="w-12 h-12 text-signal mx-auto mb-3" aria-hidden="true" />
+                <h3 className="text-lg font-medium mb-2">AI Offer Letter Drafter</h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
                     Generate a personalized offer letter for <strong>{employeeDetails.name || 'the selected applicant'}</strong> based on their position and terms.
                 </p>
                 {validationError && (
-                    <div className="mb-4 p-3 border border-yellow-200 rounded-md bg-yellow-50 dark:bg-yellow-900/10">
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300">{validationError}</p>
+                    <div className="mb-4 p-3 border border-accent-2/30 rounded-md bg-accent-2/12">
+                        <p className="text-sm text-accent-2">{validationError}</p>
                     </div>
                 )}
                 {offerSettingsData?.migrationRequired && (
-                    <div className="mb-4 p-3 border border-yellow-200 rounded-md bg-yellow-50 dark:bg-yellow-900/10">
-                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    <div className="mb-4 p-3 border border-accent-2/30 rounded-md bg-accent-2/12">
+                        <p className="text-sm text-accent-2">
                             Phase 2 offer-letter settings migration is required. Using neutral template fallback.
                         </p>
                     </div>
                 )}
                 {offerSettingsError && (
-                    <div className="mb-4 p-3 border border-red-200 rounded-md bg-red-50 dark:bg-red-900/10">
-                        <p className="text-sm text-red-700 dark:text-red-300">
+                    <div className="mb-4 p-3 border border-error/30 rounded-md bg-error/12">
+                        <p className="text-sm text-error">
                             Offer letter settings failed to load: {offerSettingsError instanceof Error ? offerSettingsError.message : 'Unknown error'}
                         </p>
                     </div>
@@ -274,7 +274,7 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
                 <button
                     onClick={handleDraft}
                     disabled={offerSettingsLoading || Boolean(offerSettingsError)}
-                    className="px-6 py-2 text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
+                    className="px-6 py-2 text-primary-foreground bg-primary rounded-full hover:bg-accent-hi transition-colors"
                 >
                     {offerSettingsLoading ? 'Loading Settings...' : 'Draft Offer Letter'}
                 </button>
@@ -284,18 +284,18 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
 
     if (loading) {
         return (
-            <div className="p-12 border rounded-lg bg-gray-50 dark:bg-gray-800/50 flex flex-col items-center justify-center space-y-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-                <p className="text-gray-500 animate-pulse">Drafting professional offer letter...</p>
+            <div className="p-12 border rounded-lg bg-muted flex flex-col items-center justify-center space-y-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-signal/30"></div>
+                <p className="text-muted-foreground animate-pulse">Drafting professional offer letter...</p>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="p-4 border border-red-200 rounded-lg bg-red-50 dark:bg-red-900/10">
-                <p className="text-sm text-red-600 dark:text-red-300">{error.message}</p>
-                <button onClick={handleDraft} className="mt-2 text-sm font-medium text-red-700 underline">Try Again</button>
+            <div className="p-4 border border-error/30 rounded-lg bg-error/12">
+                <p className="text-sm text-error">{error.message}</p>
+                <button onClick={handleDraft} className="mt-2 text-sm font-medium text-error underline">Try Again</button>
             </div>
         );
     }
@@ -304,75 +304,75 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
         <>
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-green-500" />
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-signal" aria-hidden="true" />
                         Draft Offer Letter
                     </h3>
                     <div className="flex items-center gap-2">
                         <button
                             onClick={() => setShowPreviewModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-card border rounded-md hover:bg-accent"
                         >
-                            <FileText className="w-4 h-4" />
+                            <FileText className="w-4 h-4" aria-hidden="true" />
                             Full Preview
                         </button>
                         <button
                             onClick={handleCopy}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-foreground bg-card border rounded-md hover:bg-accent"
                         >
-                            {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                            {copied ? <Check className="w-4 h-4 text-signal" aria-hidden="true" /> : <Copy className="w-4 h-4" aria-hidden="true" />}
                             {copied ? 'Copied' : 'Copy'}
                         </button>
                         {onSend && (
                             <button
                                 onClick={() => onSend(editableBody)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-primary-foreground bg-primary rounded-full hover:bg-accent-hi"
                             >
-                                <Send className="w-4 h-4" />
+                                <Send className="w-4 h-4" aria-hidden="true" />
                                 Send Offer
                             </button>
                         )}
                     </div>
                 </div>
 
-                <div className="p-6 border rounded-lg bg-white dark:bg-gray-800 shadow-sm">
-                    <div className="mb-4 pb-4 border-b dark:border-gray-700">
-                        <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Subject</label>
-                        <div className="text-gray-900 dark:text-white font-medium">{data?.subject}</div>
+                <div className="p-6 border rounded-lg bg-card shadow-sm">
+                    <div className="mb-4 pb-4 border-b">
+                        <label className="block text-xs font-medium text-muted-foreground mb-1">Subject</label>
+                        <div className="text-foreground dark:text-primary-foreground font-medium">{data?.subject}</div>
                     </div>
 
                     <div className="relative">
                         <iframe
                             srcDoc={getLetterHTML()}
-                            className="w-full h-[400px] border border-gray-200 dark:border-gray-700 rounded-md bg-white"
+                            className="w-full h-[400px] border border-border rounded-md bg-well-card"
                             title="Offer Letter Preview"
                         />
-                        <div className="absolute top-2 right-2 text-gray-400 pointer-events-none">
-                            <FileText className="w-4 h-4" />
+                        <div className="absolute top-2 right-2 text-muted-foreground pointer-events-none">
+                            <FileText className="w-4 h-4" aria-hidden="true" />
                         </div>
                     </div>
 
                 {/* Edit Mode Toggle - Optional */}
                 <details className="mt-4">
-                    <summary className="cursor-pointer text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex items-center gap-2">
-                        <Edit3 className="w-4 h-4" />
+                    <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground flex items-center gap-2">
+                        <Edit3 className="w-4 h-4" aria-hidden="true" />
                         Edit Letter Content
                     </summary>
                     <textarea
                         value={editableBody}
                         onChange={(e) => setEditableBody(e.target.value)}
-                        className="mt-2 w-full h-64 p-4 text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 rounded-md border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 resize-none font-mono text-sm leading-relaxed"
+                        className="mt-2 w-full h-64 p-4 text-foreground bg-muted rounded-md border border-border resize-none font-mono text-sm leading-relaxed"
                         placeholder="Edit the letter content here..."
                     />
                 </details>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                     {data?.key_terms?.map((term, i) => (
-                        <span key={i} className="px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-md dark:bg-blue-900/30 dark:text-blue-300">
+                        <span key={i} className="px-2 py-1 text-xs font-medium bg-signal/12 text-signal rounded-md">
                             {term}
                         </span>
                     ))}
-                    <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 rounded-md dark:bg-gray-700 dark:text-gray-400">
+                    <span className="px-2 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-md">
                         Tone: {data?.tone}
                     </span>
                 </div>
@@ -382,25 +382,25 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
         {/* Full Screen Preview Modal */}
         {showPreviewModal && (
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-shade/50"
                 onClick={() => setShowPreviewModal(false)}
             >
                 <div
-                    className="relative w-[95vw] h-[95vh] bg-white dark:bg-gray-900 rounded-lg shadow-2xl overflow-hidden"
+                    className="relative w-[95vw] h-[95vh] bg-card rounded-lg shadow-2xl overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Modal Header */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-muted">
                         <div>
-                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Offer Letter Preview</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">{data?.subject}</p>
+                            <h2 className="text-lg font-medium text-foreground dark:text-primary-foreground">Offer Letter Preview</h2>
+                            <p className="text-sm text-muted-foreground">{data?.subject}</p>
                         </div>
                         <button
                             onClick={() => setShowPreviewModal(false)}
-                            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            className="p-2 text-muted-foreground hover:text-muted-foreground rounded-md hover:bg-accent transition-colors"
                         >
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
                     </div>
@@ -409,7 +409,7 @@ export function OfferLetterDraftPanel({ employeeDetails, onSend, autoDraft }: Of
                     <div className="w-full h-[calc(95vh-80px)] p-6">
                         <iframe
                             srcDoc={getLetterHTML()}
-                            className="w-full h-full border-0 bg-white rounded-md shadow-inner"
+                            className="w-full h-full border-0 bg-well-card rounded-md shadow-inner"
                             title="Offer Letter Full Preview"
                         />
                     </div>

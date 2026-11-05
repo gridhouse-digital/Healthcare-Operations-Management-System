@@ -3,6 +3,69 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-11-05 - Access Requests page rebuilt (branch hallmark-redesign, uncommitted)
+
+`src/features/admin/pages/AccessRequestsPage.tsx` moved from a fixed-height split view to the Applicants and Employees pattern: status tabs with counts, search, a sortable table (newest first), and details in a drawer. The summary tiles were dropped because the tabs carry the same counts. **Frontend only: the hook and the query are unchanged.**
+
+- A failed load now shows an error alone; before, a failure banner sat above tiles reading 0.
+- "No access requests yet" is now separate from "No requests match your filters".
+- The drawer reads from all requests, so a status change that moves a request out of the current tab keeps the drawer open.
+
+Not verified against live data: the route is platform-admin only and the owner's login is Tenant Admin. It was exercised with a throwaway local preview using made-up rows and a stubbed network, since deleted. Changing the review state was not tested. Review state still saves immediately with no confirmation, and it does not provision anything by itself.
+
+---
+## 2026-11-05 - Sortable table headers (branch hallmark-redesign, uncommitted)
+
+Requested by the owner: finding the earliest applicant and the latest employee meant scrolling, because headers could not be clicked. **Frontend only: no Edge Function, migration or service change.**
+
+### Changed
+
+- New `src/hooks/useTableSort.ts` and `src/components/shared/SortableHeader.tsx`, plus `.sort-header` in `src/index.css`.
+- Sortable headers on Applicants, Employees, Training compliance (table view), Recurring compliance, Training Rules and Team Members.
+- Dates and numbers start highest or newest first, text starts A to Z, and a second click reverses. Blanks stay last in both directions. Headers expose `aria-sort`.
+- Employees gains a Hire Date column (from `people.hired_at`) and opens newest hire first. Its previous order was `created_at`, which is when the record entered HOMS, not when the person was hired.
+- Applicants opens on Applied, newest first, the same order as before.
+
+### Known limits
+
+- Sorting is held in the page, so it resets on reload or leaving the page.
+- Phone: Applicants and Employees show only the first column and Actions, so only name sorting is reachable there. Training compliance below the `xl` breakpoint uses cards with no headers.
+- Training compliance has no default sort, so its original order cannot be restored without a reload once a header is clicked.
+- Saving and editing were not exercised. No frontend test runner exists, so `sortRows` was checked with a throwaway script.
+
+---
+## 2026-11-04 - Hallmark Dusk redesign of src (branch hallmark-redesign, uncommitted)
+
+Full Hallmark redesign of the frontend in the Dusk theme, requested by the owner. **Frontend only: no Edge Function, migration or data change.**
+
+### Changed
+
+- New design tokens in `src/tokens.css` and `src/base.css`; shadcn roles in `src/index.css` now read from them. Locked in `design.md`.
+- Fonts moved from Inter and IBM Plex Mono to Wix Madefor Display and Text. Dark stays the default; Light mode is a designed bone palette.
+- Dashboard, Training and AI Dashboard stat tiles became ruled tallies; the dashboard now leads with the tally and two working columns.
+- Applicants list recomposed: status as a ruled tab list with counts, one filter row, a rules-only table, a loading skeleton and a restacked phone row.
+- Training Rules recomposed: status tabs, a five-part rule row, collapsible LearnDash lists, a sectioned form with a live schedule preview and switches. The shared SlideOver gained dialog semantics and Escape to close.
+- Full UI sweep against the dashboard: one icon scale, search box, field, status chip and page width; tables unboxed; side menu reworked (labelled rail, hover intent, overlay, keyboard) and mobile menu now shares its list; Employee Profile drawer rebuilt with a tally, tabs, one edit view and pinned actions.
+- Filter bars unified on the Applicants pattern (status tabs, search, selects, no box) across Employees, Training and Recurring Compliance; Access Requests search fixed. Drawers and dialogs now render at document level, and the fade-in no longer traps them under the header.
+- Light mode is now the default, set before first paint, and light drawers share the page background.
+- Light mode cards and dropdowns now share the page colour with a hairline edge; white stays only on the theme toggle, switch thumbs and the printed offer letter. Toasts use theme colours.
+- Design review pass: one StatusBadge with icon and word everywhere; dashboard sample alerts, insights and risk count replaced by Not tracked yet states; unmeasured Operational and notification indicators removed; spinners replaced by skeletons; AI Dashboard table tightened; dropped CSS variable names restored.
+- Contrast measured on signed-in routes in both themes; faded dashboard text, the light AI tag and the header search edge fixed.
+- Fixed: not-started courses labelled In Progress, mojibake in the groups row, lost tint opacity on failed connectors, Users and System Settings missing from the mobile menu.
+- Tracked-caps labels, literal colours and `transition-all` removed across components. Primary actions are one periwinkle pill.
+- Auth logo pointed at the project's own assets through `AuthLogo`, because the S3 URL returns 404. `src/App.css` deleted (nothing imported it).
+
+### Verified
+
+- `tsc -b` and `vite build` pass. Hallmark sloplint in app scope: 151 FAIL and 15 REFLEX before, 0 and 0 after, on the source and the 3 public routes.
+- Render checks of signed-in screens were done in the browser against live data, view only. /offer/:token, /update-password and /admin/access-requests were not rendered.
+- 4 mouse-enter and mouse-leave hover handlers were replaced by CSS hover, on record in the stamp.
+
+### Open
+
+- Dashboard compliance alerts and AI insights need a real data source; they show Not tracked yet until then.
+
+---
 ## 2026-06-21 - CTO review: transactional email provider direction
 
 Reviewed the current Brevo footprint before Phase 3 offer delivery work. **Docs-only; no code, migration, db push, deploy, or provider secret changes.**

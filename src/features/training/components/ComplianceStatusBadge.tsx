@@ -1,3 +1,4 @@
+import { StatusBadge, type StatusTone } from '@/components/shared/StatusBadge';
 import type { ComplianceStatus } from '../types';
 import { complianceStatusConfig } from '../utils/compliancePresentation';
 
@@ -6,29 +7,14 @@ interface ComplianceStatusBadgeProps {
   size?: 'sm' | 'md';
 }
 
-export function ComplianceStatusBadge({ status, size = 'md' }: ComplianceStatusBadgeProps) {
-  const config = complianceStatusConfig[status];
-  const fontSize = size === 'sm' ? '10px' : '11px';
-  const padding = size === 'sm' ? '2px 6px' : '2px 8px';
+const TONES: Record<ComplianceStatus, StatusTone> = {
+  compliant: 'done',
+  overdue: 'critical',
+  in_progress: 'waiting',
+  not_started: 'neutral',
+  no_courses: 'neutral',
+};
 
-  return (
-    <span
-      className="inline-flex items-center rounded-full font-semibold tracking-[0.04em]"
-      style={{
-        gap: '5px',
-        padding,
-        fontSize,
-        color: config.text,
-        background: config.bg,
-        border: `1px solid ${config.border}`,
-      }}
-    >
-      <span
-        className="shrink-0 rounded-full"
-        aria-hidden
-        style={{ width: '5px', height: '5px', background: config.dot }}
-      />
-      {config.label}
-    </span>
-  );
+export function ComplianceStatusBadge({ status }: ComplianceStatusBadgeProps) {
+  return <StatusBadge status={complianceStatusConfig[status].label} tone={TONES[status]} />;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings as SettingsIcon, Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save } from "lucide-react";
 import { settingsService } from "@/services/settingsService";
 import { toast } from "@/hooks/useToast";
 import { useConfirm } from "@/hooks/useConfirm";
@@ -16,12 +16,10 @@ import {
   getOfferLetterSettings,
 } from "@/features/offers/renderOfferLetter";
 
-const inputCls =
-  "w-full h-9 px-3 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50";
-const textareaCls =
-  "w-full min-h-72 px-3 py-2 border border-border rounded-md text-[13px] text-foreground bg-transparent focus:outline-none focus:ring-1 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/50 font-mono leading-relaxed resize-y";
+const inputCls = "saas-input";
+const textareaCls = "saas-input min-h-32 py-2";
 const labelCls = "form-label";
-const sectionCls = "saas-card p-5 space-y-4";
+const sectionCls = "saas-card p-6 space-y-4";
 
 const emptyOfferForm: SaveOfferLetterSettingsPayload = {
   offer_company_name: "",
@@ -158,7 +156,7 @@ export function SystemSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <span className="text-sm tracking-[0.02em] text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           Loading settings...
         </span>
       </div>
@@ -166,12 +164,9 @@ export function SystemSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="pl-1">
-        <div className="flex items-center gap-2">
-          <SettingsIcon size={18} className="text-primary" />
-          <h1 className="page-header-title">System Settings</h1>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="page-header-title">System Settings</h1>
         <p className="page-header-meta">
           Configure company branding and system defaults
         </p>
@@ -180,7 +175,7 @@ export function SystemSettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
       {/* Company Branding */}
       <div className={sectionCls}>
-        <p className="text-[13px] font-semibold text-foreground">
+        <p className="text-sm font-medium text-foreground">
           Company Branding
         </p>
         <div>
@@ -201,7 +196,7 @@ export function SystemSettingsPage() {
             placeholder="https://.../logo-light.png"
             className={inputCls}
           />
-          <p className="mt-1 text-[12px] tracking-[0.01em] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             Used in light mode and emails
           </p>
         </div>
@@ -213,7 +208,7 @@ export function SystemSettingsPage() {
             placeholder="https://.../logo-dark.png"
             className={inputCls}
           />
-          <p className="mt-1 text-[12px] tracking-[0.01em] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             Used in dark mode
           </p>
         </div>
@@ -221,7 +216,7 @@ export function SystemSettingsPage() {
 
       {/* Compliance Rules */}
       <div className={sectionCls}>
-        <p className="text-[13px] font-semibold text-foreground">
+        <p className="text-sm font-medium text-foreground">
           Compliance Rules
         </p>
         <div>
@@ -237,7 +232,7 @@ export function SystemSettingsPage() {
             placeholder="30"
             className={inputCls}
           />
-          <p className="mt-1 text-[12px] tracking-[0.01em] text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             System will alert when documents are within this many days of
             expiring
           </p>
@@ -248,24 +243,24 @@ export function SystemSettingsPage() {
       {/* Offer Letter */}
       <div className={sectionCls}>
         <div>
-          <p className="text-[13px] font-semibold text-foreground">Offer Letter</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-sm font-medium text-foreground">Offer Letter</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Configure the tenant-specific offer identity and default letter template.
           </p>
         </div>
 
         {offerLetterSettingsLoading && (
           <div className="rounded-md border border-border bg-muted/15 p-3">
-            <p className="text-[12px] text-muted-foreground">Loading offer letter settings...</p>
+            <p className="text-xs text-muted-foreground">Loading offer letter settings…</p>
           </div>
         )}
 
         {offerLetterSettings?.migrationRequired && (
-          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
-            <p className="text-[13px] font-medium text-amber-800 dark:text-amber-200">
+          <div className="rounded-md border border-accent-2/30 bg-accent-2/12 p-3">
+            <p className="text-sm font-medium text-accent-2">
               Offer Letter settings require the Phase 2 database migration.
             </p>
-            <p className="mt-1 text-[12px] text-amber-800/80 dark:text-amber-200/80">
+            <p className="mt-1 text-xs text-accent-2">
               Apply `20260620000001_offer_letter_template_settings.sql` before editing tenant offer templates.
             </p>
           </div>
@@ -273,10 +268,10 @@ export function SystemSettingsPage() {
 
         {offerLetterSettingsError && (
           <div className="rounded-md border border-destructive/20 bg-destructive/8 p-3">
-            <p className="text-[13px] font-medium text-destructive">
+            <p className="text-sm font-medium text-destructive">
               Failed to load Offer Letter settings.
             </p>
-            <p className="mt-1 text-[12px] text-destructive/80">
+            <p className="mt-1 text-xs text-destructive/80">
               {offerLetterSettingsError instanceof Error ? offerLetterSettingsError.message : "Check authentication, permissions, and network connectivity."}
             </p>
           </div>
@@ -335,7 +330,7 @@ export function SystemSettingsPage() {
             {OFFER_MERGE_FIELDS.map((field) => (
               <code
                 key={field}
-                className="rounded border border-border bg-background px-2 py-1 text-[12px] text-foreground"
+                className="rounded border border-border bg-background px-2 py-1 text-xs text-foreground"
               >
                 {field}
               </code>
@@ -347,8 +342,8 @@ export function SystemSettingsPage() {
       {/* Job Roles */}
       <div className={sectionCls}>
         <div>
-          <p className="text-[13px] font-semibold text-foreground">Job Roles</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
+          <p className="text-sm font-medium text-foreground">Job Roles</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Manage the list of job roles available for applicants and filtering
           </p>
         </div>
@@ -368,7 +363,7 @@ export function SystemSettingsPage() {
             disabled={!newRole.trim()}
             className="whitespace-nowrap"
           >
-            <Plus size={13} />
+            <Plus size={14} aria-hidden="true" />
             Add
           </Button>
         </div>
@@ -377,19 +372,19 @@ export function SystemSettingsPage() {
             <div
               key={index}
               className="flex items-center justify-between px-3 py-2 rounded-md border border-border group transition-colors"
-              style={{ background: "color-mix(in srgb, var(--card) 85%, var(--secondary) 15%)" }}
+              style={{ background: "color-mix(in oklab, var(--card) 85%, var(--secondary) 15%)" }}
             >
-              <span className="text-[13px] text-foreground">{role}</span>
+              <span className="text-sm text-foreground">{role}</span>
               <button
                 onClick={() => void handleDeleteRole(role)}
-                className="opacity-0 group-hover:opacity-100 p-0.5 transition-all text-muted-foreground hover:text-red-400"
-              >
-                <Trash2 size={13} />
+                className="opacity-0 group-hover:opacity-100 p-0.5 transition text-muted-foreground hover:text-error"
+               aria-label="Remove">
+                <Trash2 size={14} aria-hidden="true" />
               </button>
             </div>
           ))}
           {jobRoles.length === 0 && (
-            <p className="text-[12px] tracking-[0.01em] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               No active job roles configured.
             </p>
           )}
@@ -402,7 +397,7 @@ export function SystemSettingsPage() {
           disabled={saveOfferLetterSettings.isPending}
           size="sm"
         >
-          <Save size={13} />
+          <Save size={14} aria-hidden="true" />
           {saveOfferLetterSettings.isPending ? "Saving..." : "Save Changes"}
         </Button>
       </div>

@@ -41,15 +41,15 @@ export function AppSelect({
           type="button"
           disabled={disabled}
           className={cn(
-            "w-full rounded-md border border-border bg-card px-3 h-8 text-[13px] text-foreground transition-shadow focus:outline-none focus:ring-1 focus:ring-primary/35",
-            "inline-flex items-center justify-between gap-2 disabled:pointer-events-none disabled:opacity-50",
+            "w-full rounded-md border border-input bg-background px-3 min-h-9 py-1.5 text-[13px] text-foreground",
+            "inline-flex items-center justify-between gap-2 disabled:cursor-not-allowed disabled:opacity-55",
             className,
           )}
         >
           <span className={cn("truncate", !selected && "text-muted-foreground")}>
             {selected?.label ?? placeholder}
           </span>
-          <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
+          <ChevronDown size={14} className="shrink-0 text-muted-foreground" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent

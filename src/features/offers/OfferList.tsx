@@ -156,35 +156,35 @@ export function OfferList() {
 
     if (loading) return (
         <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-muted-foreground">Loading offers…</span>
+            <span className="text-sm text-muted-foreground">Loading offers…</span>
         </div>
     );
     if (error) return (
         <div className="flex items-center justify-center py-20">
-            <span className="text-[13px] text-destructive">{error}</span>
+            <span className="text-sm text-destructive">{error}</span>
         </div>
     );
 
     return (
         <div className="space-y-5">
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pl-1">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
                     <h1 className="page-header-title">Offers</h1>
-                    <p className="page-header-meta">{offers.length} offer letters</p>
+                    <p className="page-header-meta">{offers.length} offer {offers.length === 1 ? 'letter' : 'letters'}</p>
                 </div>
                 <Button
                     onClick={() => navigate('/offers/new')}
                     size="sm"
                     className="whitespace-nowrap"
                 >
-                    <Plus size={14} strokeWidth={2.5} />
+                    <Plus size={14} strokeWidth={1.75} aria-hidden="true" />
                     Create Offer
                 </Button>
             </div>
 
             {/* Tab nav + content card */}
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div>
                 {/* Tabs */}
                 <div className="tab-bar">
                     {tabs.map((tab) => {
@@ -193,6 +193,8 @@ export function OfferList() {
                         return (
                             <button
                                 key={tab}
+                                type="button"
+                                aria-pressed={isActive}
                                 onClick={() => setActiveTab(tab)}
                                 className={`tab-item ${isActive ? 'active' : ''}`}
                             >
@@ -208,7 +210,7 @@ export function OfferList() {
                 </div>
 
                 {/* Offers List */}
-                <div className="divide-y divide-border/60">
+                <div className="divide-y divide-border">
                     {filteredOffers.length > 0 ? (
                         filteredOffers.map((offer) => (
                             <div
@@ -220,12 +222,12 @@ export function OfferList() {
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2.5 mb-2">
-                                            <span className="text-[14px] font-semibold text-foreground">
+                                            <span className="text-[14px] font-medium text-foreground">
                                                 {offer.applicant?.first_name} {offer.applicant?.last_name}
                                             </span>
                                             <StatusBadge status={offer.status} size="sm" />
                                         </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-[12px]">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-1 text-xs">
                                             <div>
                                                 <span className="text-muted-foreground">Position</span>
                                                 <span className="text-foreground ml-2">{offer.position_title}</span>
@@ -252,26 +254,26 @@ export function OfferList() {
                                     <div className="flex items-center gap-2 flex-shrink-0">
                                         <button
                                             onClick={() => setSelectedOffer(offer)}
-                                            className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[12px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                                            className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                                         >
-                                            <Eye size={12} />
+                                            <Eye size={14} aria-hidden="true" />
                                             Preview
                                         </button>
                                         {(offer.status === 'Draft' || offer.status === 'Pending_Approval') && (
                                             <>
                                                 <button
                                                     onClick={() => handleEdit(offer.id)}
-                                                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[12px] font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                                                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                                                 >
-                                                    <Edit size={12} />
+                                                    <Edit size={14} aria-hidden="true" />
                                                     Edit
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(offer)}
                                                     disabled={processingId === offer.id}
-                                                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-md text-[12px] font-medium border border-destructive/25 text-destructive hover:bg-destructive/6 transition-colors disabled:opacity-50"
+                                                    className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-xs font-medium border border-destructive/25 text-destructive hover:bg-destructive/6 transition-colors disabled:opacity-50"
                                                 >
-                                                    <Trash2 size={12} />
+                                                    <Trash2 size={14} aria-hidden="true" />
                                                     Delete
                                                 </button>
                                             </>
@@ -281,9 +283,10 @@ export function OfferList() {
                             </div>
                         ))
                     ) : (
-                        <div className="py-16 text-center">
-                            <FileText className="mx-auto text-muted-foreground/30 mb-4" size={36} strokeWidth={1} />
-                            <p className="text-[13px] text-muted-foreground">No offers in this category</p>
+                        <div className="empty-state">
+                            <FileText className="empty-state-icon" size={24} strokeWidth={1.75} aria-hidden="true" />
+                            <p className="empty-state-title">No offers in this category</p>
+                            <p className="empty-state-hint">Offers appear here when they reach this stage.</p>
                         </div>
                     )}
                 </div>
@@ -308,7 +311,7 @@ export function OfferList() {
                             ].map(({ label, value, mono }) => (
                                 <div key={label} className="p-3 bg-muted/20 rounded-md border border-border">
                                     <p className="zone-label mb-1">{label}</p>
-                                    <p className={['text-[13px] text-foreground', mono ? 'font-mono' : ''].join(' ')}>{value}</p>
+                                    <p className={['text-sm text-foreground', mono ? 'font-mono' : ''].join(' ')}>{value}</p>
                                 </div>
                             ))}
                         </div>
@@ -317,29 +320,29 @@ export function OfferList() {
                         <div className="border border-border rounded-lg p-6 bg-background min-h-[500px]">
                             <div className="max-w-xl mx-auto space-y-5">
                                 {offerSettingsLoading && (
-                                    <div className="rounded-md border border-border bg-muted/15 p-3 text-[12px] text-muted-foreground">
+                                    <div className="rounded-md border border-border bg-muted/15 p-3 text-xs text-muted-foreground">
                                         Loading offer letter settings...
                                     </div>
                                 )}
                                 {offerSettingsData?.migrationRequired && (
-                                    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-[12px] text-amber-800 dark:text-amber-200">
+                                    <div className="rounded-md border border-accent-2/30 bg-accent-2/12 p-3 text-xs text-accent-2">
                                         Phase 2 offer-letter settings migration is required. Showing neutral template fallback.
                                     </div>
                                 )}
                                 {offerSettingsError && (
-                                    <div className="rounded-md border border-destructive/20 bg-destructive/8 p-3 text-[12px] text-destructive">
+                                    <div className="rounded-md border border-destructive/20 bg-destructive/8 p-3 text-xs text-destructive">
                                         Failed to load offer letter settings: {offerSettingsError instanceof Error ? offerSettingsError.message : 'Unknown error'}
                                     </div>
                                 )}
                                 <div className="text-center mb-6">
-                                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.03em' }}
+                                    <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', fontWeight: 500, }}
                                         className="text-foreground mb-1">
                                         {offerLetterSettings.companyName}
                                     </h2>
                                     <p className="zone-label">Employment Offer Letter</p>
                                 </div>
 
-                                <div className="space-y-4 text-[13px] text-foreground leading-relaxed">
+                                <div className="space-y-4 text-sm text-foreground leading-relaxed">
                                     <div className="bg-primary/[0.04] border border-primary/15 rounded-md p-4 my-4">
                                         <p className="zone-label mb-3">Offer Details</p>
                                         <div className="space-y-2">
@@ -349,7 +352,7 @@ export function OfferList() {
                                                 { k: 'Start Date', v: format(new Date(selectedOffer.start_date), 'MMMM d, yyyy') },
                                                 { k: 'Employment Type', v: 'Full-time' },
                                             ].map(({ k, v }) => (
-                                                <div key={k} className="flex justify-between text-[12px]">
+                                                <div key={k} className="flex justify-between text-xs">
                                                     <span className="text-muted-foreground">{k}</span>
                                                     <span className="text-foreground font-medium font-mono">{v}</span>
                                                 </div>
@@ -360,9 +363,9 @@ export function OfferList() {
                                     <div dangerouslySetInnerHTML={{ __html: offerLetterHtml(selectedOffer) }} />
 
                                     <div className="mt-8 pt-6 border-t border-border">
-                                        <p className="text-[13px] text-muted-foreground">Sincerely,</p>
-                                        <p className="mt-3 text-[18px]" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, letterSpacing: '-0.03em' }}>{offerLetterSettings.signatoryName}</p>
-                                        <p className="text-[12px] text-muted-foreground">{offerLetterSettings.signatoryTitle} - {offerLetterSettings.companyName}</p>
+                                        <p className="text-sm text-muted-foreground">Sincerely,</p>
+                                        <p className="mt-3 text-[18px]" style={{ fontFamily: 'var(--font-display)', fontWeight: 500, }}>{offerLetterSettings.signatoryName}</p>
+                                        <p className="text-xs text-muted-foreground">{offerLetterSettings.signatoryTitle} - {offerLetterSettings.companyName}</p>
                                     </div>
                                 </div>
                             </div>
@@ -376,16 +379,16 @@ export function OfferList() {
                                         <button
                                             onClick={() => handleSend(selectedOffer)}
                                             disabled={processingId === selectedOffer.id}
-                                            className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md bg-primary text-white text-[13px] font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+                                            className="flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-accent-hi transition-colors disabled:opacity-50"
                                         >
-                                            <Send size={13} />
+                                            <Send size={14} aria-hidden="true" />
                                             {processingId === selectedOffer.id ? 'Sending…' : 'Approve & Send'}
                                         </button>
                                         <button
                                             onClick={() => handleEdit(selectedOffer.id)}
-                                            className="inline-flex items-center gap-2 h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                                            className="inline-flex items-center gap-2 h-8 px-4 rounded-full border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
                                         >
-                                            <Edit size={13} />
+                                            <Edit size={14} aria-hidden="true" />
                                             Edit
                                         </button>
                                     </>
@@ -395,18 +398,18 @@ export function OfferList() {
                                         onClick={() => handleOnboard(selectedOffer)}
                                         disabled={processingId === selectedOffer.id || selectedOffer.applicant?.status === 'Hired'}
                                         className={[
-                                            'flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md text-[13px] font-semibold transition-colors',
+                                            'flex-1 inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md text-sm font-medium transition-colors',
                                             selectedOffer.applicant?.status === 'Hired'
                                                 ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                                                : 'bg-[var(--severity-low)] hover:opacity-90 text-white'
+                                                : 'border border-input text-foreground hover:bg-secondary'
                                         ].join(' ')}
                                     >
-                                        <UserCheck size={13} />
+                                        <UserCheck size={14} aria-hidden="true" />
                                         {selectedOffer.applicant?.status === 'Hired' ? 'Already Onboarded' : 'Onboard Employee'}
                                     </button>
                                 )}
                                 {(selectedOffer.status === 'Sent' || selectedOffer.status === 'Accepted') && (
-                                    <button className="flex-1 inline-flex items-center justify-center h-8 px-4 rounded-md border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+                                    <button className="flex-1 inline-flex items-center justify-center h-8 px-4 rounded-full border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
                                         Download PDF
                                     </button>
                                 )}
@@ -415,9 +418,9 @@ export function OfferList() {
                                 <button
                                     onClick={() => handleDelete(selectedOffer)}
                                     disabled={processingId === selectedOffer.id}
-                                    className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-md border border-destructive/25 text-destructive text-[13px] font-semibold hover:bg-destructive/6 transition-colors disabled:opacity-50"
+                                    className="w-full inline-flex items-center justify-center gap-2 h-8 px-4 rounded-full border border-destructive/25 text-destructive text-sm font-medium hover:bg-destructive/6 transition-colors disabled:opacity-50"
                                 >
-                                    <Trash2 size={13} />
+                                    <Trash2 size={14} aria-hidden="true" />
                                     {processingId === selectedOffer.id ? 'Deleting…' : 'Delete Offer'}
                                 </button>
                             )}

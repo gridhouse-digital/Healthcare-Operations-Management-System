@@ -154,7 +154,7 @@ export function TrainingPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 py-16 text-center">
-        <h2 className="text-base font-semibold text-foreground">Unable to load training compliance</h2>
+        <h2 className="text-base font-medium text-foreground">Unable to load training compliance</h2>
         <p className="max-w-md text-sm text-muted-foreground">
           The compliance directory could not be refreshed. Retry to load the latest effective statuses from the trusted data layer.
         </p>
@@ -168,7 +168,7 @@ export function TrainingPage() {
   if (employees.length === 0 && activeTab === 'onboarding') {
     return (
       <div className="animate-fade-in space-y-6">
-        <header className="pl-1">
+        <header>
           <h1 className="page-header-title">Training Compliance</h1>
           <p className="page-header-meta">{reportingDate}</p>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
@@ -179,15 +179,15 @@ export function TrainingPage() {
         <ModeSwitcher activeTab={activeTab} onChange={setActiveTab} onboardingCount={0} />
 
         <div className="flex flex-col items-center justify-center rounded-xl border border-border bg-card py-20">
-          <p className="mb-2 text-[15px] font-medium text-foreground">No training-compliance records are available.</p>
-          <p className="mb-4 max-w-md text-center text-[13px] text-muted-foreground">
+          <p className="mb-2 text-title text-foreground">No training-compliance records are available.</p>
+          <p className="mb-4 max-w-md text-center text-sm text-muted-foreground">
             Course assignment and LearnDash synchronization may still be pending for this tenant.
           </p>
           <Link
             to="/settings/connectors"
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-primary/90"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-accent-hi"
           >
-            <LinkIcon size={13} strokeWidth={2} />
+            <LinkIcon size={14} strokeWidth={1.75} aria-hidden="true" />
             Configure Connector
           </Link>
         </div>
@@ -198,21 +198,21 @@ export function TrainingPage() {
   return (
     <div className="animate-fade-in space-y-6">
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0 pl-1">
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="page-header-title">Training Compliance</h1>
             <span className="rounded border border-border bg-card px-2 py-1 text-xs font-medium tabular-nums text-muted-foreground">
               {employees.length} employees
             </span>
             {isFetching ? (
-              <span className="text-[11px] text-muted-foreground">Refreshing…</span>
+              <span className="text-xs text-muted-foreground">Refreshing…</span>
             ) : null}
           </div>
           <p className="page-header-meta">{reportingDate}</p>
           <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
             Monitor onboarding training, recurring requirements and compliance exceptions.
           </p>
-          <p className="mt-1 text-[11px] font-mono text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground">
             Last sync {stats?.lastSyncAt ? formatDistanceToNow(new Date(stats.lastSyncAt), { addSuffix: true }) : 'unavailable'} · LearnDash
           </p>
         </div>
@@ -337,14 +337,10 @@ function ModeSwitcher({
         role="tab"
         aria-selected={activeTab === 'onboarding'}
         onClick={() => onChange('onboarding')}
-        className={`inline-flex h-9 shrink-0 items-center rounded-md px-3 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-          activeTab === 'onboarding'
-            ? 'bg-primary text-white'
-            : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-        }`}
+        className={`tab-item${activeTab === 'onboarding' ? ' active' : ''}`}
       >
         Initial Onboarding
-        <span className="ml-2 rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] tabular-nums">
+        <span className={`tab-count ${activeTab === 'onboarding' ? 'tab-count-active' : 'tab-count-inactive'}`}>
           {onboardingCount}
         </span>
       </button>
@@ -353,11 +349,7 @@ function ModeSwitcher({
         role="tab"
         aria-selected={activeTab === 'recurring'}
         onClick={() => onChange('recurring')}
-        className={`inline-flex h-9 shrink-0 items-center rounded-md px-3 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-          activeTab === 'recurring'
-            ? 'bg-primary text-white'
-            : 'border border-border bg-card text-muted-foreground hover:text-foreground'
-        }`}
+        className={`tab-item${activeTab === 'recurring' ? ' active' : ''}`}
       >
         Recurring Compliance
       </button>

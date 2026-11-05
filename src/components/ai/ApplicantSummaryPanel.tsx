@@ -18,8 +18,8 @@ export function ApplicantSummaryPanel({ applicant }: ApplicantSummaryPanelProps)
             <div className="ai-surface p-4">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5" style={{ color: 'var(--ai-text)' }} />
-                        <h3 className="text-[15px] font-semibold tracking-[-0.015em] text-foreground">AI Applicant Summary</h3>
+                        <Sparkles className="h-5 w-5" style={{ color: 'var(--ai-text)' }} aria-hidden="true" />
+                        <h3 className="text-[15px] font-medium text-foreground">AI Applicant Summary</h3>
                     </div>
                     <Button
                         onClick={handleGenerate}
@@ -42,7 +42,7 @@ export function ApplicantSummaryPanel({ applicant }: ApplicantSummaryPanelProps)
                     className="h-8 w-8 animate-spin rounded-full border-2 border-border"
                     style={{ borderTopColor: 'var(--primary)' }}
                 />
-                <p className="animate-pulse text-sm text-muted-foreground">Analyzing resume and profile...</p>
+                <p className="animate-pulse text-sm text-muted-foreground">Analyzing resume and profile…</p>
             </div>
         );
     }
@@ -51,7 +51,7 @@ export function ApplicantSummaryPanel({ applicant }: ApplicantSummaryPanelProps)
         return (
             <div className="rounded-lg border border-destructive/15 bg-destructive/8 p-4">
                 <div className="flex items-center gap-2 text-destructive">
-                    <AlertTriangle className="w-5 h-5" />
+                    <AlertTriangle className="w-5 h-5" aria-hidden="true" />
                     <h3 className="font-medium">Analysis Failed</h3>
                 </div>
                 <p className="mt-1 text-sm text-destructive">{error.message}</p>
@@ -73,21 +73,21 @@ export function ApplicantSummaryPanel({ applicant }: ApplicantSummaryPanelProps)
             <div className="saas-card p-6">
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5" style={{ color: 'var(--ai-text)' }} />
-                        <h3 className="text-lg font-semibold">AI Analysis</h3>
+                        <Sparkles className="w-5 h-5" style={{ color: 'var(--ai-text)' }} aria-hidden="true" />
+                        <h3 className="text-lg font-medium">AI Analysis</h3>
                     </div>
                     <span className="ai-tag">AI Summary</span>
                 </div>
 
-                <p className="mb-6 leading-relaxed text-foreground/80">
+                <p className="mb-6 leading-relaxed text-secondary-foreground">
                     {data?.summary}
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Strengths */}
                     <div>
-                        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--severity-low)' }}>
-                            <CheckCircle className="w-4 h-4" />
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--severity-low)' }}>
+                            <CheckCircle className="w-4 h-4" aria-hidden="true" />
                             Key Strengths
                         </h4>
                         <ul className="space-y-2">
@@ -102,8 +102,8 @@ export function ApplicantSummaryPanel({ applicant }: ApplicantSummaryPanelProps)
 
                     {/* Risks */}
                     <div>
-                        <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold" style={{ color: 'var(--severity-high)' }}>
-                            <AlertTriangle className="w-4 h-4" />
+                        <h4 className="mb-3 flex items-center gap-2 text-sm font-medium" style={{ color: 'var(--severity-high)' }}>
+                            <AlertTriangle className="w-4 h-4" aria-hidden="true" />
                             Potential Risks
                         </h4>
                         <ul className="space-y-2">
@@ -124,8 +124,8 @@ export function ApplicantSummaryPanel({ applicant }: ApplicantSummaryPanelProps)
                 {/* Salary Insights */}
                 {data?.salary_insights && (
                     <div className="mt-6 border-t border-border pt-6">
-                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
-                            <TrendingUp className="w-4 h-4" />
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-primary">
+                            <TrendingUp className="w-4 h-4" aria-hidden="true" />
                             Salary Insights
                         </h4>
                         <p className="text-sm text-muted-foreground">

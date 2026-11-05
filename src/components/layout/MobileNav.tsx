@@ -4,30 +4,10 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useEffect, useState } from 'react';
 import { settingsService } from '@/services/settingsService';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { LayoutDashboard, Users, FileText, Briefcase, Plug, Sparkles, Mail, ClipboardCheck, BookOpenCheck, type LucideIcon } from 'lucide-react';
+import { navGroups } from './Sidebar';
 import { cn } from '@/lib/utils';
 import defaultLogoLight from '@/assets/logo-light.png';
 import defaultLogoDark from '@/assets/logo-dark.png';
-
-interface MobileNavItem {
-    name: string;
-    href: string;
-    icon: LucideIcon;
-    adminOnly?: boolean;
-    platformAdminOnly?: boolean;
-}
-
-const navigation: MobileNavItem[] = [
-    { name: 'Dashboard',    href: '/',                      icon: LayoutDashboard },
-    { name: 'Applicants',   href: '/applicants',            icon: Users },
-    { name: 'Offers',       href: '/offers',                icon: FileText },
-    { name: 'Employees',    href: '/employees',             icon: Briefcase },
-    { name: 'Compliance',   href: '/training',              icon: BookOpenCheck },
-    { name: 'AI Dashboard', href: '/admin/ai-dashboard',    icon: Sparkles,  adminOnly: true },
-    { name: 'Access Requests', href: '/admin/access-requests', icon: Mail, adminOnly: true, platformAdminOnly: true },
-    { name: 'Connectors',   href: '/settings/connectors',   icon: Plug,      adminOnly: true },
-    { name: 'Training Rules', href: '/settings/training-rules', icon: ClipboardCheck, adminOnly: true },
-];
 
 interface MobileNavProps {
     isOpen: boolean;
@@ -47,12 +27,6 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
         }).catch(() => {});
     }, []);
 
-    const filteredNav = navigation.filter(item => {
-        if (item.adminOnly && !isAdmin) return false;
-        if (item.platformAdminOnly && !isPlatformAdmin) return false;
-        return true;
-    });
-
     const currentPath = location.pathname;
 
     return (
@@ -70,69 +44,49 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
                     <img src={logoDark}  alt="HOMS" className="h-7 w-auto object-contain hidden dark:block" />
                 </div>
 
-                {/* Nav */}
-                <nav className="flex-1 overflow-y-auto py-4 px-2">
-                    <p
-                        className="px-3 mb-3 select-none"
-                        style={{
-                            fontFamily: 'var(--font-sans)',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            letterSpacing: '-0.01em',
-                            color: 'var(--sidebar-foreground)',
-                            opacity: 0.68,
-                        }}
-                    >
-                        Modules
-                    </p>
-                    <ul className="space-y-0.5">
-                        {filteredNav.map((item, i) => {
-                            const isActive = item.href === '/'
-                                ? currentPath === '/'
-                                : currentPath === item.href || currentPath.startsWith(item.href + '/');
+                {/* Nav: the same list as the desktop sidebar */}
+                <nav aria-label="Main" className="flex-1 overflow-y-auto p-2">
+                    {navGroups.map((group) => {
+                        const visibleItems = group.items.filter((item) => {
+                            if (item.adminOnly && !isAdmin) return false;
+                            if (item.platformAdminOnly && !isPlatformAdmin) return false;
+                            return true;
+                        });
+                        if (visibleItems.length === 0) return null;
 
-                            return (
-                                <li key={item.name}>
-                                    <Link
-                                        to={item.href}
-                                        onClick={onClose}
-                                        className={cn(
-                                            'animate-reveal-right',
-                                            `delay-${Math.min(i * 50, 300)}`,
-                                            'group relative flex items-center gap-3 px-3 py-2.5 w-full rounded-md transition-all duration-100',
-                                        )}
-                                        style={{
-                                            color: isActive ? 'var(--sidebar-primary)' : 'var(--sidebar-foreground)',
-                                            background: isActive ? 'color-mix(in srgb, var(--sidebar-primary) 12%, transparent)' : 'transparent',
-                                            border: isActive ? '1px solid color-mix(in srgb, var(--sidebar-primary) 20%, transparent)' : '1px solid transparent',
-                                        }}
-                                    >
-                                        {isActive && (
-                                            <div
-                                                className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-[18px] rounded-r-full"
-                                                style={{ background: 'var(--sidebar-primary)' }}
-                                            />
-                                        )}
-                                        <item.icon
-                                            size={15}
-                                            strokeWidth={isActive ? 2 : 1.75}
-                                            className="flex-shrink-0"
-                                            style={{ color: isActive ? 'var(--sidebar-primary)' : 'currentColor' }}
-                                        />
-                                        <span className={cn(
-                                            "text-[13px] leading-none",
-                                            isActive ? "font-semibold" : "font-medium"
-                                        )}>
-                                            {item.name}
-                                        </span>
-                                        {item.name === 'AI Dashboard' && (
-                                            <span className="ml-auto ai-tag">AI</span>
-                                        )}
-                                    </Link>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                        return (
+                            <div key={group.label} className="mt-2">
+                                <p className="select-none px-3 pb-1 pt-2 text-xs text-muted-foreground">{group.label}</p>
+                                <ul className="space-y-0.5">
+                                    {visibleItems.map((item) => {
+                                        const isActive = item.href === '/'
+                                            ? currentPath === '/'
+                                            : currentPath === item.href || currentPath.startsWith(item.href + '/');
+
+                                        return (
+                                            <li key={item.name}>
+                                                <Link
+                                                    to={item.href}
+                                                    onClick={onClose}
+                                                    aria-current={isActive ? 'page' : undefined}
+                                                    className={cn(
+                                                        'flex min-h-11 w-full items-center gap-3 rounded-md px-3 transition-colors',
+                                                        isActive
+                                                            ? 'bg-sidebar-primary/14 text-sidebar-primary'
+                                                            : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                                                    )}
+                                                >
+                                                    <item.icon size={16} strokeWidth={1.75} aria-hidden="true" className="flex-shrink-0" />
+                                                    <span className="text-sm font-medium">{item.name}</span>
+                                                    {item.isAI && <span className="ai-tag ml-auto">AI</span>}
+                                                </Link>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        );
+                    })}
                 </nav>
 
                 {/* Footer */}

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAISummary } from '@/hooks/useAI';
-import { calculateApplicantScore, getScoreColor as getScoreColorUtil, getScoreLabel } from '@/lib/ai/scoring';
+import { calculateApplicantScore, getScoreLabel } from '@/lib/ai/scoring';
 import {
     Sparkles,
     AlertTriangle,
@@ -46,11 +46,11 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     // Loading State
     if (loading) {
         return (
-            <div className="rounded-[20px] border border-border/80 bg-card p-6">
+            <div className="rounded-xl border border-border/80 bg-card p-6">
                 <div className="flex flex-col items-center justify-center space-y-4 py-8">
                     <div className="relative">
                         <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-                        <Sparkles className="absolute top-1/2 left-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform animate-pulse text-primary" />
+                        <Sparkles className="absolute top-1/2 left-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform animate-pulse text-primary" aria-hidden="true" />
                     </div>
                     <div className="text-center">
                         <p className="text-sm font-medium text-foreground">
@@ -66,17 +66,17 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     // Error State
     if (error) {
         return (
-            <div className="rounded-[20px] border border-destructive/15 bg-destructive/8 p-6">
+            <div className="rounded-xl border border-destructive/15 bg-destructive/8 p-6">
                 <div className="mb-4 flex items-start gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
+                    <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" aria-hidden="true" />
                     <div className="flex-1">
-                        <h3 className="font-semibold text-destructive">Analysis Failed</h3>
+                        <h3 className="font-medium text-destructive">Analysis Failed</h3>
                         <p className="mt-1 text-sm text-destructive">{error.message}</p>
                     </div>
                 </div>
                 <button
                     onClick={() => generate(applicant)}
-                    className="w-full rounded-[10px] border border-destructive/10 bg-destructive/12 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/18"
+                    className="w-full rounded-md border border-destructive/10 bg-destructive/12 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/18"
                 >
                     Try Again
                 </button>
@@ -87,17 +87,17 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     // No Data State
     if (!data) {
         return (
-            <div className="rounded-[20px] border border-border/80 bg-card p-6">
+            <div className="rounded-xl border border-border/80 bg-card p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    <Sparkles className="h-5 w-5 text-primary" />
-                    <h3 className="font-semibold text-foreground">AI Analysis</h3>
+                    <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
+                    <h3 className="font-medium text-foreground">AI Analysis</h3>
                 </div>
                 <p className="mb-4 text-sm text-muted-foreground">
                     Get AI-powered insights about this applicant's strengths, potential risks, and fit for your organization.
                 </p>
                 <button
                     onClick={() => generate(applicant)}
-                    className="w-full rounded-[10px] bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors shadow-lg shadow-primary/20 hover:bg-primary/90"
+                    className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors shadow-lg shadow-primary/20 hover:bg-accent-hi"
                 >
                     Generate AI Analysis
                 </button>
@@ -112,24 +112,26 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
     return (
         <div className="space-y-6">
             {/* Main AI Analysis Card */}
-            <div className="rounded-[20px] border border-border/80 bg-card p-6 shadow-sm">
+            <div className="saas-card p-6">
                 {/* Header with Score */}
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">AI Analysis</h3>
+                <div className="mb-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <Sparkles size={16} strokeWidth={1.75} className="text-primary" aria-hidden="true" />
+                            <h3 className="text-title whitespace-nowrap text-foreground">AI Analysis</h3>
+                        </div>
+                        <span className="ai-tag">AI-generated</span>
                     </div>
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${getScoreColorUtil(score)}`}>
-                        <span className="text-sm font-bold">
-                            Score: {score}/100
-                        </span>
-                        <span className="text-xs opacity-75">• {getScoreLabel(score)}</span>
+                    <div className="mt-4 flex items-baseline gap-2">
+                        <span className="data-value text-3xl text-foreground">{score}</span>
+                        <span className="text-sm tabular-nums text-muted-foreground">of 100</span>
+                        <span className="ml-auto text-sm text-muted-foreground">{getScoreLabel(score)}</span>
                     </div>
                 </div>
 
                 {/* Score Breakdown */}
-                <div className="mb-6 rounded-[10px] bg-muted/30 p-4">
-                    <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="mb-6 rounded-md bg-muted/30 p-4">
+                    <h4 className="mb-3 text-xs font-medium text-muted-foreground">
                         Score Breakdown (Total: {score}/100)
                     </h4>
                     <div className="space-y-3">
@@ -170,14 +172,14 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                 <div className="grid grid-cols-1 gap-6 mb-6">
                     {/* Strengths */}
                     <div>
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-400 mb-3">
-                            <CheckCircle className="w-4 h-4" />
+                        <h4 className="flex items-center gap-2 text-sm font-medium text-signal mb-3">
+                            <CheckCircle className="w-4 h-4" aria-hidden="true" />
                             Key Strengths
                         </h4>
                         <ul className="space-y-2.5">
                             {(data.strengths || []).map((strength, i) => (
                                 <li key={i} className="group flex items-start gap-3 text-sm text-foreground">
-                                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-green-500 shrink-0 group-hover:scale-125 transition-transform" />
+                                    <span className="mt-1 w-1.5 h-1.5 rounded-full bg-signal shrink-0 group-hover:scale-125 transition-transform" />
                                     <span className="flex-1">{strength}</span>
                                 </li>
                             ))}
@@ -186,20 +188,20 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
 
                     {/* Risks */}
                     <div>
-                        <h4 className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400 mb-3">
-                            <AlertTriangle className="w-4 h-4" />
+                        <h4 className="flex items-center gap-2 text-sm font-medium text-accent-2 mb-3">
+                            <AlertTriangle className="w-4 h-4" aria-hidden="true" />
                             Potential Risks
                         </h4>
                         {(!data.risks || data.risks.length === 0) ? (
                             <p className="flex items-center gap-2 text-sm italic text-muted-foreground">
-                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <CheckCircle className="w-4 h-4 text-signal" aria-hidden="true" />
                                 No significant risks identified
                             </p>
                         ) : (
                             <ul className="space-y-2.5">
                                 {data.risks.map((risk, i) => (
                                     <li key={i} className="group flex items-start gap-3 text-sm text-foreground">
-                                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 group-hover:scale-125 transition-transform" />
+                                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-accent-2 shrink-0 group-hover:scale-125 transition-transform" />
                                         <span className="flex-1">{risk}</span>
                                     </li>
                                 ))}
@@ -211,11 +213,11 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                 {/* Salary Insights */}
                 {data.salary_insights && (
                     <div className="border-t border-border/80 pt-6">
-                        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-primary">
-                            <TrendingUp className="w-4 h-4" />
+                        <h4 className="mb-2 flex items-center gap-2 text-sm font-medium text-primary">
+                            <TrendingUp className="w-4 h-4" aria-hidden="true" />
                             Salary Insights
                         </h4>
-                        <p className="rounded-[10px] bg-primary/8 p-3 text-sm text-foreground">
+                        <p className="rounded-md bg-primary/8 p-3 text-sm text-foreground">
                             {data.salary_insights}
                         </p>
                     </div>
@@ -239,26 +241,26 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
             </div>
 
             {/* Quick Actions Card */}
-            <div className="rounded-[20px] border border-border/80 bg-card p-6">
-                <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Lightbulb className="h-4 w-4 text-primary" />
+            <div className="rounded-xl border border-border/80 bg-card p-6">
+                <h4 className="mb-4 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Lightbulb className="h-4 w-4 text-primary" aria-hidden="true" />
                     Suggested Actions
                 </h4>
                 <div className="space-y-2">
                     {score >= 80 && (
                         <ActionButton
-                            icon={<Calendar className="w-4 h-4" />}
+                            icon={<Calendar className="w-4 h-4" aria-hidden="true" />}
                             label="Schedule Interview"
                             priority="high"
                         />
                     )}
                     <ActionButton
-                        icon={<Mail className="w-4 h-4" />}
+                        icon={<Mail className="w-4 h-4" aria-hidden="true" />}
                         label="Request Additional Info"
                         priority="normal"
                     />
                     <ActionButton
-                        icon={<FileText className="w-4 h-4" />}
+                        icon={<FileText className="w-4 h-4" aria-hidden="true" />}
                         label="Add to Shortlist"
                         priority="normal"
                     />
@@ -266,25 +268,25 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
             </div>
 
             {/* Applicant Stats Card */}
-            <div className="rounded-[20px] border border-border/80 bg-card p-6">
-                <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Target className="h-4 w-4 text-primary" />
+            <div className="rounded-xl border border-border/80 bg-card p-6">
+                <h4 className="mb-4 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Target className="h-4 w-4 text-primary" aria-hidden="true" />
                     Quick Stats
                 </h4>
                 <div className="space-y-3">
                     <StatItem
-                        icon={<Clock className="w-4 h-4" />}
+                        icon={<Clock className="w-4 h-4" aria-hidden="true" />}
                         label="Application Age"
                         value={`${applicationAge} day${applicationAge !== 1 ? 's' : ''} ago`}
                     />
                     <StatItem
-                        icon={<Award className="w-4 h-4" />}
+                        icon={<Award className="w-4 h-4" aria-hidden="true" />}
                         label="Completion Rate"
                         value={`${completionRate}%`}
                         highlight={completionRate === 100}
                     />
                     <StatItem
-                        icon={<Users className="w-4 h-4" />}
+                        icon={<Users className="w-4 h-4" aria-hidden="true" />}
                         label="Status"
                         value={applicant?.status || 'New'}
                     />
@@ -293,10 +295,10 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
 
             {/* Applicant Ranking (if score is high) */}
             {score >= 70 && (
-                <div className="rounded-[20px] border border-primary/20 bg-gradient-to-br from-primary/12 to-chart-5/10 p-6">
+                <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/12 to-chart-5/10 p-6">
                     <div className="flex items-center gap-2 mb-2">
-                        <Award className="h-5 w-5 text-primary" />
-                        <h4 className="font-semibold text-foreground">
+                        <Award className="h-5 w-5 text-primary" aria-hidden="true" />
+                        <h4 className="font-medium text-foreground">
                             Top Candidate
                         </h4>
                     </div>
@@ -304,7 +306,7 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
                         This applicant ranks in the <strong className="text-primary">top 15%</strong> of all applicants
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                        Similar candidates hired: <strong className="text-green-600 dark:text-green-400">8/10</strong>
+                        Similar candidates hired: <strong className="text-signal">8/10</strong>
                     </p>
                 </div>
             )}
@@ -314,23 +316,19 @@ export function EnhancedApplicantSummaryPanel({ applicant }: EnhancedApplicantSu
 
 // Helper Components
 function ScoreFactor({ label, score, points }: { label: string; score: number; points?: string }) {
-    const getColor = (s: number) => {
-        if (s >= 80) return 'bg-green-500';
-        if (s >= 60) return 'bg-yellow-500';
-        return 'bg-red-500';
-    };
+    const getColor = (s: number) => (s >= 60 ? 'bg-signal' : 'bg-accent-2');
 
     return (
         <div>
             <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs text-muted-foreground">{label}</span>
-                <span className="text-xs font-semibold text-foreground">
+                <span className="text-xs font-medium text-foreground">
                     {points || `${Math.round(score)}%`}
                 </span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-border/60">
                 <div
-                    className={`h-full transition-all duration-500 ${getColor(score)}`}
+                    className={`h-full transition duration-500 ${getColor(score)}`}
                     style={{ width: `${Math.min(100, score)}%` }}
                 />
             </div>
@@ -350,9 +348,9 @@ function ActionButton({
     const isPriority = priority === 'high';
 
     return (
-        <button className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-[10px] text-sm font-medium transition-all hover:scale-[1.02] ${
+        <button className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium transition hover:scale-[1.02] ${
             isPriority
-                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90'
+                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-accent-hi'
                 : 'border border-border text-foreground hover:bg-muted/60'
         }`}>
             {icon}
@@ -378,9 +376,9 @@ function StatItem({
                 <span className="text-muted-foreground">{icon}</span>
                 <span className="text-xs text-muted-foreground">{label}</span>
             </div>
-            <span className={`text-xs font-semibold ${
+            <span className={`text-xs font-medium ${
                 highlight
-                    ? 'text-green-600 dark:text-green-400'
+                    ? 'text-signal'
                     : 'text-foreground'
             }`}>
                 {value}

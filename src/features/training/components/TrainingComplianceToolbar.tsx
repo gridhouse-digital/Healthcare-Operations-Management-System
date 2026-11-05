@@ -21,8 +21,7 @@ interface TrainingComplianceToolbarProps {
   totalCount: number;
 }
 
-const inputCls =
-  'w-full px-3 h-9 border border-border rounded-md text-[13px] text-foreground bg-card focus:outline-none focus:ring-2 focus:ring-primary/35 transition-shadow placeholder:text-muted-foreground/60';
+const inputCls = "saas-input";
 
 const statusOptions = [
   { value: 'all', label: 'All statuses' },
@@ -118,20 +117,20 @@ export function TrainingComplianceToolbar({
   );
 
   return (
-    <div className="saas-card space-y-3 p-3">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
         <div className="relative min-w-0 flex-1">
           <label htmlFor={searchId} className="sr-only">
             Search employees by name, email or role
           </label>
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={13} strokeWidth={2} />
+          <Search size={14} strokeWidth={1.75} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             id={searchId}
             type="search"
             placeholder="Search employees by name, email or role"
             value={filters.search}
             onChange={(event) => onChange({ ...filters, search: event.target.value })}
-            className={`${inputCls} pl-8`}
+            className={`${inputCls} pl-9`}
           />
         </div>
 
@@ -145,10 +144,10 @@ export function TrainingComplianceToolbar({
             className="xl:hidden"
             onClick={() => setSheetOpen(true)}
           >
-            <Filter size={14} />
+            <Filter size={14} aria-hidden="true" />
             Filters
             {activeCount > 0 ? (
-              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+              <span className="rounded-full bg-primary/15 px-1.5 py-0.5 text-xs font-medium text-primary">
                 {activeCount}
               </span>
             ) : null}
@@ -171,13 +170,13 @@ export function TrainingComplianceToolbar({
                 if (chip.key === 'gate') onChange({ ...filters, gate: 'all' });
                 if (chip.key === 'adjustments') onChange({ ...filters, adjustments: 'all' });
               }}
-              className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] text-foreground"
+              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs text-foreground"
             >
               {chip.label}
-              <X size={12} />
+              <X size={14} aria-hidden="true" />
             </button>
           ))}
-          <button type="button" onClick={clearAll} className="text-[11px] font-medium text-primary hover:underline">
+          <button type="button" onClick={clearAll} className="text-xs font-medium text-primary hover:underline">
             Clear all
           </button>
         </div>
@@ -188,19 +187,19 @@ export function TrainingComplianceToolbar({
           <button
             type="button"
             aria-label="Close filters"
-            className="fixed inset-0 z-40 bg-background/72 backdrop-blur-sm xl:hidden"
+            className="fixed inset-0 z-40 bg-background/72 xl:hidden"
             onClick={() => setSheetOpen(false)}
           />
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Compliance filters"
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl border border-border bg-popover/95 p-4 shadow-2xl backdrop-blur-sm xl:hidden"
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-2xl border border-border bg-popover/95 p-4 shadow-2xl xl:hidden"
           >
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground">Filters</h2>
+              <h2 className="text-sm font-medium text-foreground">Filters</h2>
               <button type="button" aria-label="Close" onClick={() => setSheetOpen(false)} className="rounded-md p-1 text-muted-foreground">
-                <X size={16} />
+                <X size={16} aria-hidden="true" />
               </button>
             </div>
             <div className="space-y-3">

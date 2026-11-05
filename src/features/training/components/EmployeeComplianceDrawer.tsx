@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { ExternalLink, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmployeeTrainingDetailPage } from '../EmployeeTrainingDetailPage';
@@ -28,30 +29,30 @@ export function EmployeeComplianceDrawer({ employeeId, onClose }: EmployeeCompli
     };
   }, [onClose]);
 
-  return (
+  return createPortal(
     <>
       <button
         type="button"
         aria-label="Close compliance drawer"
-        className="fixed inset-0 z-40 bg-background/72 backdrop-blur-sm"
+        className="fixed inset-0 z-40 bg-background/72"
         onClick={onClose}
       />
       <aside
         role="dialog"
         aria-modal="true"
         aria-label="Employee compliance details"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[92vw] flex-col border-l border-border bg-card shadow-2xl xl:max-w-6xl 2xl:max-w-7xl"
+        className="drawer-surface fixed inset-y-0 right-0 z-50 flex w-full max-w-5xl flex-col border-l border-border bg-background shadow-2xl"
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3 sm:px-6">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-inherit px-4 py-3 sm:px-6">
           <div>
-            <p className="text-sm font-semibold text-foreground">Employee compliance</p>
-            <p className="text-[11px] text-muted-foreground">Directory stays open behind this panel</p>
+            <h2 className="text-section text-foreground">Employee compliance</h2>
+            <p className="text-xs text-muted-foreground">Directory stays open behind this panel</p>
           </div>
           <div className="flex items-center gap-2">
             <Button type="button" variant="outline" size="sm" asChild>
               <Link to={`/training/employee/${employeeId}`} target="_blank" rel="noreferrer">
                 Open full page
-                <ExternalLink size={14} />
+                <ExternalLink size={14} aria-hidden="true" />
               </Link>
             </Button>
             <button
@@ -59,9 +60,9 @@ export function EmployeeComplianceDrawer({ employeeId, onClose }: EmployeeCompli
               type="button"
               aria-label="Close drawer"
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
-              <X size={16} />
+              <X size={16} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -70,6 +71,7 @@ export function EmployeeComplianceDrawer({ employeeId, onClose }: EmployeeCompli
           <EmployeeTrainingDetailPage embedded employeeId={employeeId} onClose={onClose} />
         </div>
       </aside>
-    </>
+    </>,
+    document.body,
   );
 }

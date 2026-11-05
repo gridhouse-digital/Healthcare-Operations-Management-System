@@ -19,8 +19,8 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
     if (!data && !loading && !error) {
         return (
             <div className="saas-card p-6 text-center">
-                <Trophy className="mx-auto mb-3 h-12 w-12" style={{ color: 'var(--severity-medium)' }} />
-                <h3 className="text-lg font-semibold mb-2">AI Candidate Ranking</h3>
+                <Trophy className="mx-auto mb-3 h-12 w-12" style={{ color: 'var(--severity-medium)' }} aria-hidden="true" />
+                <h3 className="text-lg font-medium mb-2">AI Candidate Ranking</h3>
                 <p className="mx-auto mb-4 max-w-md text-muted-foreground">
                     Rank {candidates.length} candidates against the job description to identify the top performers.
                 </p>
@@ -38,9 +38,9 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
             <div className="ai-surface flex flex-col items-center justify-center space-y-4 p-12">
                 <div className="relative">
                     <div className="h-12 w-12 animate-spin rounded-full border-2 border-border" style={{ borderTopColor: 'var(--primary)' }} />
-                    <Trophy className="absolute top-1/2 left-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform text-primary" />
+                    <Trophy className="absolute top-1/2 left-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 transform text-primary" aria-hidden="true" />
                 </div>
-                <p className="animate-pulse text-muted-foreground">Comparing candidates against requirements...</p>
+                <p className="animate-pulse text-muted-foreground">Comparing candidates against requirements…</p>
             </div>
         );
     }
@@ -49,7 +49,7 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
         return (
             <div className="rounded-lg border border-destructive/15 bg-destructive/8 p-4">
                 <div className="flex items-center gap-2 text-destructive">
-                    <AlertTriangle className="w-5 h-5" />
+                    <AlertTriangle className="w-5 h-5" aria-hidden="true" />
                     <h3 className="font-medium">Ranking Failed</h3>
                 </div>
                 <p className="mt-1 text-sm text-destructive">{error.message}</p>
@@ -68,8 +68,8 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Target className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" aria-hidden="true" />
                     Ranking Results
                 </h3>
                 <span className="text-sm text-muted-foreground">
@@ -81,7 +81,7 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
                 {data?.rankings.sort((a, b) => b.score - a.score).map((ranking, index) => (
                     <div
                         key={ranking.applicant_id}
-                        className={`border rounded-lg transition-all ${showDetails === ranking.applicant_id
+                        className={`border rounded-lg transition ${showDetails === ranking.applicant_id
                                 ? 'bg-primary/8 border-primary/20'
                                 : 'bg-card border-border hover:border-primary/25'
                             }`}
@@ -92,7 +92,7 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
                         >
                             <div className="flex items-center gap-4">
                                 <div className={`
-                  flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm
+                  flex items-center justify-center w-8 h-8 rounded-full font-medium text-sm
                   ${index === 0 ? 'bg-[color:var(--severity-medium)]/12 text-[color:var(--severity-medium)]' :
                                         index === 1 ? 'bg-muted text-muted-foreground' :
                                             index === 2 ? 'bg-[color:var(--severity-high)]/12 text-[color:var(--severity-high)]' : 'bg-secondary text-muted-foreground'}
@@ -114,7 +114,7 @@ export function ApplicantRankingPanel({ candidates, jobDescription }: ApplicantR
 
                             <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                    <div className="text-2xl font-bold text-primary">{ranking.score}</div>
+                                    <div className="text-2xl font-medium text-primary">{ranking.score}</div>
                                     <div className="text-xs text-muted-foreground">Score</div>
                                 </div>
                                 <ArrowRight className={`h-5 w-5 text-muted-foreground transition-transform ${showDetails === ranking.applicant_id ? 'rotate-90' : ''}`} />
