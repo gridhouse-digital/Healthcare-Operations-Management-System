@@ -30,7 +30,7 @@ function deps(over: Partial<PlatformOverviewDeps<OverviewCaller>> = {}) {
       calls.push("load");
       return Promise.resolve({
         totals: {
-          agencies: 1, needingAttention: 0, employees: 3, employeesOnboarding: 0,
+          agencies: 1, needingAttention: 0, suspended: 0, employees: 3, employeesOnboarding: 0,
           recurringOverdue: null, failedSyncs: 0, openAccessRequests: 0,
         },
         agencies: [],

@@ -298,6 +298,38 @@ Deno.test({
 });
 
 // ===========================================================================
+// Agency status: only the manage-tenant function may change it.
+// ===========================================================================
+
+Deno.test({
+  name: "RLS: a tenant user cannot call set_tenant_status",
+  ignore: !env, ...wrap,
+  fn: async () => {
+    const { h } = await ensureSetup();
+    const { error } = await h.tenantA.client.rpc("set_tenant_status", {
+      p_tenant_id: h.tenantB.tenantId,
+      p_status: "suspended",
+      p_reason: "not allowed",
+      p_actor: h.tenantA.userId,
+    });
+    assertEquals(error !== null, true, "set_tenant_status must not be callable by tenant users");
+  },
+});
+
+Deno.test({
+  name: "RLS: authenticated role has no write access to tenants",
+  ignore: !env, ...wrap,
+  fn: async () => {
+    const { h } = await ensureSetup();
+    const { error } = await h.tenantA.client
+      .from("tenants")
+      .update({ status: "suspended", status_reason: "changed" })
+      .eq("id", h.tenantB.tenantId);
+    assertEquals(error?.code, "42501", "tenants: authenticated must be denied, whatever the JWT role");
+  },
+});
+
+// ===========================================================================
 // 2. ai_cache — PK is input_hash (text), so the id-keyed matrix above does not
 //    cover it. Legacy "Authenticated users can read cache" USING(true) dropped
 //    by migration 20260530000000.

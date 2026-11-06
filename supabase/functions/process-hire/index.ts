@@ -3,6 +3,7 @@ import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
+import { suspendedTenantIds } from "../_shared/tenant-status.ts";
 
 // Story 3.1 — process-hire
 //
@@ -330,6 +331,12 @@ Deno.serve(async (req: Request) => {
     // Authenticated user: restrict to own tenant only
     if (ctx.mode === "user") {
       hiresQuery = hiresQuery.eq("tenant_id", ctx.tenantId);
+    }
+
+    // A suspended agency's hires stay queued until it is reactivated
+    const suspended = await suspendedTenantIds(admin);
+    if (suspended.size > 0) {
+      hiresQuery = hiresQuery.not("tenant_id", "in", `(${[...suspended].join(",")})`);
     }
 
     const { data: hires, error: hiresErr } = await hiresQuery;

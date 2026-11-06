@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { formatDistanceToNow } from 'date-fns';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Building2, ShieldAlert } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import { PageSkeleton } from '@/components/shared/PageSkeleton';
 import { SortableHeader } from '@/components/shared/SortableHeader';
 import { StatusBadge, type StatusTone } from '@/components/shared/StatusBadge';
 import { NotTrackedState } from '@/components/shared/NotTrackedState';
+import { Button } from '@/components/ui/button';
 import { SlideOver } from '@/components/ui/SlideOver';
 import { useTableSort, type SortColumn } from '@/hooks/useTableSort';
 import { StatsCard } from '@/features/dashboard/components/StatsCard';
@@ -22,6 +24,7 @@ const STATUS: Record<AgencyStatus, { label: string; tone: StatusTone }> = {
     attention: { label: 'Needs attention', tone: 'waiting' },
     not_connected: { label: 'Not connected', tone: 'untracked' },
     no_data: { label: 'No data yet', tone: 'untracked' },
+    suspended: { label: 'Suspended', tone: 'critical' },
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -91,6 +94,89 @@ function StatusWithReason({ agency }: { agency: AgencySummary }) {
     );
 }
 
+/* Suspending blocks people from working, so it takes a reason and a second step */
+function AgencyAccess({ agency }: { agency: AgencySummary }) {
+    const queryClient = useQueryClient();
+    const [confirming, setConfirming] = useState(false);
+    const [reason, setReason] = useState('');
+    const suspended = agency.status === 'suspended';
+
+    const change = useMutation({
+        mutationFn: () => platformService.setAgencyStatus(
+            agency.id,
+            suspended ? 'reactivate' : 'suspend',
+            suspended ? undefined : reason.trim(),
+        ),
+        onSuccess: async () => {
+            toast.success(suspended ? `${agency.name} reactivated` : `${agency.name} suspended`);
+            setConfirming(false);
+            setReason('');
+            await queryClient.invalidateQueries({ queryKey: ['platform-overview'] });
+        },
+        onError: () => toast.error('The agency could not be updated. Nothing changed.'),
+    });
+
+    return (
+        <section className="space-y-3 border-t border-border pt-6">
+            <h3 className="text-title text-foreground">Access</h3>
+
+            {suspended && (
+                <div className="space-y-1 text-sm text-foreground">
+                    <p>{agency.suspension?.reason ?? 'No reason recorded'}</p>
+                    {agency.suspension?.since && (
+                        <p className="text-xs text-muted-foreground">
+                            Suspended {format(new Date(agency.suspension.since), 'MMM d, yyyy')}
+                        </p>
+                    )}
+                </div>
+            )}
+
+            {!suspended && !confirming && (
+                <>
+                    <p className="text-sm text-muted-foreground">
+                        Suspending stops sign-ins and scheduled syncs for this agency. Its records are kept, and people already signed in lose access when their session token expires.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={() => setConfirming(true)}>Suspend agency</Button>
+                </>
+            )}
+
+            {!suspended && confirming && (
+                <div className="space-y-3">
+                    <label className="block">
+                        <span className="form-label">Reason for suspending {agency.name}</span>
+                        <textarea
+                            value={reason}
+                            onChange={(event) => setReason(event.target.value)}
+                            rows={3}
+                            autoFocus
+                            className="saas-input"
+                        />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={reason.trim().length < 5 || change.isPending}
+                            onClick={() => change.mutate()}
+                        >
+                            {change.isPending ? 'Suspending…' : 'Confirm suspension'}
+                        </Button>
+                        <Button variant="outline" size="sm" disabled={change.isPending} onClick={() => setConfirming(false)}>
+                            Cancel
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {suspended && (
+                <Button variant="outline" size="sm" disabled={change.isPending} onClick={() => change.mutate()}>
+                    {change.isPending ? 'Reactivating…' : 'Reactivate agency'}
+                </Button>
+            )}
+        </section>
+    );
+}
+
 function AgencyDetails({ agency, syncWindowDays }: { agency: AgencySummary; syncWindowDays: number }) {
     return (
         <div className="space-y-6">
@@ -129,6 +215,8 @@ function AgencyDetails({ agency, syncWindowDays }: { agency: AgencySummary; sync
                     </NotTrackedState>
                 )}
             </section>
+
+            <AgencyAccess agency={agency} />
 
             <section className="space-y-2 border-t border-border pt-6">
                 <h3 className="text-title text-foreground">Connected systems</h3>
@@ -192,7 +280,10 @@ export function PlatformOverviewPage() {
             </div>
 
             <div className="tally tally-5">
-                <StatsCard title="Agencies" value={totals.agencies} subtitle={totals.needingAttention === 1 ? '1 needs attention' : `${totals.needingAttention} need attention`} />
+                <StatsCard title="Agencies" value={totals.agencies} subtitle={[
+                        totals.needingAttention === 1 ? '1 needs attention' : `${totals.needingAttention} need attention`,
+                        totals.suspended ? `${totals.suspended} suspended` : null,
+                    ].filter(Boolean).join(', ')} />
                 <StatsCard title="Employees" value={totals.employees} subtitle={`${totals.employeesOnboarding} onboarding`} />
                 <StatsCard
                     title="Overdue Renewals"

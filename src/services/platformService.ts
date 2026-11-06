@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-export type AgencyStatus = 'ok' | 'attention' | 'not_connected' | 'no_data';
+export type AgencyStatus = 'ok' | 'attention' | 'not_connected' | 'no_data' | 'suspended';
 
 export interface AgencyConnection {
     source: string;
@@ -30,6 +30,7 @@ export interface AgencySummary {
     lastSyncAt: string | null;
     failedSyncs: number;
     attentionReasons: string[];
+    suspension: { reason: string | null; since: string | null } | null;
 }
 
 export interface PlatformOverview {
@@ -38,6 +39,7 @@ export interface PlatformOverview {
     totals: {
         agencies: number;
         needingAttention: number;
+        suspended: number;
         employees: number;
         employeesOnboarding: number;
         recurringOverdue: number | null;
@@ -60,7 +62,16 @@ export const platformService = {
             agencies: data.agencies.map((agency) => ({
                 ...agency,
                 attentionReasons: agency.attentionReasons ?? [],
+                suspension: agency.suspension ?? null,
             })),
         };
+    },
+
+    async setAgencyStatus(tenantId: string, action: 'suspend' | 'reactivate', reason?: string): Promise<void> {
+        const { data, error } = await supabase.functions.invoke<{ error?: { message?: string } }>('manage-tenant', {
+            body: { tenantId, action, reason },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error.message ?? 'Agency update failed');
     },
 };

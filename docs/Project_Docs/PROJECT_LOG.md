@@ -3,6 +3,35 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-11-05 - Agency suspension (branch feat/tenant-suspend, live on production)
+
+Platform admins can suspend and reactivate an agency from the overview drawer. Records are kept.
+
+- Migration `20261105000001_tenant_status.sql` adds `tenants.status`, `set_tenant_status` (status change and audit row in one transaction) and a `custom_access_token_hook` that refuses tokens for suspended agencies, exempting platform admins.
+- New Edge Function `manage-tenant`. Scheduled jobs skip suspended agencies, and their hires stay queued.
+- Someone already signed in keeps working until their access token expires, because Edge Functions and RLS do not check agency status.
+- `anon` and `authenticated` lost write access to `tenants`, so status can only change through `set_tenant_status`.
+- `detect-hires-bamboohr` now imports `jsr:@supabase/supabase-js@2`, because the bare specifier fails with `--use-api` bundling.
+
+### Verified on production
+
+- Migration applied. The hook passed a rolled-back test: active user gets claims, suspended agency user gets 403, platform admin is exempt. A real platform admin refresh then succeeded through it.
+- All seven functions deployed. `manage-tenant` refused no token, the anon key and a forged token.
+- The owner suspended and reactivated Test Agency from the drawer. Both `agency.*` audit rows were written with the correct actor and reason.
+- The 00:00 UTC run of `detect-hires-bamboohr` and `process-hire` returned 200 on the new code.
+
+### Not verified
+
+- A real sign-in refused for a suspended agency: Test Agency has no users, so this was only proven in the rolled-back test.
+- A tenant admin sign-in through the new hook, and the JazzHR and daily jobs on the new code.
+
+### Notes
+
+- Test Agency (`test-agency`) is on production with no users or data. Audit rows reference it, so hide it with archive in the next PR.
+- `update-tenant-user-role` calls `auth.admin.signOut` with a user id, and the auth log shows it fails with `bad_jwt`, so a role change does not sign the user out. Fix separately, and check deactivate.
+- Deploying from a terminal behind Norton Web/Mail Shield needs `NODE_EXTRA_CA_CERTS=C:\ProgramData\Norton\Antivirus\wscert.pem`.
+
+---
 ## 2026-11-05 - Security: role change and deactivate guards
 
 `update-tenant-user-role` trusted its request body. It accepted any role, including `platform_admin`, and it applied the auth update to a body-supplied `userId` that was not tied to the tenant row. A tenant admin could therefore promote an account to platform admin, or overwrite the auth metadata of a user in another tenant and sign them out.

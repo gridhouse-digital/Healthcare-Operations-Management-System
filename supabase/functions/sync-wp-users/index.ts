@@ -4,6 +4,7 @@ import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
 import { normalizeEmail } from "../_shared/identity.ts";
+import { suspendedTenantIds, withoutSuspended } from "../_shared/tenant-status.ts";
 
 // Story 4.5.1 — sync-wp-users
 //
@@ -443,9 +444,10 @@ Deno.serve(async (req: Request) => {
       query = query.eq("tenant_id", filterTenantId);
     }
 
-    const { data: settings, error: settingsErr } = await query;
+    const { data: allSettings, error: settingsErr } = await query;
 
     if (settingsErr) throw settingsErr;
+    const settings = withoutSuspended<Record<string, unknown>>(allSettings, await suspendedTenantIds(admin));
     if (!settings || settings.length === 0) {
       return withCors(
         new Response(

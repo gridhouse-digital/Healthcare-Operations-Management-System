@@ -158,6 +158,7 @@ Deno.test("totals add up and untracked agencies add nothing", () => {
   assertEquals(totals, {
     agencies: 2,
     needingAttention: 2,
+    suspended: 0,
     employees: 11,
     employeesOnboarding: 2,
     recurringOverdue: 2,
@@ -197,6 +198,32 @@ Deno.test("agencies needing attention sort first and ties keep their order", () 
   const b = summarize(raw({ id: "b", recurringOverdue: 1 }));
   const c = summarize(raw({ id: "c" }));
   assertEquals(sortByAttention([a, b, c]).map((agency) => agency.id), ["b", "a", "c"]);
+});
+
+Deno.test("a suspended agency shows as suspended with no attention reasons", () => {
+  const agency = summarize(raw({
+    tenantStatus: "suspended",
+    statusReason: "Unpaid invoices",
+    statusChangedAt: "2026-11-01T00:00:00Z",
+    recurringOverdue: 3,
+    sources: [source({ lastSuccessAt: "2026-01-01T00:00:00Z" })],
+  }));
+  assertEquals(agency.status, "suspended");
+  assertEquals(agency.attentionReasons, []);
+  assertEquals(agency.suspension, { reason: "Unpaid invoices", since: "2026-11-01T00:00:00Z" });
+  assertEquals(summarizeTotals([agency], 0).suspended, 1);
+  assertEquals(summarizeTotals([agency], 0).needingAttention, 0);
+});
+
+Deno.test("an active agency has no suspension", () => {
+  assertEquals(summarize(raw()).suspension, null);
+});
+
+Deno.test("suspended agencies sort last", () => {
+  const off = summarize(raw({ id: "off", tenantStatus: "suspended" }));
+  const ok = summarize(raw({ id: "ok" }));
+  const urgent = summarize(raw({ id: "urgent", recurringOverdue: 1 }));
+  assertEquals(sortByAttention([off, ok, urgent]).map((agency) => agency.id), ["urgent", "ok", "off"]);
 });
 
 Deno.test("failed syncs add up across agencies", () => {

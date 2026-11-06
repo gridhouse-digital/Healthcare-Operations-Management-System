@@ -1,8 +1,9 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { handleError } from "../_shared/error-response.ts";
 import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { cronOrTenantGuard } from "../_shared/cron-or-tenant-guard.ts";
+import { suspendedTenantIds, withoutSuspended } from "../_shared/tenant-status.ts";
 
 // Story 2.1 — BambooHR Hire Detector (production-safe)
 // - Callable by pg_cron and manually via authenticated POST
@@ -439,11 +440,13 @@ Deno.serve(async (req: Request) => {
       settingsQuery = settingsQuery.eq("tenant_id", ctx.tenantId);
     }
 
-    const { data: settings, error: settingsErr } = await settingsQuery;
+    const { data: allSettings, error: settingsErr } = await settingsQuery;
 
     if (settingsErr) {
       throw settingsErr;
     }
+
+    const settings = withoutSuspended(allSettings, await suspendedTenantIds(admin));
 
     if (!settings || settings.length === 0) {
       return withCors(
