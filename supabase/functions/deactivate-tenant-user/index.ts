@@ -5,7 +5,8 @@ import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { blockedUserChange } from "../_shared/role-change.ts";
 
-// FR-19: Deactivate user — disable auth + invalidate sessions + audit.
+// FR-19: Deactivate user — disable auth + audit. The ban stops token refresh, so
+// access ends when the current JWT expires.
 
 interface DeactivateBody {
   tenantUserId: string;
@@ -73,9 +74,6 @@ Deno.serve(async (req: Request) => {
       { ban_duration: "876600h" }, // ~100 years = effectively permanent
     );
     if (authBanError) throw authBanError;
-
-    // Invalidate all active sessions immediately
-    await adminClient.auth.admin.signOut((tu as { user_id: string }).user_id, "global");
 
     void logAudit({
       tenantId: ctx.tenantId,
