@@ -181,10 +181,16 @@ jobs:
             exit 0
           fi
           supabase link --project-ref "$PROJECT_REF"
-          PENDING="$(supabase db push --dry-run 2>&1)"
+          # --remote is required: without it the CLI targets a local stack.
+          # The command runs inside `if` so its output still prints on failure.
+          if ! PENDING="$(supabase db push --dry-run --remote 2>&1)"; then
+            echo "$PENDING"
+            echo "::error::Could not compare migrations with the deployed database."
+            exit 1
+          fi
           echo "$PENDING"
-          # A clean trunk has nothing to push. Anything pending = drift = fail.
-          if echo "$PENDING" | grep -qiE 'Would push|Applying migration|[0-9]+ migration'; then
+          # Pass only on an explicit match, so an unexpected message can't read as clean.
+          if ! echo "$PENDING" | grep -qi 'up to date'; then
             echo "::error::Local migrations differ from the deployed ledger — drift detected."
             exit 1
           fi

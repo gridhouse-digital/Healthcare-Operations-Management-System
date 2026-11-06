@@ -3,6 +3,11 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-11-06 - CI: Migration Parity fixed
+
+Migration Parity failed on `main` for every merge from PR 28 on, and PRs never run it. The latest Supabase CLI defaults `db push` to the local stack, so the check tried `127.0.0.1` and exited before printing the error. It now passes `--remote`, prints output on failure, and passes only on an explicit "up to date".
+
+---
 ## 2026-11-05 - Agency suspension (branch feat/tenant-suspend, live on production)
 
 Platform admins can suspend and reactivate an agency from the overview drawer. Records are kept.
@@ -23,7 +28,7 @@ Platform admins can suspend and reactivate an agency from the overview drawer. R
 ### Not verified
 
 - A real sign-in refused for a suspended agency: Test Agency has no users, so this was only proven in the rolled-back test.
-- A tenant admin sign-in through the new hook, and the JazzHR and daily jobs on the new code.
+- The JazzHR and daily jobs on the new code. Both a tenant admin and a platform admin have since signed in through the new hook.
 
 ### Notes
 
