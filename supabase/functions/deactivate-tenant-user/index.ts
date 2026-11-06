@@ -59,7 +59,15 @@ Deno.serve(async (req: Request) => {
     });
     if (blocked) return withCors(errorResponse("FORBIDDEN", blocked, 403), req);
 
-    // Update tenant_users status
+    // Ban first. The ban is what stops token refresh, so "deactivated" must never
+    // be recorded unless it succeeded. If the status update below then fails, the
+    // user is still blocked and retrying is safe.
+    const { error: authBanError } = await adminClient.auth.admin.updateUserById(
+      target.user_id,
+      { ban_duration: "876600h" }, // ~100 years = effectively permanent
+    );
+    if (authBanError) throw authBanError;
+
     const { error: updateError } = await adminClient
       .from("tenant_users")
       .update({ status: "deactivated", updated_at: new Date().toISOString() })
@@ -67,13 +75,6 @@ Deno.serve(async (req: Request) => {
       .eq("tenant_id", ctx.tenantId);
 
     if (updateError) throw updateError;
-
-    // Disable Supabase auth account
-    const { error: authBanError } = await adminClient.auth.admin.updateUserById(
-      (tu as { user_id: string }).user_id,
-      { ban_duration: "876600h" }, // ~100 years = effectively permanent
-    );
-    if (authBanError) throw authBanError;
 
     void logAudit({
       tenantId: ctx.tenantId,

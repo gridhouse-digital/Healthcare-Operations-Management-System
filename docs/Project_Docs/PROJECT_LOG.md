@@ -10,6 +10,10 @@
 A working sign-out would not end a live token either, because it only stops refresh. The calls are removed and the real behaviour is stated in each function: a role change applies at the next refresh through `custom_access_token_hook`, and a deactivated user is banned from refreshing. Both take effect within the JWT lifetime, which is the same for agency suspension.
 
 ---
+`deactivate-tenant-user` now bans before it records `deactivated`. Before, a failed ban left the row deactivated with refresh still working: with no active row, `custom_access_token_hook` passes stored `app_metadata` through unchanged.
+
+Open: production has two auth users with stored tenant_admin metadata and no `tenant_users` row, so the same pass-through applies to them, including during an agency suspension. Decide whether to add rows or remove the accounts before changing the hook.
+
 ## 2026-11-06 - CI: Migration Parity fixed
 
 Migration Parity failed on `main` for every merge from PR 28 on, and PRs never run it. The latest Supabase CLI defaults `db push` to the local stack, so the check tried `127.0.0.1` and exited before printing the error. It now passes `--remote`, prints output on failure, and passes only on an explicit "up to date".
