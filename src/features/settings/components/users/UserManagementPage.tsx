@@ -169,8 +169,8 @@ function InviteModal({ onClose }: { onClose: () => void }) {
       await invite.mutateAsync(values);
       toast.success(`Invitation sent to ${values.email}`);
       onClose();
-    } catch {
-      toast.error("Failed to send invitation");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send invitation");
     }
   }
 

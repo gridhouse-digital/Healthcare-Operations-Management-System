@@ -192,8 +192,9 @@ updated_at  TIMESTAMPTZ
 UNIQUE (tenant_id, user_id)
 ```
 
-**RLS:** Own tenant only.
+**RLS:** Own tenant only. The browser can only read: `anon` and `authenticated` have no write grants, so all writes go through Edge Functions.
 **Audit trigger:** `audit_tenant_users_trigger`
+**Activation:** `on_invited_user_confirmed` on `auth.users` moves `pending` to `active` when Auth verifies the emailed link. Nothing else activates an invite.
 **Note:** This is the source of truth for JWT app_metadata claims (via custom_access_token_hook).
 
 ---

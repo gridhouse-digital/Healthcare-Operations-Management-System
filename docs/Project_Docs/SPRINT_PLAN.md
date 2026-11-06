@@ -668,6 +668,18 @@ Source: `docs/bmad/working-notes/2026-06-13-onboarding-gate-per-department-revis
 - [x] Tests: `deno test _shared/tests/` 131/0; RLS suite updated with `v_onboarding_gate` cross-tenant coverage + two-department contract (live assertions skipped locally because env vars absent); `npm run build` clean; targeted touched-file ESLint 0 errors. Full `npm run lint` remains blocked by pre-existing repo lint debt (86 problems).
 - [ ] Deploy from `main` after sign-off only: migration -> `convert-applicant`, `process-hire`, `onboard-employee`, `save-ld-mappings`; owner flags groups 54 and 1428; run backfill identify first, then `--apply` only after approval.
 
+## Invite activation [IMPLEMENTED — PR open, not deployed]
+
+- [x] Invited user reaches `active` when Auth verifies the emailed link, audited, with no client-supplied tenant
+- [x] Browser write access to `tenant_users` removed
+- [x] `invite-tenant-user` moved to a tested handler; tenant and role no longer sent as user metadata; link goes to `/update-password`
+- [x] Dead `invite-user` function removed
+- [x] Handler tests, and integration tests on real Auth and Postgres in the RLS job
+- [ ] Commit `20261106000001`, then apply `20261106000002` on production (owner)
+- [ ] Deploy `invite-tenant-user` (owner)
+- [ ] Confirm the Redirect URL, then send one real invite and accept it (owner)
+- [ ] Owner decision: turn off public signups, which nothing in the app uses
+
 ## UI — Hallmark Dusk redesign [IMPLEMENTED — uncommitted on hallmark-redesign]
 
 - [x] Dusk tokens, fonts and shadcn role mapping; Light mode as a bone palette
