@@ -1,6 +1,6 @@
 {
   "tasks": {
-    "test:rls": "deno test --allow-env --allow-net rls.test.ts"
+    "test:rls": "deno test --allow-env --allow-net rls.test.ts invite-activation.test.ts"
   },
   "imports": {
     "jsr:@supabase/supabase-js@2": "jsr:@supabase/supabase-js@2",

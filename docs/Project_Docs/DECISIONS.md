@@ -603,3 +603,17 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 **Why:** the 29 Edge Functions use a guard that reads only the token, and RLS deliberately stays on `tenant_id` from the JWT. Checking status on every request would change all of them. A token is therefore honoured until it expires.
 
 **Rollback:** set every agency active, deploy the jobs without the skip, then run: `grant insert, update, delete, truncate, references, trigger on public.tenants to anon, authenticated`, restore `custom_access_token_hook` from `20260304000002_mvp_people_integration_audit.sql`, `drop function public.set_tenant_status(uuid, text, text, uuid)`, and drop `status`, `status_reason`, `status_changed_at` and `status_changed_by` from `tenants`.
+
+## 2026-11-06 - Invites activate when Auth verifies the emailed link
+
+**Decision:** a trigger on `auth.users` (`on_invited_user_confirmed`) moves `tenant_users` from `pending` to `active` when `email_confirmed_at` is first set, and writes the audit row in the same transaction. `anon` and `authenticated` lose write access to `tenant_users`. An email can belong to one agency, and an email with an existing account cannot be invited.
+
+**Why:** Auth sets that column only after checking the token, so there is no request for a browser to send and no tenant_id to supply; the tenant comes from the row the admin created. An activation Edge Function would be a call the browser could skip or make itself. Activating happens at link verification rather than at password set because Auth issues the first token then, so that token already carries the claims, and an invitee who closes the page is not stranded.
+
+Confirmation alone is not enough. With autoconfirm on, `signUp` confirms an invited user and returns a session to the caller, without touching the inbox. The trigger therefore also needs the mark an emailed link leaves: a generated password from an invite link, or a cleared recovery token from a recovery link. These are Auth internals, so `supabase/tests/rls/invite-activation.test.ts` pins them on every PR, on a stack with autoconfirm on.
+
+Status has one writer as a result: the browser only reads `tenant_users`, the same model as `tenants`.
+
+**Known limits:** a link scanner that follows the email activates the row, but gets no usable session for anyone else, and the invitee can recover through Forgot password. An invitee who accepts in the moment between the invite being sent and the row being created stays without a row.
+
+**Rollback:** run `drop trigger on_invited_user_confirmed on auth.users`, `drop function public.activate_invited_tenant_users()`, `drop function public.tenant_memberships_for_email(text)`, and deploy the previous `invite-tenant-user`, which depends on neither function. Leave the `tenant_users` grants revoked: nothing needs them back.
