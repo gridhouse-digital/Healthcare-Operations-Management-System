@@ -12,7 +12,9 @@ A working sign-out would not end a live token either, because it only stops refr
 ---
 `deactivate-tenant-user` now bans before it records `deactivated`. Before, a failed ban left the row deactivated with refresh still working: with no active row, `custom_access_token_hook` passes stored `app_metadata` through unchanged.
 
-Production had two auth users with stored tenant_admin metadata and no `tenant_users` row, so the same pass-through applied to them, including during an agency suspension. Added active tenant_admin rows for both on Prolific Homecare on 2026-11-06, at the owner's request. Next: make the hook drop stored tenant and role claims when there is no active row.
+Production had two auth users with stored tenant_admin metadata and no `tenant_users` row, so the same pass-through applied to them, including during an agency suspension. Added active tenant_admin rows for both on Prolific Homecare on 2026-11-06, at the owner's request. `20261106000001_token_hook_requires_active_row.sql` makes the hook drop stored tenant and role claims when there is no active row. Tested in a rolled-back transaction and applied to production on 2026-11-06.
+
+Found while checking this: nothing moves a `tenant_users` row from `pending` to `active`, and both invite functions pass tenant and role to `inviteUserByEmail` as `data`, which is user metadata. An invited user therefore gets no tenant claims. Production has no pending rows, so no one is affected yet.
 
 ## 2026-11-06 - CI: Migration Parity fixed
 
