@@ -5,7 +5,8 @@ import { handleCors, withCors } from "../_shared/cors.ts";
 import { logAudit } from "../_shared/audit-logger.ts";
 import { blockedUserChange, isAssignableRole } from "../_shared/role-change.ts";
 
-// FR-19: Role change + forced session invalidation.
+// FR-19: Role change. custom_access_token_hook reads tenant_users, so the new
+// role applies at the user's next token refresh, within the JWT lifetime.
 
 interface UpdateRoleBody {
   tenantUserId: string;  // tenant_users.id
@@ -77,9 +78,6 @@ Deno.serve(async (req: Request) => {
       app_metadata: { tenant_id: ctx.tenantId, role },
     });
     if (authError) throw authError;
-
-    // Force session invalidation — sign out all sessions for this user
-    await adminClient.auth.admin.signOut(target.user_id, "global");
 
     void logAudit({
       tenantId: ctx.tenantId,

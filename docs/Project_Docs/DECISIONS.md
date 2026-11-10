@@ -604,6 +604,18 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 
 **Rollback:** set every agency active, deploy the jobs without the skip, then run: `grant insert, update, delete, truncate, references, trigger on public.tenants to anon, authenticated`, restore `custom_access_token_hook` from `20260304000002_mvp_people_integration_audit.sql`, `drop function public.set_tenant_status(uuid, text, text, uuid)`, and drop `status`, `status_reason`, `status_changed_at` and `status_changed_by` from `tenants`.
 
+---
+
+## 2026-11-06 - Tenant and role claims need an active tenant_users row
+
+**Decision:** `custom_access_token_hook` removes `tenant_id` and `role` from `app_metadata` when the user has no active `tenant_users` row. Other `app_metadata` stays.
+
+**Why:** stored metadata used to pass through, so a deactivated user, or one with no row, could keep tenant access after a refresh, and suspension did not reach them. `tenant_users` is now the only source of those claims.
+
+**Rollback:** re-create the function from `20261105000001_tenant_status.sql`.
+
+---
+
 ## 2026-11-06 - Invites activate when Auth verifies the emailed link
 
 **Decision:** a trigger on `auth.users` (`on_invited_user_confirmed`) moves `tenant_users` from `pending` to `active` when `email_confirmed_at` is first set, and writes the audit row in the same transaction. `anon` and `authenticated` lose write access to `tenant_users`. An email can belong to one agency, and an email with an existing account cannot be invited.
