@@ -3,19 +3,50 @@
 > Living document. Updated every session. Most recent entry at top.
 
 ---
+## 2026-11-06 - Invite activation (branch fix/invite-activation, not deployed)
+
+Invited users could never get access: `invite-tenant-user` created a `pending` row and nothing moved it to `active`, while the token hook reads only active rows. Now a trigger on `auth.users` activates the row when Supabase Auth verifies the emailed link.
+
+### Changed
+- Migration `20261106000002`: trigger `on_invited_user_confirmed` activates pending rows and writes a `user.activated` audit row in the Auth transaction. It requires proof the emailed link was used, because with autoconfirm on, `signUp` confirms an invited user and returns a session to whoever called it.
+- Same migration: `anon` and `authenticated` lose write access to `tenant_users`, as they did for `tenants`, so only Edge Functions can write it.
+- `invite-tenant-user` moved to `handler.ts`. It stops passing tenant and role in `data`, which wrote user metadata despite the comment saying app metadata. The link now goes to `/update-password`. Existing members, deactivated users and emails on another agency are refused before an email is sent, and a pending invite can be resent.
+- `invite-user` deleted: undeployed since 2026-06-02, no callers, no audit.
+- Team Members shows why an invite was refused.
+
+### Verified, on a local stack only
+- Without the migration the integration test fails, because acceptance leaves the row pending. With it, the test passes.
+- Real function, emailed link, password set and sign-in, with the hook on: first token carries tenant and role, row active, both audit rows present, and the Users page shows Active.
+- A stranger's `signUp` on an invited email got a session and activated the first version of the trigger. The final version stays pending, including when the stranger requests a recovery email first.
+- `deno test _shared/tests/`: 231 passed. Fresh `db reset` plus `deno task test:rls`: 71 passed. `npm run build` passes.
+
+### Not verified
+- Nothing has run on production: no migration, no function deploy, no real email.
+
+### Found in review, 2026-11-10
+- Production grants `anon` and `authenticated` full write access to `tenant_users`, and the only policy checks the tenant. A rolled-back test showed a session with hr_admin claims setting its own role to `platform_admin`. This migration's revoke closes it, so apply it promptly. `audit_log` has not been checked for past misuse.
+- `oyinyemi84@gmail.com` was invited, never confirmed and had an active tenant_admin row, so a public `signUp` on that email could have given a stranger tenant access. Its row was set to `pending` on production on 2026-11-10 at the owner's request. Forgot password activates it once this is live.
+
+### Before this goes live
+- `20261106000001` is now on `main` and on production, so this migration applies next.
+- Confirm `<ALLOWED_ORIGIN_1>/update-password` is in Auth's Redirect URLs. If it is not, the invite lands on the Site URL with no password prompt.
+
+---
 ## 2026-11-06 - Removed sign-out calls that could never work
 
 `update-tenant-user-role` and `deactivate-tenant-user` called `auth.admin.signOut` with a user id. That API takes the user's own JWT, so every call failed with `bad_jwt` and the result was ignored.
 
 A working sign-out would not end a live token either, because it only stops refresh. The calls are removed and the real behaviour is stated in each function: a role change applies at the next refresh through `custom_access_token_hook`, and a deactivated user is banned from refreshing. Both take effect within the JWT lifetime, which is the same for agency suspension.
 
----
 `deactivate-tenant-user` now bans before it records `deactivated`. Before, a failed ban left the row deactivated with refresh still working: with no active row, `custom_access_token_hook` passes stored `app_metadata` through unchanged.
 
 Production had two auth users with stored tenant_admin metadata and no `tenant_users` row, so the same pass-through applied to them, including during an agency suspension. Added active tenant_admin rows for both on Prolific Homecare on 2026-11-06, at the owner's request. `20261106000001_token_hook_requires_active_row.sql` makes the hook drop stored tenant and role claims when there is no active row. Tested in a rolled-back transaction and applied to production on 2026-11-06.
 
 Found while checking this: nothing moves a `tenant_users` row from `pending` to `active`, and both invite functions pass tenant and role to `inviteUserByEmail` as `data`, which is user metadata. An invited user therefore gets no tenant claims. Production has no pending rows, so no one is affected yet.
 
+Released 2026-11-07: PR 33 merged, and `update-tenant-user-role` and `deactivate-tenant-user` deployed as version 14.
+
+---
 ## 2026-11-06 - CI: Migration Parity fixed
 
 Migration Parity failed on `main` for every merge from PR 28 on, and PRs never run it. The latest Supabase CLI defaults `db push` to the local stack, so the check tried `127.0.0.1` and exited before printing the error. It now passes `--remote`, prints output on failure, and passes only on an explicit "up to date".

@@ -51,11 +51,20 @@ interface InviteUserPayload {
   role: TenantRole;
 }
 
+async function invokeErrorMessage(error: Error & { context?: unknown }): Promise<string> {
+  if (error.context instanceof Response) {
+    const body = await error.context.json().catch(() => null) as { error?: { message?: string } } | null;
+    if (body?.error?.message) return body.error.message;
+  }
+  return error.message;
+}
+
 async function inviteUser(payload: InviteUserPayload): Promise<void> {
   const { data, error } = await supabase.functions.invoke("invite-tenant-user", {
     body: payload,
   });
-  if (error) throw error;
+  // A refused invite is a non-2xx response, so its reason is on the raw response.
+  if (error) throw new Error(await invokeErrorMessage(error));
   if ((data as { error?: { message: string } } | null)?.error) {
     throw new Error((data as { error: { message: string } }).error.message);
   }

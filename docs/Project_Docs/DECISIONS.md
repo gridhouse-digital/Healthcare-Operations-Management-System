@@ -613,3 +613,19 @@ anon offer-response path) and `leaked_password` (owner dashboard toggle).
 **Why:** stored metadata used to pass through, so a deactivated user, or one with no row, could keep tenant access after a refresh, and suspension did not reach them. `tenant_users` is now the only source of those claims.
 
 **Rollback:** re-create the function from `20261105000001_tenant_status.sql`.
+
+---
+
+## 2026-11-06 - Invites activate when Auth verifies the emailed link
+
+**Decision:** a trigger on `auth.users` (`on_invited_user_confirmed`) moves `tenant_users` from `pending` to `active` when `email_confirmed_at` is first set, and writes the audit row in the same transaction. `anon` and `authenticated` lose write access to `tenant_users`. An email can belong to one agency, and an email with an existing account cannot be invited.
+
+**Why:** Auth sets that column only after checking the token, so there is no request for a browser to send and no tenant_id to supply; the tenant comes from the row the admin created. An activation Edge Function would be a call the browser could skip or make itself. Activating happens at link verification rather than at password set because Auth issues the first token then, so that token already carries the claims, and an invitee who closes the page is not stranded.
+
+Confirmation alone is not enough. With autoconfirm on, `signUp` confirms an invited user and returns a session to the caller, without touching the inbox. The trigger therefore also needs the mark an emailed link leaves: a generated password from an invite link, or a cleared recovery token from a recovery link. These are Auth internals, so `supabase/tests/rls/invite-activation.test.ts` pins them on every PR, on a stack with autoconfirm on.
+
+Status has one writer as a result: the browser only reads `tenant_users`, the same model as `tenants`.
+
+**Known limits:** a link scanner that follows the email activates the row, but gets no usable session for anyone else, and the invitee can recover through Forgot password. An invitee who accepts in the moment between the invite being sent and the row being created stays without a row.
+
+**Rollback:** run `drop trigger on_invited_user_confirmed on auth.users`, `drop function public.activate_invited_tenant_users()`, `drop function public.tenant_memberships_for_email(text)`, and deploy the previous `invite-tenant-user`, which depends on neither function. Leave the `tenant_users` grants revoked: nothing needs them back.
